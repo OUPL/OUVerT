@@ -43,7 +43,7 @@ CAMLFLAGS         := $(COQMF_CAMLFLAGS)
 HASNATDYNLINK     := $(COQMF_HASNATDYNLINK)
 
 Makefile.conf: 
-	coq_makefile bigops.v compile.v dist.v dyadic.v extrema.v listlemmas.v maplemmas.v numerics.v orderedtypes.v strings.v vector.v -o Makefile -arg '-w notation-overriden'
+	coq_makefile -R . OUVerT -arg '-w notation-overriden' bigops.v compile.v dist.v dyadic.v extrema.v listlemmas.v maplemmas.v numerics.v orderedtypes.v strings.v vector.v -o Makefile
 
 # This file can be created by the user to hook into double colon rules or
 # add any other Makefile code he may need
