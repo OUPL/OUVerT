@@ -7,12 +7,11 @@ From mathcomp Require Import all_algebra.
 
 Import GRing.Theory Num.Def Num.Theory.
 
-Require Import bigops.
+Require Import OUVerT.bigops.
 
 Local Open Scope ring_scope.
 
 (** Discrete distributions *)
-
 Section Dist.
   Variable T : finType.
   Variable rty : numDomainType.
@@ -321,7 +320,6 @@ Section uniform.
 End uniform.
 
 (** Markov's Inequality *)
-
 Section markov.
   Variable T : finType.
   Variable rty : numFieldType.
@@ -350,15 +348,58 @@ Section markov.
     apply: ler_trans; first by apply: H3.
     apply: H2.
   Qed.     
-End markov.    
+End markov.
 
-Section chernoff.
+(** An R-valued analogue of the Markov lemma proved above *)
+Section markovR.
+  Require Import QArith Reals Rpower Ranalysis Fourier.
   Variable T : finType.
-  Variable rty : numFieldType.
-  Variable f : T -> rty.
-  Variable f_nonneg : forall t, 0 <= f t.
-  Variable d : dist T rty.
-  (*TODO*)
-End chernoff.
+  Variable a : R.
+  Variable a_gt0 : 0 < a.
+  Variable f : T -> R.
+  Variable f_nonneg : forall x, 0 <= f x.
+  Variable d : T -> R.
+  Variable d_dist : big_sum (enum T) d = 1.
+  Variable d_nonneg : forall x, 0 <= d x.
+
+  Definition probOfR (d : T -> R) (p : pred T) := big_sum (filter p (enum T)) d.
+  Definition expValR (d f : T -> R) := big_sum (enum T) (fun x => d x * f x).
+  Definition PREDR (x : T) : bool := Rle_lt_dec a (f x).
+
+  Lemma expValR_split (p : pred T) :
+    expValR d f =
+    big_sum (filter p (enum T)) (fun x => d x * f x) +
+    big_sum (filter (predC p) (enum T)) (fun x => d x * f x).
+  Proof. by apply: big_sum_split. Qed.
+
+  Lemma ler_pdivl_mulrR z x y : 0 < z -> x * z <= y -> x <= y / z.
+  Proof.
+    move => H H2; rewrite /Rdiv.
+    have H3: x * z <= (y * /z) * z.
+    { rewrite Rmult_assoc Rinv_l; last first.
+      { move => Heq; rewrite Heq in H.
+        by move: (Rnot_lt0 0); rewrite Rmult_0_r. }
+      by rewrite Rmult_1_r. }
+    eapply Rmult_le_reg_r; eauto.
+  Qed.    
   
+  Lemma markovR : probOfR d PREDR <= expValR d f / a.
+  Proof.
+    rewrite ->expValR_split with (p:=PREDR); rewrite /probOfR.
+    apply: ler_pdivl_mulrR => //.
+    have H:
+      big_sum [seq x <- enum T | PREDR x] d * a <=
+      big_sum [seq x <- enum T | PREDR x] (fun x : T => d x * f x).
+    { rewrite Rmult_comm -big_sum_scalar; apply: big_sum_le => x Hin.
+      rewrite Rmult_comm; apply: Rmult_le_compat => //.
+      { by apply: Rlt_le. }
+      { by apply: Rle_refl. }
+      rewrite mem_filter in Hin; case: (andP Hin); rewrite /PREDR.
+      case: (Rle_lt_dec a (f x)) => //. }
+    apply: Rle_trans; first by apply: H.
+    rewrite -[big_sum _ _]Rplus_0_r Rplus_assoc; apply: Rplus_le_compat_l.
+    rewrite Rplus_0_l; apply: big_sum_ge0 => x; rewrite -[0](Rmult_0_l 0).
+    apply: Rmult_le_compat => //; apply: Rle_refl.
+  Qed.    
+End markovR.
     

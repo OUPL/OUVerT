@@ -1,13 +1,13 @@
 Set Implicit Arguments.
 Unset Strict Implicit.
 
-Require Import NArith QArith Reals Rpower Ranalysis Fourier.
+Require Import NArith QArith Reals Rpower Ranalysis Fourier Permutation.
 
 Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 
-Require Import numerics.
+Require Import OUVerT.numerics.
 
 Delimit Scope R_scope with R.
 
@@ -61,6 +61,40 @@ Proof.
   f_equal.
   by rewrite Rplus_comm.
 Qed.      
+
+Lemma big_sum_cat T (cs1 cs2 : seq T) f :
+  (big_sum (cs1++cs2) (fun c => f c) =
+   big_sum cs1 (fun c => f c) + big_sum cs2 (fun c => f c))%R.
+Proof.
+  elim: cs1 => /=; first by rewrite Rplus_0_l.
+  move=> a l IH; rewrite IH /=.
+  rewrite [((_ + big_sum l (fun c => f c) + _))%R]Rplus_assoc //.
+Qed.
+
+Lemma big_sum_perm T (cs1 cs2 : seq T) (H : Permutation cs1 cs2) f :
+  (big_sum cs1 (fun c => f c) = big_sum cs2 (fun c => f c))%R.
+Proof.
+  elim: H => //=.
+  { move => x l l' H -> //. }
+  { by move => x y l; rewrite -Rplus_assoc [f y + f x]Rplus_comm Rplus_assoc. }
+  move => l l' l'' H /= -> H2 -> //.
+Qed.
+
+Lemma big_sum_split T (cs : seq T) f (p : pred T) :
+  (big_sum cs f = big_sum (filter p cs) f + big_sum (filter (predC p) cs) f)%R.
+Proof.
+  rewrite ->big_sum_perm with (cs2 := filter p cs ++ filter (predC p) cs); last first.
+  { elim: cs => // a l /= H; case: (p a) => /=.
+    { by constructor. }
+      by apply: Permutation_cons_app. }
+  by rewrite big_sum_cat.
+Qed.    
+
+Lemma big_sum_ge0 T (cs : seq T) f (H : forall x, 0 <= f x) : 0 <= big_sum cs f.
+Proof.
+  elim: cs => /=; first by apply: Rle_refl.
+  move => a l H2; rewrite -[0]Rplus_0_l; apply: Rplus_le_compat => //.
+Qed.  
 
 Lemma rat_to_R_sum T (cs : seq T) (f : T -> rat) :
   rat_to_R (\sum_(c <- cs) (f c)) =  
