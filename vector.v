@@ -27,7 +27,9 @@ Module Type PAYLOAD.
   Parameter t_of_u_t : forall t, t_of_u (u_of_t t) = t.
 End PAYLOAD.  
 
-Module Vector (B : BOUND) (P : PAYLOAD).
+Module Type VECTOR.
+  Declare Module B : BOUND.
+  Declare Module P : PAYLOAD.  
   Module Ix := MyOrdNatDepProps B. (* the indices *)
   Module M := Make Ix.             (* sparse maps *)
   Module MFacts := Facts M.
@@ -42,7 +44,7 @@ Module Vector (B : BOUND) (P : PAYLOAD).
       payload domain.
     *)
 
-  Definition nonzero (p : P.t) : bool := ~~(P.eq0 p).
+  Definition nonzero (p : P.t) : bool := negb (P.eq0 p).
 
   Definition sparse (m : t) := forall i y, M.find i m = Some y -> nonzero y.
 
@@ -61,22 +63,6 @@ Module Vector (B : BOUND) (P : PAYLOAD).
   (* assumes f i P.t0 = P.t0 *)
   Definition map0 (f : Ix.t -> P.t -> P.t) (m : t) : t :=
     M.mapi f m.
-
-  (* auxiliary function for map_s. makes proofs easier. *)
-  Definition map_s_aux (f : Ix.t -> P.t -> P.t) (m : t) l : t :=
-    List.fold_right (fun i acc =>
-                       match M.find i m with
-                       | None =>
-                         let v := f i P.t0 in
-                         if P.eq0 v then acc else M.add i v acc
-                       | Some v =>
-                         let v' := f i v in
-                         if P.eq0 v' then acc else M.add i v' acc
-                       end) (M.empty _) l.
-
-  (* a slow map that doesn't assume anything *)
-  Definition map_s (f : Ix.t -> P.t -> P.t) (m : t) : t :=
-    map_s_aux f m (enumerate Ix.t).
 
   (* assumes f i P.t0 t = t *)  
   Definition fold0 T (f : Ix.t -> P.t -> T -> T) (m : t) (t0 : T) : T :=
@@ -118,6 +104,96 @@ Module Vector (B : BOUND) (P : PAYLOAD).
   Definition of_fun (f : Ix.t -> P.t) : t :=
     of_list (List.map (fun ix => (ix, f ix)) (enumerate Ix.t)).
 
+  (* a slow map that doesn't assume anything *)
+  Definition map_s (f : Ix.t -> P.t -> P.t) (m : t) : t :=
+    of_fun (fun ix => f ix (get ix m)).
+End VECTOR.
+
+Module Vector (B : BOUND) (P : PAYLOAD) <: VECTOR.
+  Module B := B. Export B.
+  Module P := P. Export P.
+  Module Ix := MyOrdNatDepProps B. (* the indices *) 
+  Module M := Make Ix.             (* sparse maps *) 
+  Module MFacts := Facts M. 
+  Module MProps := Properties M. 
+  Notation n := B.n.          (* the dimensionality *)
+  Definition t := (M.t P.t).  (* the type of computable vectors *)
+
+  (** [SPARSITY INVARIANT]: 
+      ~~~~~~~~~~~~~~~~~~~~~ 
+      The map contains no key-value pairs (i,p) s.t. p = P.t0. That is, 
+      it only implicitly represents keys that map to the zero of the 
+      payload domain.
+    *)
+
+  Definition nonzero (p : P.t) : bool := negb (P.eq0 p).
+
+  Definition sparse (m : t) := forall i y, M.find i m = Some y -> nonzero y.
+
+  (* operations *)
+  Definition get (i : Ix.t) (m : t) : P.t :=
+    match M.find i m with
+    | None => P.t0
+    | Some p => p
+    end.
+
+  (* update i -> p; maintains [SPARSITY_INVARIANT] *)
+  Definition set (i : Ix.t) (p : P.t) (m : t) : t :=
+    if P.eq0 p then M.remove i m
+    else M.add i p m.
+
+  (* assumes f i P.t0 = P.t0 *)
+  Definition map0 (f : Ix.t -> P.t -> P.t) (m : t) : t :=
+    M.mapi f m.
+
+  (* assumes f i P.t0 t = t *)  
+  Definition fold0 T (f : Ix.t -> P.t -> T -> T) (m : t) (t0 : T) : T :=
+    M.fold f m t0.
+
+  (* a slow fold0 that doesn't assume f i P.t0 t = t *)
+  Definition foldr T (f : Ix.t -> P.t -> T -> T) (m : t) (t0 : T) : T :=
+    List.fold_right (fun ix acc => f ix (get ix m) acc) t0 (enumerate Ix.t).
+  
+  (* does any (i, p) pair satisfy f? if so, which one? *)
+  Fixpoint any_rec (f : Ix.t -> P.t -> bool) (m : t) (l : list Ix.t) : option (Ix.t * P.t) :=
+    match l with
+    | nil => None
+    | i :: l' =>
+      let p := get i m in 
+      if f i p then Some (i, p)
+      else any_rec f m l'
+    end.
+  
+  Definition any (f : Ix.t -> P.t -> bool) (m : t) : option (Ix.t * P.t) :=
+    match List.find (fun i => f i (get i m)) (enumerate Ix.t) with
+    | None => None
+    | Some ix => Some (ix, get ix m)
+    end.
+
+  (* construct a vector from list of ordered pairs l *)
+  Definition of_list_INTERNAL (l : list (Ix.t * P.t)) : t :=
+    MProps.of_list l.
+
+  (* same as of_list_INTERNAL but filters out pairs (i,p) 
+     s.t. p = P.t0, thus maintaining the [SPARSITY_INVARIANT] *)
+  Definition of_list (l : list (Ix.t * P.t)) : t :=
+    of_list_INTERNAL (List.filter (fun p : (Ix.t*P.t) => nonzero p.2) l).
+
+  Definition to_list (m : t) : list (Ix.t * P.t) :=
+    M.elements m.
+  
+  (* construct a vector from function f *)
+  Definition of_fun (f : Ix.t -> P.t) : t :=
+    of_list (List.map (fun ix => (ix, f ix)) (enumerate Ix.t)).
+
+  (* a slow map that doesn't assume anything *)
+  Definition map_s (f : Ix.t -> P.t -> P.t) (m : t) : t :=
+    of_fun (fun ix => f ix (get ix m)).
+End Vector.
+
+Module VectorProofs (Vec : VECTOR).
+  Import Vec.
+  
   (* SPARSITY PROOFS *)
   Definition mk_sparse (m : t) : t := of_fun (fun ix => get ix m).
 
@@ -175,182 +251,6 @@ Module Vector (B : BOUND) (P : PAYLOAD).
   Proof.
     rewrite MProps.F.add_o. move => H0.
     destruct (M.E.eq_dec) => //.
-  Qed.
-
-  (* map_s preserves [SPARSITY_INVARIANT] *)
-  Lemma map_s_sparse m f :
-    sparse m ->
-    sparse (map_s f m).
-  Proof.
-    rewrite /sparse /map_s. move => H0 i.
-    rewrite /foldr; move: (enumerate Ix.t) => l.
-    induction l => // /=.
-    { move => y H1. destruct (M.find (elt:=P.t) a m) as [t0|t0].
-      { case H3: (P.eq0 (f a t0)); rewrite H3 in H1. apply IHl => //.
-        { destruct (M.E.eq_dec i a).
-          { (* case [i == a]: implies y = f a t0 which is nonzero from H3. *)
-            have H4: (y = f a t0).
-            { apply M.E.eq_sym in e.
-              apply (@add_eq_val i a (map_s_aux f m l) (f a t0)) in e. 
-              by rewrite H1 in e; inversion e. }
-            by rewrite H4 /nonzero H3. }
-          { (* case [i <> a]: goal directly follows from IH and H1. *)
-            apply IHl. rewrite MProps.F.add_neq_o in H1 => //.
-            by apply compile.M.Raw.Proofs.L.PX.MO.neq_sym. } } }
-      { case H3: (P.eq0 (f a P.t0)); rewrite H3 in H1. apply IHl => //.
-        { destruct (M.E.eq_dec i a).
-          { (* case [i == a]: implies y = f a t0 which is nonzero from H3. *)
-            have H4: (y = f a P.t0).
-            { apply M.E.eq_sym in e.
-              apply (@add_eq_val i a (map_s_aux f m l) (f a P.t0)) in e.
-              by rewrite H1 in e; inversion e. }
-            by rewrite H4 /nonzero H3. }
-          { (* case [i <> a]: goal directly follows from IH and H1. *)
-            apply IHl. rewrite MProps.F.add_neq_o in H1 => //.
-            by apply compile.M.Raw.Proofs.L.PX.MO.neq_sym. } } } }
-  Qed.
-
-  (* map_s works correctly for the 4 cases:
-     1) zero mapped to zero
-     2) nonzero mapped to zero
-     3) zero mapped to nonzero
-     4) nonzero mapped to nonzero
-     These results are combined in the overall proof [map_s_correct]. *)
-
-  (* zero -> zero *)
-  Lemma map_s_correct_zz m f i :
-    f i P.t0 = P.t0 -> M.find i m = None ->
-    M.find i (map_s f m) = None.
-  Proof.
-    move => H0 H1. rewrite /map_s. move: (enumerate Ix.t) => l.
-    induction l => // /=.
-    case H4: (M.find (elt:=P.t) a m).
-    { case H5: (P.eq0 (f a _)) => //.
-      { destruct (M.E.eq_dec i a).
-        { have H6: (M.find (elt:=P.t) i m = M.find (elt:=P.t) a m).
-          { by apply MProps.F.find_o. }
-          by rewrite H6 in H1; rewrite H1 in H4. }
-        { rewrite MProps.F.add_neq_o => //.
-          by apply compile.M.Raw.Proofs.L.PX.MO.neq_sym. } } }
-    { case H5: (P.eq0 (f a P.t0)) => //.
-      { move: (Ix.eqP i a) => [eqP0 eqP1].
-        destruct (Ix.eq_dec i a).
-        { apply eqP1 in e. subst. rewrite H0 in H5.
-          by destruct (P.eq0P P.t0). }
-        { rewrite MProps.F.add_neq_o => //.
-          by apply compile.M.Raw.Proofs.L.PX.MO.neq_sym. } } }
-  Qed.
-
-  (* zero -> nonzero *)
-  Lemma map_s_correct_zn m f i y :
-    f i P.t0 = y -> y <> P.t0 -> M.find i m = None ->
-    M.find i (map_s f m) = Some y.
-  Proof.
-    move => H0 H1 H2. rewrite /map_s.
-    move: (Ix.enum_ok_obligation_2 i) => H3.
-    induction (enumerate Ix.t) => // /=.
-    { case H4: (M.find a m).
-      { case H5: (P.eq0 (f a _)) => //.
-        { move: (Ix.eqP i a) => [eqP0 eqP1].
-          destruct (Ix.eq_dec i a).
-          { apply eqP1 in e; subst. rewrite H2 in H4 => //. }
-          { apply IHl. destruct H3 => //. subst. destruct n => //. } }
-        { move: (Ix.eqP i a) => [eqP0 eqP1].
-          destruct (Ix.eq_dec i a).
-          { apply eqP1 in e; subst. rewrite H2 in H4 => //. }
-          { rewrite MProps.F.add_neq_o => //.
-            apply IHl. destruct H3 => //. subst. destruct n => //.
-            apply compile.M.Raw.Proofs.L.PX.MO.neq_sym => //. } } }
-      { case H5: (P.eq0 (f a _)) => //.
-        { move: (Ix.eqP i a) => [eqP0 eqP1].
-          destruct (Ix.eq_dec i a).
-          { apply eqP1 in e; subst. destruct (P.eq0P (f a P.t0)) => //. }
-          { apply IHl. destruct H3 => //. subst. destruct n => //. } }
-        { move: (Ix.eqP i a) => [eqP0 eqP1].
-          destruct (Ix.eq_dec i a).
-          { apply eqP1 in e; subst. apply MProps.F.add_eq_o => //. }
-          { rewrite MProps.F.add_neq_o => //.
-            apply IHl. destruct H3 => //. subst. destruct n => //.
-            apply compile.M.Raw.Proofs.L.PX.MO.neq_sym => //. } } } }
-  Qed.
-
-  (* nonzero -> zero *)
-  Lemma map_s_correct_nz m f i x :
-    f i x = P.t0 -> M.find i m = Some x -> get i (map_s f m) = P.t0.
-  Proof.
-    move => H0 H2. rewrite /map_s. move: (enumerate Ix.t) => l.
-    induction l => // /=.
-    case H4: (M.find (elt:=P.t) a m).
-    { case H5: (P.eq0 (f a _)) => //.
-      { move: (Ix.eqP i a) => [eqP0 eqP1].
-        destruct (Ix.eq_dec i a).
-        { apply eqP1 in e; subst.
-          rewrite H2 in H4. inversion H4; subst. rewrite H0 in H5.
-          by destruct (P.eq0P P.t0). }
-        { rewrite /get MProps.F.add_neq_o => //.
-          by apply compile.M.Raw.Proofs.L.PX.MO.neq_sym. } } }
-    { case H5: (P.eq0 (f a P.t0)) => //.
-      { subst. move: (Ix.eqP i a) => [eqP0 eqP1].
-        destruct (Ix.eq_dec i a).
-        { by apply eqP1 in e; subst; rewrite H4 in H2. }
-        { rewrite /get MProps.F.add_neq_o => //.
-          by apply compile.M.Raw.Proofs.L.PX.MO.neq_sym. } } }
-  Qed.
-
-  (* nonzero -> nonzero *)
-  Lemma map_s_correct_nn m f i x :
-    nonzero (f i x) -> M.find i m = Some x -> get i (map_s f m) = f i x.
-  Proof.
-    move => H0 H1. rewrite /map_s. move: (Ix.enum_ok_obligation_2 i) => H2.
-    induction (enumerate Ix.t) => // /=.
-    move: (Ix.eqP i a) => [eqP0 eqP1].
-    case H4: (M.find (elt:=P.t) a m).
-    { case H5: (P.eq0 (f a _)) => //.
-      { destruct (Ix.eq_dec i a).
-        { apply eqP1 in e; subst.
-          rewrite H1 in H4. inversion H4; symmetry in H3; subst.
-          destruct (P.eq0P (f a x)) => //.
-          rewrite e /nonzero in H0. apply negb_true_iff in H0.
-          by destruct (P.eq0P P.t0). }
-        { apply IHl. apply in_inv in H2. destruct H2; subst => //.
-          by exfalso; apply n; apply eqP0. } }
-      { destruct (Ix.eq_dec i a).
-        { apply eqP1 in e; subst. rewrite H4 in H1.
-          by inversion H1; subst; rewrite /get add_eq_val. }
-        { rewrite /get. apply compile.M.Raw.Proofs.L.PX.MO.neq_sym in n.
-          rewrite MProps.F.add_neq_o => //.
-          apply IHl. apply in_inv in H2. destruct H2 => //.
-          by subst; exfalso; apply n; apply eqP0. } } }
-    { case H5: (P.eq0 (f a P.t0)) => //.
-      { destruct (Ix.eq_dec i a).
-        { by apply eqP1 in e; subst; rewrite H4 in H1; inversion H1. }
-        { apply in_inv in H2. destruct H2; subst.
-          { by exfalso; apply n; apply eqP0. }
-          { by apply IHl. } } }
-      { destruct (Ix.eq_dec i a).
-        { by apply eqP1 in e; subst; rewrite H4 in H1; inversion H1. }
-        { apply in_inv in H2. destruct H2; subst.
-          { by exfalso; apply n; apply eqP0. }
-          { rewrite /get. apply compile.M.Raw.Proofs.L.PX.MO.neq_sym in n.
-            by rewrite MProps.F.add_neq_o => //; apply IHl. } } } }
-  Qed.
-
-  (* Overall correctness of map_s *)
-  Lemma map_s_correct m f i :
-    get i (map_s f m) = f i (get i m).
-  Proof.
-    remember (f i (get i m)) as y.
-    remember (M.find i m) as x. destruct x.
-    { destruct (P.eq0P (f i t0)).
-      { subst. rewrite (@map_s_correct_nz m f i t0) => //.
-        by rewrite /get -Heqx. }
-      { rewrite /get -Heqx in Heqy. rewrite Heqy.
-        apply map_s_correct_nn => //. apply negb_true_iff.
-        by destruct (P.eq0P (f i t0)). } }
-    { rewrite /get -Heqx in Heqy. rewrite Heqy /get.
-      destruct (P.eq0P (f i P.t0)).
-      { by rewrite e map_s_correct_zz. }
-      { by rewrite (@map_s_correct_zn m f i (f i P.t0)). } }
   Qed.
 
   (* REFINEMENT PROOFS *)
@@ -931,11 +831,17 @@ Module Vector (B : BOUND) (P : PAYLOAD).
       by case => H4 _; move: (H4 H5).
     Qed.
 
+    Lemma map_s_correct m g i : get i (map_s g m) = g i (get i m).
+    Proof.
+      rewrite /map_s; move: (match_vecs_of_fun (fun ix : Ix.t => g ix (get ix m))).
+      by move/(_ i) ->; rewrite ffunE P.t_of_u_t Ix_of_Ordinal_Ix.
+    Qed.      
+
     Lemma match_vecs_mk_sparse :
       match_vecs (mk_sparse v) [ffun i => P.u_of_t (get (Ix_of_Ordinal i) v)].
     Proof. apply: (match_vecs_of_fun (fun ix => get ix v)). Qed.
   End refinement_lemmas.
-End Vector.  
+End VectorProofs.  
 
 (* two-dimensional vectors *)
 
@@ -950,15 +856,16 @@ Module MatrixPayload (B : BOUND) (P : PAYLOAD) <: PAYLOAD.
     case: d => x y /=; move: y; case: x => y; constructor => //.
     case H: Vec.M.empty => [z w]; inversion H; subst.
     f_equal; apply: proof_irrelevance.
-  Qed.    
-  Definition u := {m : t & {f : Vec.ty & Vec.match_vecs m f}}.
+  Qed.
+  Module VecProofs := VectorProofs Vec. Import VecProofs.
+  Definition u := {m : t & {f : VecProofs.ty & VecProofs.match_vecs m f}}.
   Program Definition u_of_t (m : t) : u :=
     existT _ m _.
   Next Obligation.
     set (f := [ffun i : 'I_B.n =>
-               P.u_of_t (Vec.get (Vec.Ix_of_Ordinal i) m)] : Vec.ty).
+               P.u_of_t (Vec.get (VecProofs.Ix_of_Ordinal i) m)] : VecProofs.ty).
     refine (existT _ f _).
-    by move => i; rewrite /f ffunE Vec.Ix_of_Ordinal_Ix P.t_of_u_t.
+    by move => i; rewrite /f ffunE VecProofs.Ix_of_Ordinal_Ix P.t_of_u_t.
   Qed.
   Definition t_of_u (f : u) : t := projT1 f.
   Lemma t_of_u_t : forall t0 : t, t_of_u (u_of_t t0) = t0.
@@ -979,15 +886,16 @@ Module ConstraintMatrixPayload (B : BOUND) (P : PAYLOAD) <: PAYLOAD.
     case: d => x y /=; move: y; case: x => y; constructor => //.     
     case H: Vec.M.empty => [z w]; inversion H; subst.
     f_equal; f_equal; apply: proof_irrelevance.
-  Qed.    
-  Definition u := {m : t & {f : Vec.ty & Vec.match_vecs (fst m) f}}.
+  Qed.
+  Module VecProofs := VectorProofs Vec. Import VecProofs.  
+  Definition u := {m : t & {f : VecProofs.ty & VecProofs.match_vecs (fst m) f}}.
   Program Definition u_of_t (m : t) : u :=
     existT _ m _.
   Next Obligation.
     set (f := [ffun i : 'I_B.n =>
-               P.u_of_t (Vec.get (Vec.Ix_of_Ordinal i) m.1)] : Vec.ty).
+               P.u_of_t (Vec.get (VecProofs.Ix_of_Ordinal i) m.1)] : VecProofs.ty).
     refine (existT _ f _).
-    by move => i; rewrite /f ffunE Vec.Ix_of_Ordinal_Ix P.t_of_u_t.
+    by move => i; rewrite /f ffunE VecProofs.Ix_of_Ordinal_Ix P.t_of_u_t.
   Qed.
   Definition t_of_u (f : u) : t := projT1 f.
   Lemma t_of_u_t : forall t0 : t, t_of_u (u_of_t t0) = t0.
@@ -1042,18 +950,19 @@ Definition Dabs (d : DRed.t) : DRed.t :=
 
 Module DVector (B : BOUND).
   Module Vec := Vector B DPayload.
-
+  Module VecProofs := VectorProofs Vec. Import VecProofs.
+  
   Definition sum1 (v : Vec.t) : DRed.t :=
     Vec.fold0 (fun ix d acc => (d + acc)%DRed) v 0%DRed.
   
   Lemma sum1_sum v f :
     Vec.sparse v ->
-    Vec.match_vecs v f ->
+    VecProofs.match_vecs v f ->
     Qeq (D_to_Q (sum1 v))
         (rat_to_Q (\sum_(i : 'I_B.n) projT1 (f i))).
   Proof.
     move => Hsparse H; rewrite /sum1.
-    rewrite (Vec.match_vecs_fold0 (f := f)) => //.
+    rewrite (VecProofs.match_vecs_fold0 (f := f)) => //.
     { rewrite -filter_index_enum; elim: (index_enum _).
       { rewrite big_nil //. }
       move => a l; rewrite big_cons /= => IH.
@@ -1074,7 +983,7 @@ Module DVector (B : BOUND).
       (fun _ d (acc : DRed.t) => if Dlt_bool acc (Dabs d) then Dabs d else acc)
       v
       0%DRed.
-End DVector.    
+End DVector.
 
 Module DConstraintMatrixPayload (B : BOUND) <: PAYLOAD.
   Module DVec := DVector B. Include DVec.
@@ -1090,15 +999,15 @@ Module DConstraintMatrixPayload (B : BOUND) <: PAYLOAD.
     case: d => x y /=; move: y; case: x => y; constructor => //.     
     case H: Vec.M.empty => [z w]; inversion H; subst.
     f_equal; f_equal; apply: proof_irrelevance.
-  Qed.    
-  Definition u := {m : t & {f : Vec.ty & Vec.match_vecs (fst m) f}}.
+  Qed.
+  Definition u := {m : t & {f : VecProofs.ty & VecProofs.match_vecs (fst m) f}}.
   Program Definition u_of_t (m : t) : u :=
     existT _ m _.
   Next Obligation.
     set (f := [ffun i : 'I_B.n =>
-               DPayload.u_of_t (Vec.get (Vec.Ix_of_Ordinal i) m.1)] : Vec.ty).
+               DPayload.u_of_t (Vec.get (VecProofs.Ix_of_Ordinal i) m.1)] : VecProofs.ty).
     refine (existT _ f _).
-    by move => i; rewrite /f ffunE Vec.Ix_of_Ordinal_Ix DPayload.t_of_u_t.
+    by move => i; rewrite /f ffunE VecProofs.Ix_of_Ordinal_Ix DPayload.t_of_u_t.
   Qed.
   Definition t_of_u (f : u) : t := projT1 f.
   Lemma t_of_u_t : forall t0 : t, t_of_u (u_of_t t0) = t0.
@@ -1109,49 +1018,3 @@ Module DConstraintMatrix (NumFeatures : BOUND) (NumConstraints : BOUND).
   Module Constraint := DConstraintMatrixPayload NumFeatures. Include Constraint.
   Module CMatrix := Vector NumConstraints Constraint.
 End DConstraintMatrix.  
-
-Inductive Bit : Type := BI | BO.
-
-Module BitPayload <: PAYLOAD.
-  Definition t := Bit.
-  Definition t0 := BO.
-  Definition eq0 (x : t) :=
-    match x with
-    | BO => true
-    | BI => false
-    end.
-  Lemma eq0P (x : t) : reflect (x = t0) (eq0 x).
-  Proof. by rewrite /t0; case: x; constructor. Qed.
-  Definition u := t.
-  Definition u_of_t (x : t) : u := x.
-  Definition t_of_u (y : u) : t := y.
-  Lemma t_of_u_t (x : t) : t_of_u (u_of_t x) = x.
-  Proof. by []. Qed.
-End BitPayload.
-
-Module BitVectorPayload (B : BOUND) <: PAYLOAD.
-  Module BVec := Vector B BitPayload. Include BVec.
-  Definition t0 : t := BVec.M.empty _.
-  Definition eq0 (v : t) := BVec.M.is_empty v.
-  Lemma eq0P v : reflect (v=t0) (eq0 v).
-  Proof.
-    rewrite /eq0 /BVec.M.is_empty /BVec.M.Raw.is_empty /t0.
-    case: v => x y /=; move: y; case: x => y; constructor => //.     
-    case H: BVec.M.empty => [z w]; inversion H; subst.
-    f_equal; f_equal; apply: proof_irrelevance.
-  Qed.    
-  Definition u := {m : t & {f : BVec.ty & BVec.match_vecs m f}}.
-  Program Definition u_of_t (m : t) : u :=
-    existT _ m _.
-  Next Obligation.
-    set (f := [ffun i : 'I_B.n =>
-               BitPayload.u_of_t (BVec.get (BVec.Ix_of_Ordinal i) m)] : BVec.ty).
-    refine (existT _ f _).
-    by move => i; rewrite /f ffunE BVec.Ix_of_Ordinal_Ix BitPayload.t_of_u_t.
-  Qed.
-  Definition t_of_u (f : u) : t := projT1 f.
-  Lemma t_of_u_t : forall t0 : t, t_of_u (u_of_t t0) = t0.
-  Proof. by []. Qed.
-End BitVectorPayload.
-
-
