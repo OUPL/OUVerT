@@ -158,7 +158,7 @@ Module OrderedProd (A B : MyOrderedType) <: MyOrderedType.
         by apply: pf'. }
     right; case => H3 H4.
     by clear H2; apply: pf.
-  Qed.    
+  Defined.
 
   Lemma eqP : forall x y, x = y <-> eq x y.
   Proof.
@@ -205,15 +205,10 @@ Module MyOrdNatDep (B : BOUND) <: MyOrderedType.
 
   Lemma lt_dec x y : ({x<y} + {x>=y})%nat.
   Proof.
-    case H: (leq (S x) y); first by left.
-    case H2: (y <= x)%nat; first by right.
-    move: (leq_total y x); rewrite H2 /= => H3.
-    rewrite ltnNge in H.    
-    rewrite leqNgt in H2.
-    rewrite leqNgt in H3.
-    rewrite -ltnNge in H.
-    by rewrite H in H2.
-  Qed.
+    destruct (le_lt_dec y x).
+    - by right; apply /leP.
+    - by left; apply /ltP.
+  Defined.
 
   Lemma gt0_pred_lt n : (0 < n -> n.-1 < n)%nat.
   Proof. elim: n => //. Qed.
