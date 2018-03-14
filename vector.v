@@ -20,98 +20,124 @@ Module Type PAYLOAD.
   Parameter t0 : t.   (* the "unit" value of type t *)
   Parameter eq0 : t -> bool.
   Parameter eq0P : forall x, reflect (x = t0) (eq0 x).
-  Parameter u : Type. (* the high-level type *)
-  (* one half of a bijection *)    
-  Parameter u_of_t : t -> u.
-  Parameter t_of_u : u -> t.
-  Parameter t_of_u_t : forall t, t_of_u (u_of_t t) = t.
 End PAYLOAD.  
+
+Class Rep t :=
+  mkRep { u : Type;
+          u_of_t : t -> u;
+          t_of_u : u -> t;
+          t_of_u_t : forall t, t_of_u (u_of_t t) = t }.
 
 Module Type VECTOR.
   Declare Module B : BOUND.
-  Declare Module P : PAYLOAD.  
-  Module Ix := MyOrdNatDepProps B. (* the indices *)
-  Module M := Make Ix.             (* sparse maps *)
-  Module MFacts := Facts M.
-  Module MProps := Properties M.
-  Notation n := B.n.          (* the dimensionality *)
-  Definition t := (M.t P.t).  (* the type of computable vectors *)
+  Declare Module P : PAYLOAD.
 
-  (** [SPARSITY INVARIANT]: 
-      ~~~~~~~~~~~~~~~~~~~~~ 
-      The map contains no key-value pairs (i,p) s.t. p = P.t0. That is, 
-      it only implicitly represents keys that map to the zero of the 
-      payload domain.
-    *)
-
-  Definition nonzero (p : P.t) : bool := negb (P.eq0 p).
-
-  Definition sparse (m : t) := forall i y, M.find i m = Some y -> nonzero y.
-
-  (* operations *)
-  Definition get (i : Ix.t) (m : t) : P.t :=
-    match M.find i m with
-    | None => P.t0
-    | Some p => p
-    end.
-
-  (* update i -> p; maintains [SPARSITY_INVARIANT] *)
-  Definition set (i : Ix.t) (p : P.t) (m : t) : t :=
-    if P.eq0 p then M.remove i m
-    else M.add i p m.
-
-  (* assumes f i P.t0 = P.t0 *)
-  Definition map0 (f : Ix.t -> P.t -> P.t) (m : t) : t :=
-    M.mapi f m.
-
-  (* assumes f i P.t0 t = t *)  
-  Definition fold0 T (f : Ix.t -> P.t -> T -> T) (m : t) (t0 : T) : T :=
-    M.fold f m t0.
-
-  (* a slow fold0 that doesn't assume f i P.t0 t = t *)
-  Definition foldr T (f : Ix.t -> P.t -> T -> T) (m : t) (t0 : T) : T :=
-    List.fold_right (fun ix acc => f ix (get ix m) acc) t0 (enumerate Ix.t).
+  Module Ix := MyOrdNatDepProps B.
   
-  (* does any (i, p) pair satisfy f? if so, which one? *)
-  Fixpoint any_rec (f : Ix.t -> P.t -> bool) (m : t) (l : list Ix.t) : option (Ix.t * P.t) :=
-    match l with
-    | nil => None
-    | i :: l' =>
-      let p := get i m in 
-      if f i p then Some (i, p)
-      else any_rec f m l'
-    end.
+  Parameter t : Type.
+
+  Parameter get : Ix.t -> t -> P.t.
+  Parameter set : Ix.t -> P.t -> t -> t.
+  Parameter map0 : (Ix.t -> P.t -> P.t) -> t -> t.
+  Parameter fold0 : forall T, (Ix.t -> P.t -> T -> T) -> t -> T -> T.
+  Parameter foldr : forall T, (Ix.t -> P.t -> T -> T) -> t -> T -> T.
+  Parameter any : (Ix.t -> P.t -> bool) -> t -> option (Ix.t * P.t).
+  Parameter of_fun : (Ix.t -> P.t) -> t.
+  Parameter mk_sparse : t -> t.
+
+  Parameter sparse : t -> Prop.
+  Parameter mk_sparse_sparse : forall m, sparse (mk_sparse m).
+  Parameter set_sparse : forall m i x, sparse m -> sparse (set i x m).
+  Parameter map0_sparse : forall m f,
+    (forall i x, f i x = P.t0 -> x = P.t0) ->
+    sparse m ->
+    sparse (map0 f m).
+
+  Section REFINEMENT_PROOFS.
+  Context `{rep : Rep P.t}.
+  Definition ty := 'I_B.n -> u.
+  Definition upd i p (f : ty) : ty := fun i' => if i == i' then p else f i'.
+
+  Parameter Ix_of_Ordinal : 'I_B.n -> Ix.t.
+  Parameter Ordinal_of_Ix : Ix.t -> 'I_B.n. 
+  Parameter Ix_of_Ordinal_Ix : forall i, Ix_of_Ordinal (Ordinal_of_Ix i) = i.
+  Parameter Ordinal_of_Ix_Ordinal : forall i, Ordinal_of_Ix (Ix_of_Ordinal i) = i.
   
-  Definition any (f : Ix.t -> P.t -> bool) (m : t) : option (Ix.t * P.t) :=
-    match List.find (fun i => f i (get i m)) (enumerate Ix.t) with
-    | None => None
-    | Some ix => Some (ix, get ix m)
-    end.
+  (* the representation invariant *)
+  Parameter match_vecs : t -> ty -> Prop.
 
-  (* construct a vector from list of ordered pairs l *)
-  Definition of_list_INTERNAL (l : list (Ix.t * P.t)) : t :=
-    MProps.of_list l.
+  Section refinement_proofs.
+    Variables (v : t) (f : ty).
 
-  (* same as of_list_INTERNAL but filters out pairs (i,p) 
-     s.t. p = P.t0, thus maintaining the [SPARSITY_INVARIANT] *)
-  Definition of_list (l : list (Ix.t * P.t)) : t :=
-    of_list_INTERNAL (List.filter (fun p : (Ix.t*P.t) => nonzero p.2) l).
+    Parameter match_vecs_get :
+      match_vecs v f ->
+      forall i, get i v = t_of_u (f (Ordinal_of_Ix i)).
+    Parameter match_vecs_set :
+      match_vecs v f ->      
+      forall i p, match_vecs (set i p v) (upd (Ordinal_of_Ix i) (u_of_t p) f).
+    Parameter match_vecs_map0 :
+      match_vecs v f ->            
+      forall 
+        (g : Ix.t -> P.t -> P.t)
+        (pf_g : forall i, g i P.t0 = P.t0),
+      let g' := fun i u => u_of_t (g (Ix_of_Ordinal i) (t_of_u u)) in
+      match_vecs (map0 g v) (fun i : 'I_B.n => g' i (f i)).
+    Parameter match_vecs_foldr :
+      match_vecs v f ->            
+      forall 
+        T (tx : T) (g : Ix.t -> P.t -> T -> T)
+        (pf_g : forall i t, g i P.t0 t = t),
+      let g' := fun i t => g (Ix_of_Ordinal i) (t_of_u (f i)) t in
+      foldr g v tx =
+      List.fold_right g' tx [seq (Ordinal_of_Ix ix) | ix <- enumerate Ix.t].
 
-  Definition to_list (m : t) : list (Ix.t * P.t) :=
-    M.elements m.
-  
-  (* construct a vector from function f *)
-  Definition of_fun (f : Ix.t -> P.t) : t :=
-    of_list (List.map (fun ix => (ix, f ix)) (enumerate Ix.t)).
+    (* foldr and fold0 are equivalent assuming the composition operator is 
+       symmetric, associative, and preserves zeros *)
+    Parameter fold0_foldr :
+      forall 
+        (Hsparse : sparse v)
+        (g : P.t -> P.t -> P.t)
+        (pf_g : forall t, g P.t0 t = t)           
+        (gcom : forall t1 t2, g t1 t2 = g t2 t1)
+        (gassoc : forall t1 t2 t3, g t1 (g t2 t3) = g (g t1 t2) t3),
+        fold0 (fun _ => g) v P.t0 = foldr (fun _ => g) v P.t0.
+    Parameter match_vecs_fold0 :
+      match_vecs v f ->            
+      forall 
+        (Hsparse : sparse v)
+        (g : P.t -> P.t -> P.t)
+        (pf_g : forall t, g P.t0 t = t)           
+        (gcom : forall t1 t2, g t1 t2 = g t2 t1)
+        (gassoc : forall t1 t2 t3, g t1 (g t2 t3) = g (g t1 t2) t3),
+      let g' := fun i t => g (t_of_u (f i)) t in
+      fold0 (fun _ => g) v P.t0 =
+      List.fold_right g' P.t0 (enum 'I_B.n).
+    
+    (* a single refinement lem for any would be better here... *)
+    Parameter match_vecs_any_some :
+      match_vecs v f ->            
+      forall g ix p,
+        any g v = Some (ix, p) ->
+        [/\ g ix p & t_of_u (f (Ordinal_of_Ix ix)) = p].
+    Parameter match_vecs_any_none :
+      match_vecs v f ->            
+      forall g,
+        any g v = None ->
+       forall i, g (Ix_of_Ordinal i) (t_of_u (f i)) = false.
+    Parameter match_vecs_of_fun :
+      forall g : Ix.t -> P.t,
+        let: g' := fun i : 'I_B.n => u_of_t (g (Ix_of_Ordinal i)) in 
+        match_vecs (of_fun g) g'.
 
-  (* a slow map that doesn't assume anything *)
-  Definition map_s (f : Ix.t -> P.t -> P.t) (m : t) : t :=
-    of_fun (fun ix => f ix (get ix m)).
+    Parameter match_vecs_mk_sparse :
+      match_vecs (mk_sparse v) (fun i => u_of_t (get (Ix_of_Ordinal i) v)).
+  End refinement_proofs.
+  End REFINEMENT_PROOFS.
 End VECTOR.
-
+  
 Module Vector (B : BOUND) (P : PAYLOAD) <: VECTOR.
-  Module B := B. Export B.
-  Module P := P. Export P.
+  Module B := B. 
+  Module P := P. 
   Module Ix := MyOrdNatDepProps B. (* the indices *) 
   Module M := Make Ix.             (* sparse maps *) 
   Module MFacts := Facts M. 
@@ -187,13 +213,9 @@ Module Vector (B : BOUND) (P : PAYLOAD) <: VECTOR.
     of_list (List.map (fun ix => (ix, f ix)) (enumerate Ix.t)).
 
   (* a slow map that doesn't assume anything *)
-  Definition map_s (f : Ix.t -> P.t -> P.t) (m : t) : t :=
+  Definition maps (f : Ix.t -> P.t -> P.t) (m : t) : t :=
     of_fun (fun ix => f ix (get ix m)).
-End Vector.
 
-Module VectorProofs (Vec : VECTOR).
-  Import Vec.
-  
   (* SPARSITY PROOFS *)
   Definition mk_sparse (m : t) : t := of_fun (fun ix => get ix m).
 
@@ -245,20 +267,12 @@ Module VectorProofs (Vec : VECTOR).
     by move => H2 H3; apply/negP; move: H2; case: (P.eq0P (f i a)).
   Qed.
 
-  Lemma add_eq_val i a m v :
-    N.eq (Ix.val a) (Ix.val i) ->
-    M.find (elt:=P.t) i (M.add a v m) = Some v.
-  Proof.
-    rewrite MProps.F.add_o. move => H0.
-    destruct (M.E.eq_dec) => //.
-  Qed.
-
-  (* REFINEMENT PROOFS *)
-
-  Definition ty := {ffun 'I_n -> P.u}. (* high-level vectors *)
+  Section REFINEMENT_PROOFS.
+  Context `{rep : Rep P.t}.
+  Definition ty := 'I_n -> u. (* high-level vectors *)
 
   Definition upd i p (f : ty) : ty :=
-    [ffun i' => if i == i' then p else f i'].
+    fun i' => if i == i' then p else f i'.
   
   Lemma Ix_of_Ordinal_lem x :
     (x < n)%N ->
@@ -309,25 +323,25 @@ Module VectorProofs (Vec : VECTOR).
   
   (* the representation invariant *)
   Definition match_vecs (v : t) (f : ty) : Prop :=
-    forall i : Ix.t, get i v = P.t_of_u (f (Ordinal_of_Ix i)).
+    forall i : Ix.t, get i v = t_of_u (f (Ordinal_of_Ix i)).
 
-  Section refinement_lemmas.
+  Section refinement_proofs.
     Variables (v : t) (f : ty) (pf : match_vecs v f).
 
     Lemma match_vecs_get i :
-      get i v = P.t_of_u (f (Ordinal_of_Ix i)).
+      get i v = t_of_u (f (Ordinal_of_Ix i)).
     Proof. by apply: pf. Qed.
     
     Lemma match_vecs_set i p :
-      match_vecs (set i p v) (upd (Ordinal_of_Ix i) (P.u_of_t p) f).
+      match_vecs (set i p v) (upd (Ordinal_of_Ix i) (u_of_t p) f).
     Proof.
-      move => j; rewrite /upd ffunE /set /get.
+      move => j; rewrite /upd /set /get.
       case Heq: (P.eq0 p). (*P.t0 = p*)
       { move: (P.eq0P _ Heq) => <-.
         case: (Ix.eq_dec i j) => [px|px].
         { move: px; rewrite -Ix.eqP => H; rewrite H MProps.F.remove_eq_o; last first.
         { apply: N.eq_refl. }
-        by subst i; rewrite eq_refl P.t_of_u_t. }
+        by subst i; rewrite eq_refl t_of_u_t. }
         have ->: (Ordinal_of_Ix i == Ordinal_of_Ix j = false).
         { case E: (Ordinal_of_Ix i == Ordinal_of_Ix j) => //.
           move: (eqP E) => F; elimtype False; apply: px.
@@ -341,7 +355,7 @@ Module VectorProofs (Vec : VECTOR).
       case: (Ix.eq_dec i j) => [px|px]. (*P.t0 <> p*)
       { move: px; rewrite -Ix.eqP => H; rewrite H MProps.F.add_eq_o; last first.
         { apply: N.eq_refl. }
-        by subst i; rewrite eq_refl P.t_of_u_t. }
+        by subst i; rewrite eq_refl t_of_u_t. }
       have ->: (Ordinal_of_Ix i == Ordinal_of_Ix j = false).
       { case E: (Ordinal_of_Ix i == Ordinal_of_Ix j) => //.
         move: (eqP E) => F; elimtype False; apply: px.
@@ -357,12 +371,12 @@ Module VectorProofs (Vec : VECTOR).
     Lemma match_vecs_map0
           (g : Ix.t -> P.t -> P.t)
           (pf_g : forall i, g i P.t0 = P.t0) :
-      let g' := fun i u => P.u_of_t (g (Ix_of_Ordinal i) (P.t_of_u u)) in
-      match_vecs (map0 g v) [ffun i : 'I_n => g' i (f i)].
+      let g' := fun i u => u_of_t (g (Ix_of_Ordinal i) (t_of_u u)) in
+      match_vecs (map0 g v) (fun i : 'I_n => g' i (f i)).
     Proof.
-      rewrite /map0 => j; rewrite ffunE /get MProps.F.mapi_o.
+      rewrite /map0 => j; rewrite /get MProps.F.mapi_o.
       case E: (M.find _ _) => /= [d|].
-      { move: (pf j) => <-; f_equal; f_equal; rewrite /get E P.t_of_u_t.
+      { move: (pf j) => <-; f_equal; f_equal; rewrite /get E t_of_u_t.
         have ->: j = {| Ix.val := N.of_nat (N.to_nat (Ix.val j));
                         Ix.pf := Ix_of_Ordinal_lem (x:=N.to_nat (Ix.val j)) (Ix.pf j)|}.
         { clear E; case: j => j pfj /=; move: (Ix_of_Ordinal_lem _).
@@ -370,7 +384,7 @@ Module VectorProofs (Vec : VECTOR).
         simpl; f_equal; move: (Ix_of_Ordinal_lem _); rewrite N2Nat.id => pfj.
         move: (Ix_of_Ordinal_lem _); move: pfj; rewrite N2Nat.id => x y.
         f_equal; apply: proof_irrelevance. }
-      { move: (pf j); rewrite /get E => H; rewrite P.t_of_u_t -H pf_g //. }
+      { move: (pf j); rewrite /get E => H; rewrite t_of_u_t -H pf_g //. }
       case => ? pf1; case => ? pf2 e /=; rewrite /N.eq => Heq; move: pf1 pf2.
       rewrite Heq => ??; f_equal; f_equal; apply: proof_irrelevance.      
     Qed.
@@ -378,7 +392,7 @@ Module VectorProofs (Vec : VECTOR).
     Lemma match_vecs_foldr
           T (tx : T) (g : Ix.t -> P.t -> T -> T)
           (pf_g : forall i t, g i P.t0 t = t) :
-      let g' := fun i t => g (Ix_of_Ordinal i) (P.t_of_u (f i)) t in
+      let g' := fun i t => g (Ix_of_Ordinal i) (t_of_u (f i)) t in
       foldr g v tx =
       List.fold_right g' tx [seq (Ordinal_of_Ix ix) | ix <- enumerate Ix.t].
     Proof.
@@ -451,8 +465,8 @@ Module VectorProofs (Vec : VECTOR).
           (gassoc : forall t1 t2 t3, g t1 (g t2 t3) = g (g t1 t2) t3)
           l1 l2 :
       Permutation l1 l2 ->
-      let g' := fun i t => g (P.t_of_u (f i)) t in      
-      List.fold_right (fun i : ordinal_finType n => [eta g (P.t_of_u (f i))]) P.t0 l1 =
+      let g' := fun i t => g (t_of_u (f i)) t in      
+      List.fold_right (fun i : ordinal_finType n => [eta g (t_of_u (f i))]) P.t0 l1 =
       List.fold_right g' P.t0 l2.
     Proof.
       elim => //; first by move => x l l' H /= ->.
@@ -658,7 +672,7 @@ Module VectorProofs (Vec : VECTOR).
           (pf_g : forall t, g P.t0 t = t)           
           (gcom : forall t1 t2, g t1 t2 = g t2 t1)
           (gassoc : forall t1 t2 t3, g t1 (g t2 t3) = g (g t1 t2) t3) :
-      let g' := fun i t => g (P.t_of_u (f i)) t in
+      let g' := fun i t => g (t_of_u (f i)) t in
       fold0 (fun _ => g) v P.t0 =
       List.fold_right g' P.t0 [seq (Ordinal_of_Ix ix) | ix <- enumerate Ix.t].
     Proof. by rewrite fold0_foldr //; apply: match_vecs_foldr. Qed.
@@ -669,7 +683,7 @@ Module VectorProofs (Vec : VECTOR).
           (pf_g : forall t, g P.t0 t = t)           
           (gcom : forall t1 t2, g t1 t2 = g t2 t1)
           (gassoc : forall t1 t2 t3, g t1 (g t2 t3) = g (g t1 t2) t3) :
-      let g' := fun i t => g (P.t_of_u (f i)) t in
+      let g' := fun i t => g (t_of_u (f i)) t in
       fold0 (fun _ => g) v P.t0 =
       List.fold_right g' P.t0 (enum 'I_n).
     Proof.
@@ -686,7 +700,7 @@ Module VectorProofs (Vec : VECTOR).
 
     Lemma match_vecs_any_some g ix p :
       any g v = Some (ix, p) ->
-      [/\ g ix p & P.t_of_u (f (Ordinal_of_Ix ix)) = p].
+      [/\ g ix p & t_of_u (f (Ordinal_of_Ix ix)) = p].
     Proof.
       rewrite /any; case H: (List.find _ _) => [ix'|//].
       case => H1 H2; split.
@@ -696,7 +710,7 @@ Module VectorProofs (Vec : VECTOR).
 
     Lemma match_vecs_any_none g :
       any g v = None ->
-      forall i, g (Ix_of_Ordinal i) (P.t_of_u (f i)) = false.
+      forall i, g (Ix_of_Ordinal i) (t_of_u (f i)) = false.
     Proof.
       rewrite /any; case H: (List.find _ _) => [//|] _ i.
       have H2: In (Ix_of_Ordinal i) (enumerate Ix.t).
@@ -709,17 +723,17 @@ Module VectorProofs (Vec : VECTOR).
       NoDupA (M.eq_key (elt:=P.t)) l ->      
       match_vecs
         (of_list_INTERNAL l)
-        [ffun i =>
-         P.u_of_t
+        (fun i =>
+         u_of_t
            (match findA (MProps.F.eqb (Ix_of_Ordinal i)) l with
             | None => P.t0
             | Some p => p
-            end)].
+            end)).
     Proof.
       clear v f pf.
-      elim: l; first by simpl => H ix; rewrite ffunE /get MProps.F.empty_o P.t_of_u_t.
-      case => ix p l IH; inversion 1; clear H; subst => ix'; rewrite ffunE.
-      move: (IH H3 ix'); rewrite /get ffunE 2!P.t_of_u_t Ix_of_Ordinal_Ix; clear IH.
+      elim: l; first by simpl => H ix; rewrite /get MProps.F.empty_o t_of_u_t.
+      case => ix p l IH; inversion 1; clear H; subst => ix'.
+      move: (IH H3 ix'); rewrite /get 2!t_of_u_t Ix_of_Ordinal_Ix; clear IH.
       simpl; rewrite /MProps.uncurry /=; case: (Ix.eq_dec ix ix') => [pfx|pfx].
       { move: pfx; rewrite -Ix.eqP => <-.
         rewrite MProps.F.add_eq_o => //.
@@ -773,12 +787,12 @@ Module VectorProofs (Vec : VECTOR).
       NoDupA (M.eq_key (elt:=P.t)) l ->      
       match_vecs
         (of_list l)
-        [ffun i =>
-         P.u_of_t
+        (fun i =>
+         u_of_t
            (match findA (MProps.F.eqb (Ix_of_Ordinal i)) l with
             | None => P.t0
             | Some p => p
-            end)].
+            end)).
     Proof.
       move => H; rewrite /match_vecs => i; rewrite of_list_of_list_INTERNAL => //.
       by apply: match_vecs_of_list_INTERNAL.
@@ -788,7 +802,7 @@ Module VectorProofs (Vec : VECTOR).
       [/\ NoDupA (M.eq_key (elt:=P.t)) (to_list v)
         & forall p,
           InA (M.eq_key_elt (elt:=P.t)) p (to_list v) ->
-          p.2 = P.t_of_u (f (Ordinal_of_Ix p.1))].
+          p.2 = t_of_u (f (Ordinal_of_Ix p.1))].
     Proof.
       split; first by apply: M.elements_3w.
       case => i x; rewrite /to_list /= => H. 
@@ -797,7 +811,7 @@ Module VectorProofs (Vec : VECTOR).
     Qed.
     
     Lemma match_vecs_of_fun (g : Ix.t -> P.t) :
-      let: g' := [ffun i : 'I_n => P.u_of_t (g (Ix_of_Ordinal i))] in 
+      let: g' := fun i : 'I_n => u_of_t (g (Ix_of_Ordinal i)) in 
       match_vecs (of_fun g) g'.
     Proof.
       rewrite /of_fun; case: (Ix.enum_ok) => H Htot ix.
@@ -813,7 +827,7 @@ Module VectorProofs (Vec : VECTOR).
             apply: proof_irrelevance. }
           by apply: InA_cons_tl; apply: IH. }
         by apply: IH. }
-      move: (match_vecs_of_list H2 ix) ->; rewrite 2!ffunE 2!P.t_of_u_t.
+      move: (match_vecs_of_list H2 ix) ->; rewrite 2!t_of_u_t.
       rewrite /MProps.F.eqb Ix_of_Ordinal_Ix.
       move: (Htot ix) => H3.
       have H5:
@@ -831,76 +845,18 @@ Module VectorProofs (Vec : VECTOR).
       by case => H4 _; move: (H4 H5).
     Qed.
 
-    Lemma map_s_correct m g i : get i (map_s g m) = g i (get i m).
+    Lemma maps_correct m g i : get i (maps g m) = g i (get i m).
     Proof.
-      rewrite /map_s; move: (match_vecs_of_fun (fun ix : Ix.t => g ix (get ix m))).
-      by move/(_ i) ->; rewrite ffunE P.t_of_u_t Ix_of_Ordinal_Ix.
+      rewrite /maps; move: (match_vecs_of_fun (fun ix : Ix.t => g ix (get ix m))).
+      by move/(_ i) ->; rewrite t_of_u_t Ix_of_Ordinal_Ix.
     Qed.      
 
     Lemma match_vecs_mk_sparse :
-      match_vecs (mk_sparse v) [ffun i => P.u_of_t (get (Ix_of_Ordinal i) v)].
+      match_vecs (mk_sparse v) (fun i => u_of_t (get (Ix_of_Ordinal i) v)).
     Proof. apply: (match_vecs_of_fun (fun ix => get ix v)). Qed.
-  End refinement_lemmas.
-End VectorProofs.  
-
-(* two-dimensional vectors *)
-
-Module MatrixPayload (B : BOUND) (P : PAYLOAD) <: PAYLOAD.
-  Module Vec := Vector B P.
-  Definition t := Vec.t.                    
-  Definition t0 : t := Vec.M.empty _.
-  Definition eq0 (d : t) := Vec.M.is_empty d.
-  Lemma eq0P d : reflect (d=t0) (eq0 d).
-  Proof.
-    rewrite /eq0 /Vec.M.is_empty /Vec.M.Raw.is_empty /t0.
-    case: d => x y /=; move: y; case: x => y; constructor => //.
-    case H: Vec.M.empty => [z w]; inversion H; subst.
-    f_equal; apply: proof_irrelevance.
-  Qed.
-  Module VecProofs := VectorProofs Vec. Import VecProofs.
-  Definition u := {m : t & {f : VecProofs.ty & VecProofs.match_vecs m f}}.
-  Program Definition u_of_t (m : t) : u :=
-    existT _ m _.
-  Next Obligation.
-    set (f := [ffun i : 'I_B.n =>
-               P.u_of_t (Vec.get (VecProofs.Ix_of_Ordinal i) m)] : VecProofs.ty).
-    refine (existT _ f _).
-    by move => i; rewrite /f ffunE VecProofs.Ix_of_Ordinal_Ix P.t_of_u_t.
-  Qed.
-  Definition t_of_u (f : u) : t := projT1 f.
-  Lemma t_of_u_t : forall t0 : t, t_of_u (u_of_t t0) = t0.
-  Proof. by []. Qed.
-End MatrixPayload.
-
-Module ConstraintMatrixPayload (B : BOUND) (P : PAYLOAD) <: PAYLOAD.
-  Module Vec := Vector B P.
-  Definition label := bool.
-  Definition t : Type := (Vec.t * label).
-  Definition t0 : t := (Vec.M.empty _, false).
-  Definition eq0 (d : t) := Vec.M.is_empty (fst d) && negb (snd d).
-  Lemma eq0P d : reflect (d=t0) (eq0 d).
-  Proof.
-    rewrite /eq0 /Vec.M.is_empty /Vec.M.Raw.is_empty /t0.
-    case: d => d; case.
-    { case: d => x y /=; move: y; case: x => y; constructor => //. }
-    case: d => x y /=; move: y; case: x => y; constructor => //.     
-    case H: Vec.M.empty => [z w]; inversion H; subst.
-    f_equal; f_equal; apply: proof_irrelevance.
-  Qed.
-  Module VecProofs := VectorProofs Vec. Import VecProofs.  
-  Definition u := {m : t & {f : VecProofs.ty & VecProofs.match_vecs (fst m) f}}.
-  Program Definition u_of_t (m : t) : u :=
-    existT _ m _.
-  Next Obligation.
-    set (f := [ffun i : 'I_B.n =>
-               P.u_of_t (Vec.get (VecProofs.Ix_of_Ordinal i) m.1)] : VecProofs.ty).
-    refine (existT _ f _).
-    by move => i; rewrite /f ffunE VecProofs.Ix_of_Ordinal_Ix P.t_of_u_t.
-  Qed.
-  Definition t_of_u (f : u) : t := projT1 f.
-  Lemma t_of_u_t : forall t0 : t, t_of_u (u_of_t t0) = t0.
-  Proof. by []. Qed.
-End ConstraintMatrixPayload.
+  End refinement_proofs.
+End REFINEMENT_PROOFS.  
+End Vector.  
 
 (* one-dimensional D-vectors *)
 
@@ -916,6 +872,10 @@ Module DPayload <: PAYLOAD.
       f_equal; apply: proof_irrelevance. }
     by inversion 1; case: dx H H0 a => d pf; case => H /= _; subst d.
   Qed.
+End DPayload.
+
+Module DPayloadRep.
+  Import DPayload.
   Definition u := dyadic_rat.
   Definition u_of_t (dx : t) := D_to_dyadic_rat dx.(DRed.d).
   Definition t_of_u (r : dyadic_rat) : t :=
@@ -942,27 +902,27 @@ Module DPayload <: PAYLOAD.
     generalize pf.
     revert H2; clear pf; intros -> pf e.
     f_equal; apply proof_irrelevance.
-  Qed.    
-End DPayload.  
+  Qed.
+  Instance DPayloadRep : Rep t := mkRep t_of_u_t.
+End DPayloadRep.  
 
 Definition Dabs (d : DRed.t) : DRed.t :=
   (if Dlt_bool d D0 then -d else d)%DRed.
 
 Module DVector (B : BOUND).
-  Module Vec := Vector B DPayload.
-  Module VecProofs := VectorProofs Vec. Import VecProofs.
+  Module Vec := Vector B DPayload. Import Vec.
   
   Definition sum1 (v : Vec.t) : DRed.t :=
     Vec.fold0 (fun ix d acc => (d + acc)%DRed) v 0%DRed.
-  
+
   Lemma sum1_sum v f :
-    Vec.sparse v ->
-    VecProofs.match_vecs v f ->
+    sparse v ->
+    match_vecs v f ->
     Qeq (D_to_Q (sum1 v))
         (rat_to_Q (\sum_(i : 'I_B.n) projT1 (f i))).
   Proof.
     move => Hsparse H; rewrite /sum1.
-    rewrite (VecProofs.match_vecs_fold0 (f := f)) => //.
+    rewrite (match_vecs_fold0 (f := f)) => //.
     { rewrite -filter_index_enum; elim: (index_enum _).
       { rewrite big_nil //. }
       move => a l; rewrite big_cons /= => IH.
@@ -974,47 +934,13 @@ Module DVector (B : BOUND).
     { move => t1 t2; apply: DRed.addC. }
     move => t1 t2 t3; apply: DRed.addA.
   Qed.
-  
+
   Definition dot_product (v1 v2 : Vec.t) : DRed.t :=
     sum1 (Vec.map0 (fun ix d1 => (d1 * Vec.get ix v2)%DRed) v1).
   
   Definition linf_norm (v : Vec.t) : DRed.t :=
-    Vec.fold0
+    fold0
       (fun _ d (acc : DRed.t) => if Dlt_bool acc (Dabs d) then Dabs d else acc)
       v
       0%DRed.
 End DVector.
-
-Module DConstraintMatrixPayload (B : BOUND) <: PAYLOAD.
-  Module DVec := DVector B. Include DVec.
-  Definition label := bool.
-  Definition t : Type := (Vec.t * label).
-  Definition t0 : t := (Vec.M.empty _, false).
-  Definition eq0 (d : t) := Vec.M.is_empty (fst d) && negb (snd d).
-  Lemma eq0P d : reflect (d=t0) (eq0 d).
-  Proof.
-    rewrite /eq0 /Vec.M.is_empty /Vec.M.Raw.is_empty /t0.
-    case: d => d; case.
-    { case: d => x y /=; move: y; case: x => y; constructor => //. }
-    case: d => x y /=; move: y; case: x => y; constructor => //.     
-    case H: Vec.M.empty => [z w]; inversion H; subst.
-    f_equal; f_equal; apply: proof_irrelevance.
-  Qed.
-  Definition u := {m : t & {f : VecProofs.ty & VecProofs.match_vecs (fst m) f}}.
-  Program Definition u_of_t (m : t) : u :=
-    existT _ m _.
-  Next Obligation.
-    set (f := [ffun i : 'I_B.n =>
-               DPayload.u_of_t (Vec.get (VecProofs.Ix_of_Ordinal i) m.1)] : VecProofs.ty).
-    refine (existT _ f _).
-    by move => i; rewrite /f ffunE VecProofs.Ix_of_Ordinal_Ix DPayload.t_of_u_t.
-  Qed.
-  Definition t_of_u (f : u) : t := projT1 f.
-  Lemma t_of_u_t : forall t0 : t, t_of_u (u_of_t t0) = t0.
-  Proof. by []. Qed.
-End DConstraintMatrixPayload.
-
-Module DConstraintMatrix (NumFeatures : BOUND) (NumConstraints : BOUND).
-  Module Constraint := DConstraintMatrixPayload NumFeatures. Include Constraint.
-  Module CMatrix := Vector NumConstraints Constraint.
-End DConstraintMatrix.  
