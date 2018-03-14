@@ -117,7 +117,15 @@ Proof.
   move => x.
   field.
 Qed.
-  
+
+Lemma big_sum_mult_left T (cs : seq T) c f :
+  c * big_sum cs f = big_sum cs (fun x => c * f x).
+Proof.
+  elim: cs => //=.
+  { by rewrite Rmult_0_r. }
+  move => a l /=; rewrite Rmult_plus_distr_l => -> //.
+Qed.  
+
 Fixpoint big_product (T : Type) (cs : seq T) (f : T -> R) : R :=
   if cs is [:: c & cs'] then (f c * big_product cs' f)%R
   else 1%R.
@@ -200,6 +208,11 @@ Proof.
   { by apply: H1; rewrite in_cons; apply/orP; left. }
     by apply: IH=> c H; apply: H1; rewrite in_cons; apply/orP; right.
 Qed.    
+
+Lemma big_product0 (T : eqType) (cs : seq T) c :
+  c \in cs -> 
+  big_product cs (fun _ => 0) = 0.
+Proof. by elim: cs c => // a l IH c /= _; rewrite Rmult_0_l. Qed.
 
 Lemma rat_to_R_prod T (cs : seq T) (f : T -> rat) :
   rat_to_R (\prod_(c <- cs) (f c)) =  

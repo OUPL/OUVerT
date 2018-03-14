@@ -7,7 +7,7 @@ From mathcomp Require Import all_algebra.
 
 Import GRing.Theory Num.Def Num.Theory.
 
-Require Import OUVerT.bigops.
+Require Import bigops numerics.
 
 Local Open Scope ring_scope.
 
@@ -350,9 +350,11 @@ Section markov.
   Qed.     
 End markov.
 
+(* R-valued stuff after this point: *)
+Require Import QArith Reals Rpower Ranalysis Fourier.
+
 (** An R-valued analogue of the Markov lemma proved above *)
 Section markovR.
-  Require Import QArith Reals Rpower Ranalysis Fourier.
   Variable T : finType.
   Variable a : R.
   Variable a_gt0 : 0 < a.
@@ -366,6 +368,13 @@ Section markovR.
   Definition expValR (d f : T -> R) := big_sum (enum T) (fun x => d x * f x).
   Definition PREDR (x : T) : bool := Rle_lt_dec a (f x).
 
+  Lemma expValR_ge0 : 0 <= expValR d f.
+  Proof.
+    rewrite /expValR; elim: (enum T) => /=; try apply: Rle_refl.
+    move => x l H; apply: Rplus_le_le_0_compat => //.
+    by apply: Rmult_le_pos.
+  Qed.      
+  
   Lemma expValR_split (p : pred T) :
     expValR d f =
     big_sum (filter p (enum T)) (fun x => d x * f x) +
@@ -400,6 +409,138 @@ Section markovR.
     rewrite -[big_sum _ _]Rplus_0_r Rplus_assoc; apply: Rplus_le_compat_l.
     rewrite Rplus_0_l; apply: big_sum_ge0 => x; rewrite -[0](Rmult_0_l 0).
     apply: Rmult_le_compat => //; apply: Rle_refl.
-  Qed.    
+  Qed.
 End markovR.
-    
+
+(** Relative entropy RE(p||q) 
+    NOTE: This definition is nonstandard in that we use natural rather 
+    than binary log. *)
+Section relative_entropy.
+  Variable T : finType.
+  Variables p q : T -> R.
+  Variable p_dist : big_sum (enum T) p = 1.
+  Variable p_nonneg : forall x, 0 <= p x.
+  Variable q_dist : big_sum (enum T) q = 1.
+  Variable q_nonneg : forall x, 0 <= q x.
+  Definition RE := big_sum (enum T) (fun x => p x * ln (p x / q x)).
+End relative_entropy.
+
+Section markovR_exp.
+  Variable T : finType.
+  Variable a : R.
+  Variable a_gt0 : 0 < a.
+  Variable f : T -> R.
+  Variable f_nonneg : forall x, 0 <= f x.
+  Variable d : T -> R.
+  Variable d_dist : big_sum (enum T) d = 1.
+  Variable d_nonneg : forall x, 0 <= d x.
+  
+  Lemma markovR_exp :
+    probOfR d (fun x => Rle_lt_dec (exp a) (exp (f x))) <=
+    exp (- a) * expValR d (fun x => exp (f x)).
+  Proof.
+    rewrite exp_Ropp Rmult_comm; apply: markovR => //; first by apply: exp_pos_pos.
+    rewrite /Rle => x; case: (f_nonneg x) => H.
+    { by left; apply: exp_pos_pos. }
+    rewrite -H; left; rewrite exp_0; apply: Rlt_0_1.
+  Qed.    
+End markovR_exp.
+
+Section chernoff_lemmas.
+  Variable T : finType.
+  Variables d : T -> R.
+  Variable d_dist : big_sum (enum T) d = 1.
+  Variable d_nonneg : forall x, 0 <= d x.
+  Variable m : nat.
+  Variable m_gt0 : (0 < m)%nat.
+  Variable f : 'I_m -> T -> R.
+  Variable f_range : forall i x, 0 <= f i x <= 1. 
+  Variable f_identically_distributed :
+    forall i j : 'I_m, expValR d (f i) = expValR d (f j).
+  Variable f_independent :
+    expValR d (fun x => big_product (enum 'I_m) (fun i => f i x)) =
+    big_product (enum 'I_m) (fun i => expValR d (f i)).
+
+  Definition mR := rat_to_R (m%:R).
+  Lemma mR_gt0 : (0 < mR)%R.
+  Proof.
+    rewrite /mR -rat_to_R0; apply: rat_to_R_lt; rewrite gt_rat0 numq_gt0.
+    by move: (ltr0n rat_numDomainType m) ->.
+  Qed.
+  Lemma mR_neq0 : (mR <> 0)%R.
+  Proof. by move: mR_gt0 => H H2; rewrite H2 in H; move: (Rlt_asym _ _ H). Qed.
+  
+  Definition i0 : 'I_m := Ordinal m_gt0.
+  Definition p := expValR d (f i0).
+  Definition phat := fun x => (/mR) * big_sum (enum 'I_m) (fun i => f i x).
+  Lemma phat_ge0 x : 0 <= phat x.
+  Proof.
+    apply: Rmult_le_pos.
+    { rewrite -[/mR]Rmult_1_l; apply: Rle_mult_inv_pos; first by apply: Rle_zero_1.
+      apply: mR_gt0. }
+    by apply: big_sum_ge0 => i; case: (f_range i x).
+  Qed.
+
+  Lemma expVal_independence g :
+    expValR d (fun x => big_product (enum 'I_m) (fun i => g (f i x))) =
+    big_product (enum 'I_m) (fun i => expValR d (fun x => g (f i x))).
+  Proof.
+  Abort.  
+
+  Variable eps : R.
+  Variable eps_gt0 : 0 < eps.
+  Variable lambda : R.
+  Variable lambda_ge0 : 0 < lambda.
+
+  Definition q := p + eps.
+
+  Lemma probOfR_phat_q_exp g h c (Hlt : 0 < c) :
+    probOfR d (fun x => Rle_lt_dec (g x) (h x)) =
+    probOfR d (fun x => Rle_lt_dec (exp (c * g x)) (exp (c * h x))).
+  Proof.
+    apply: big_sum_ext => //; apply/eq_filter => x.
+    move: (exp_increasing (c * g x) (c * h x)) => H.
+    case: (Rle_lt_dec (g x) (h x)).
+    { move => H2; case: (Rle_lt_dec (exp (c * g x)) (exp (c * h x))) => // H3.
+      { case: H2.
+        { move => H4; move: (H (Rfourier_lt _ _ _ H4 Hlt)) => H5.
+          by move: (Rlt_asym _ _ H5). }
+        move => H4; elimtype False; rewrite ->H4 in H3; clear H4.
+        by move: (Rlt_asym _ _ H3). }}
+    move => H2; case: (Rle_lt_dec (exp (c * g x)) (exp (c * h x))) => // H3.
+    move: (exp_increasing _ _ (Rfourier_lt _ _ _ H2 Hlt)) => H4; case: H3.
+    { by move => H5; move: (Rlt_asym _ _ H4). }
+    by move => H5; elimtype False; rewrite H5 in H4; move: (Rlt_asym _ _ H4).
+  Qed.    
+  
+  Lemma probOfR_phat_q :
+    probOfR d (fun x => Rle_lt_dec q (phat x)) <=
+    exp (-lambda * mR * q) *
+    expValR d (fun x => big_product (enum 'I_m) (fun i => exp (lambda * f i x))).
+  Proof.
+    have H: 0 < lambda * mR.
+    { apply: Rmult_lt_0_compat => //; apply: mR_gt0. }
+    rewrite (probOfR_phat_q_exp _ _ H); apply: Rle_trans; [apply markovR_exp => //|].
+    { apply: Rmult_lt_0_compat => //.
+      rewrite /q/p; rewrite -(Rplus_0_r 0); apply: Rplus_le_lt_compat => //.
+      apply: expValR_ge0 => //.
+      by move => x; case: (f_range i0 x). }
+    { move => x; rewrite -(Rmult_0_r 0); apply: Rmult_le_compat; try apply: Rle_refl.
+      { by left. }
+      apply: phat_ge0. }
+    have ->: -(lambda * mR * q) = -lambda * mR * q.
+    { by rewrite 2!Ropp_mult_distr_l. }
+    rewrite /phat; apply Rmult_le_compat_l.
+    { left; apply: exp_pos. }
+    rewrite /expValR; apply: big_sum_le => c H2; apply: Rmult_le_compat_l.
+    { apply: d_nonneg. }
+    have ->:
+      lambda * mR * (/ mR * big_sum (enum 'I_m) (f^~ c))
+    = lambda * big_sum (enum 'I_m) (f^~ c).
+    { rewrite Rmult_assoc -[mR * _]Rmult_assoc Rinv_r; last first.
+      { apply: mR_neq0. }
+      rewrite Rmult_1_l //. }
+    rewrite big_sum_mult_left -big_product_exp_sum; apply: Rle_refl.
+  Qed.
+
+End chernoff_lemmas.
