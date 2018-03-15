@@ -273,11 +273,6 @@ Proof.
     move => ->; rewrite exp_ln; fourier.
 Qed.
 
-Lemma exp_upper_01 x c :
-  0 <= x <= 1 ->
-  exp (c * x) <= 1 - x + x * exp c.
-Proof. Admitted. (*TODO: Sam? :-)*)
-
 Lemma exp_mult x y : exp (x * INR y) = exp x ^ y.
 Proof.
   apply: ln_inv; try apply: exp_pos.
@@ -290,4 +285,29 @@ Proof.
     by move => n; rewrite ln_exp // Rmult_plus_distr_l Rmult_1_r Rplus_comm. }
   apply: pow_lt; apply: exp_pos.    
 Qed.
+
+Lemma ln_upper_01 x c :
+  0 < x < 1 ->
+  c * x <= ln (1 - x + x * exp c).
+Proof.
+  case => H1 H2.
+Admitted. (*TODO: Sam? :-)*)
+
+Lemma exp_upper_01 x c :
+  0 <= x <= 1 ->
+  exp (c * x) <= 1 - x + x * exp c.
+Proof.
+  case => H1 H2; case: H1 => H1x; last first.
+  { subst x; rewrite Rmult_0_r exp_0 /Rminus Ropp_0 Rplus_0_r Rmult_0_l Rplus_0_r.
+    apply: Rle_refl. }
+  case: H2 => H2x; last first.
+  { subst x; rewrite Rmult_1_r Rmult_1_l; fourier. }
+  have Hx: 0 < 1 - x + x * exp c.
+  { rewrite -[0]Rplus_0_l; apply: Rplus_lt_compat; try fourier.
+    apply: Rmult_lt_0_compat => //; apply: exp_pos. }
+  move: (ln_upper_01 c (conj H1x H2x)); case.
+  { move/exp_increasing => H; left; apply: Rlt_le_trans; first by apply: H.
+    rewrite exp_ln //; apply: Rle_refl. }
+  move => ->; rewrite exp_ln //; apply: Rle_refl.
+Qed.  
 
