@@ -118,6 +118,7 @@ Proof.
   field.
 Qed.
 
+(*DUPLICATE: REMOVE*)
 Lemma big_sum_mult_left T (cs : seq T) c f :
   c * big_sum cs f = big_sum cs (fun x => c * f x).
 Proof.
@@ -207,7 +208,30 @@ Proof.
   move=> a l IH H1; apply Rplus_le_compat.
   { by apply: H1; rewrite in_cons; apply/orP; left. }
     by apply: IH=> c H; apply: H1; rewrite in_cons; apply/orP; right.
-Qed.    
+Qed.
+
+Lemma big_sum_lt_aux (T : eqType) (cs : seq T) (f : T -> R) g :
+  (forall c, c \in cs -> f c < g c)%R -> 
+  cs=[::] \/ (big_sum cs f < big_sum cs g)%R.
+Proof.
+  elim: cs=> //=.
+  { by move=> _; left. }
+  move=> a l IH H1; right; apply Rplus_lt_le_compat.
+  { by apply: H1; rewrite in_cons; apply/orP; left. }
+  have H2: (forall c : T, c \in l -> f c < g c).
+  { by move => c Hin; move: (H1 c); rewrite in_cons; apply; apply/orP; right. }
+  case: (IH H2) => //.
+  { move => -> /=; apply: Rle_refl. }
+  by move => H3; left.
+Qed.
+
+Lemma big_sum_lt (T : eqType) (cs : seq T) (f : T -> R) g :
+  (forall c, c \in cs -> f c < g c)%R -> 
+  cs<>[::] ->
+  (big_sum cs f < big_sum cs g)%R.
+Proof.
+  move => H H1; case: (big_sum_lt_aux H) => //.
+Qed.
 
 Lemma big_product0 (T : eqType) (cs : seq T) c :
   c \in cs -> 
@@ -223,6 +247,22 @@ Proof.
   rewrite rat_to_R_mul IH.
     by f_equal; rewrite rat_to_R_plus rat_to_R_opp rat_to_R_mul.
 Qed.    
+
+Lemma big_sum_lift (T : Type) (ts : seq T) f g 
+      (g_zero : g 0 = 0)
+      (g_plus : forall x y, g (x + y) = g x + g y) :
+  big_sum ts (fun x => g (f x)) = g (big_sum ts (fun x => f x)).
+Proof. by elim: ts => //= a l ->. Qed.
+
+Lemma big_product_lift (T : Type) (ts : seq T) f g 
+      (g_zero : g 1 = 1)
+      (g_mult : forall x y, g (x * y) = g x * g y) :
+  big_product ts (fun x => g (f x)) = g (big_product ts (fun x => f x)).
+Proof. by elim: ts => //= a l ->. Qed.
+
+Lemma big_product_constant T (cs : seq T) n :
+  (big_product cs (fun _ => n) = n ^ size cs)%R.
+Proof. elim: cs => //= _ l -> //. Qed.
 
 (*TODO: All these bigops should really be consolidated at some point...sigh*)
 

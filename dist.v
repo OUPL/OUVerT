@@ -7,7 +7,7 @@ From mathcomp Require Import all_algebra.
 
 Import GRing.Theory Num.Def Num.Theory.
 
-Require Import bigops numerics.
+Require Import bigops numerics expfacts.
 
 Local Open Scope ring_scope.
 
@@ -374,6 +374,13 @@ Section markovR.
     move => x l H; apply: Rplus_le_le_0_compat => //.
     by apply: Rmult_le_pos.
   Qed.      
+
+  Lemma expValR_linear g h : expValR d (fun x => g x + h x) = expValR d g + expValR d h.
+  Proof.
+    rewrite /expValR; elim: (enum T) => /=; first by rewrite Rplus_0_r.
+    move => x l ->; rewrite Rmult_plus_distr_l -!Rplus_assoc -[(_ + _) + d x * h x]Rplus_comm.
+    by rewrite -Rplus_assoc -[d x * h x + _]Rplus_comm.
+  Qed.    
   
   Lemma expValR_split (p : pred T) :
     expValR d f =
@@ -446,7 +453,7 @@ Section markovR_exp.
   Qed.    
 End markovR_exp.
 
-Section chernoff_lemmas.
+Section chernoff.
   Variable T : finType.
   Variables d : T -> R.
   Variable d_dist : big_sum (enum T) d = 1.
@@ -454,19 +461,21 @@ Section chernoff_lemmas.
   Variable m : nat.
   Variable m_gt0 : (0 < m)%nat.
   Variable f : 'I_m -> T -> R.
-  Variable f_range : forall i x, 0 <= f i x <= 1. 
+  Variable f_range : forall i x, 0 <= f i x <= 1.
   Variable f_identically_distributed :
     forall i j : 'I_m, expValR d (f i) = expValR d (f j).
+  (* Mutual independence of the f's: 
+     -The expected value of the product of a function of the f_i's is equal to 
+      the product of the expected value of the same function of the f_i's.
+     -NOTE: this is a stronger assumption than pairwise independence. *)
   Variable f_independent :
-    expValR d (fun x => big_product (enum 'I_m) (fun i => f i x)) =
-    big_product (enum 'I_m) (fun i => expValR d (f i)).
+    forall g : R -> R, 
+    expValR d (fun x => big_product (enum 'I_m) (fun i => g (f i x))) =
+    big_product (enum 'I_m) (fun i => expValR d (fun x => g (f i x))).
 
-  Definition mR := rat_to_R (m%:R).
+  Definition mR := INR m.
   Lemma mR_gt0 : (0 < mR)%R.
-  Proof.
-    rewrite /mR -rat_to_R0; apply: rat_to_R_lt; rewrite gt_rat0 numq_gt0.
-    by move: (ltr0n rat_numDomainType m) ->.
-  Qed.
+  Proof. by apply: lt_0_INR; apply/ltP. Qed.
   Lemma mR_neq0 : (mR <> 0)%R.
   Proof. by move: mR_gt0 => H H2; rewrite H2 in H; move: (Rlt_asym _ _ H). Qed.
   
@@ -481,19 +490,45 @@ Section chernoff_lemmas.
     by apply: big_sum_ge0 => i; case: (f_range i x).
   Qed.
 
-  Lemma expVal_independence g :
-    expValR d (fun x => big_product (enum 'I_m) (fun i => g (f i x))) =
-    big_product (enum 'I_m) (fun i => expValR d (fun x => g (f i x))).
+  Lemma expVal_independence c :
+    expValR d (fun x => big_product (enum 'I_m) (fun i => exp (c * f i x))) =
+    big_product (enum 'I_m) (fun i => expValR d (fun x => exp (c * f i x))).
   Proof.
-  Abort.  
+    set (g x := exp (c * x)).
+    change
+      (expValR (T:=T) d (fun x : T => big_product (enum 'I_m) (fun i : ordinal_finType m => g (f i x))) =
+       big_product (enum 'I_m) (fun i : ordinal_finType m => expValR (T:=T) d (fun x : T => g (f i x)))).
+    by rewrite f_independent.
+  Qed.
 
   Variable eps : R.
   Variable eps_gt0 : 0 < eps.
-  Variable lambda : R.
-  Variable lambda_ge0 : 0 < lambda.
 
   Definition q := p + eps.
 
+  Lemma lt_p_q : p < q.
+  Proof.
+    rewrite /q; rewrite -[p]Rplus_0_r.
+    have ->: p + 0 + eps = p + eps by rewrite Rplus_0_r.
+    apply: Rplus_le_lt_compat => //.
+    apply: Rle_refl.
+  Qed.
+
+  Lemma p_leq1 : p <= 1.
+  Proof.
+    rewrite /p/expValR -d_dist; apply: big_sum_le; last first.
+    move => c Hin; rewrite -[d c]Rmult_1_r.
+    have ->: d c * 1 * f i0 c = d c * f i0 c by rewrite Rmult_1_r.
+    apply: Rmult_le_compat => //.
+    { by case: (f_range i0 c). }
+    { by apply: Rle_refl. }
+    by case: (f_range i0 c).
+  Qed.
+  
+  Section LAMBDA.
+  Variable lambda : R.
+  Variable lambda_gt0 : 0 < lambda.
+  
   Lemma probOfR_phat_q_exp g h c (Hlt : 0 < c) :
     probOfR d (fun x => Rle_lt_dec (g x) (h x)) =
     probOfR d (fun x => Rle_lt_dec (exp (c * g x)) (exp (c * h x))).
@@ -516,8 +551,9 @@ Section chernoff_lemmas.
   Lemma probOfR_phat_q :
     probOfR d (fun x => Rle_lt_dec q (phat x)) <=
     exp (-lambda * mR * q) *
-    expValR d (fun x => big_product (enum 'I_m) (fun i => exp (lambda * f i x))).
+    big_product (enum 'I_m) (fun i => expValR d (fun x => exp (lambda * f i x))).
   Proof.
+    rewrite -expVal_independence.
     have H: 0 < lambda * mR.
     { apply: Rmult_lt_0_compat => //; apply: mR_gt0. }
     rewrite (probOfR_phat_q_exp _ _ H); apply: Rle_trans; [apply markovR_exp => //|].
@@ -543,4 +579,103 @@ Section chernoff_lemmas.
     rewrite big_sum_mult_left -big_product_exp_sum; apply: Rle_refl.
   Qed.
 
-End chernoff_lemmas.
+  Lemma expValR_linear_approx : 
+    exp (-lambda * mR * q) *
+    big_product (enum 'I_m) (fun i => expValR d (fun x => exp (lambda * f i x))) <=
+    exp (-lambda * mR * q) *
+    big_product (enum 'I_m) (fun i => expValR d (fun x => 1 - f i x + f i x * exp lambda)).
+  Proof.
+    apply: Rmult_le_compat_l; first by left; apply: exp_pos.
+    apply: big_product_le.
+    { move => c Hin; apply: expValR_ge0 => // x; left; apply: exp_pos. }
+    { move => i Hin; apply: expValR_ge0 => // x.
+      rewrite -[0]Rplus_0_l; apply: Rplus_le_compat.
+      { case: (f_range i x) => _ Hleq; fourier. }
+      case: (f_range i x) => H _; rewrite -[0](Rmult_0_r 0).
+      apply: Rmult_le_compat; try solve[apply: Rle_refl|by []].
+      left; apply: exp_pos. }
+    move => c Hin; apply: big_sum_le => x Hinx; apply: Rmult_le_compat_l => //.
+    by apply: exp_upper_01.
+  Qed.
+
+  Lemma probOfR_phat_q_bound : 
+    probOfR d (fun x => Rle_lt_dec q (phat x)) <=
+    exp (-lambda * mR * q) *
+    big_product (enum 'I_m) (fun i => expValR d (fun x => 1 - f i x + f i x * exp lambda)).
+  Proof.
+    apply: Rle_trans; first by apply: probOfR_phat_q.
+    apply: expValR_linear_approx.
+  Qed.
+
+  Lemma expValR_simpl i :
+    expValR d (fun x => 1 - f i x + f i x * exp lambda) =
+    1 - p + p * exp lambda.
+  Proof.
+    rewrite 2!expValR_linear/expValR.
+    have ->: big_sum (enum T) (fun x => d x * 1) = big_sum (enum T) d.
+    { by apply: big_sum_ext => // x; apply: Rmult_1_r. }
+    rewrite d_dist.
+    have ->:
+       big_sum (enum T) (fun x : T => d x * - f i x) =
+      -big_sum (enum T) (fun x : T => d x * f i x).
+    { rewrite -big_sum_nmul; apply: big_sum_ext => // x.
+      by rewrite Ropp_mult_distr_r_reverse. }   
+    have ->:
+      big_sum (enum T) (fun x : T => d x * (f i x * exp lambda)) =
+      big_sum (enum T) (fun x : T => exp lambda * (d x * f i x)).
+    { by apply big_sum_ext => // x; rewrite -Rmult_assoc Rmult_comm. }
+    f_equal.
+    { rewrite /p/expValR/Rminus; f_equal; f_equal; apply: f_identically_distributed. }
+    rewrite big_sum_scalar Rmult_comm; f_equal.
+    apply: f_identically_distributed.
+  Qed.    
+  
+  Lemma big_product_expValR_simpl_aux : 
+    big_product (enum 'I_m) (fun i => expValR d (fun x => 1 - f i x + f i x * exp lambda)) =
+    big_product (enum 'I_m) (fun i => 1 - p + p * exp lambda).
+  Proof.
+    apply: big_product_ext => // x; apply: expValR_simpl.
+  Qed.    
+    
+  Lemma big_product_expValR_simpl :
+    big_product (enum 'I_m) (fun i => expValR d (fun x => 1 - f i x + f i x * exp lambda)) =
+    (1 - p + p * exp lambda) ^ m.
+  Proof.
+    by rewrite big_product_expValR_simpl_aux big_product_constant size_enum_ord.
+  Qed.  
+
+  Definition phi := ln (exp (-lambda*q) * (1 - p + p * exp lambda)).
+
+  Lemma one_minus_p_etc_gt0 : 0 < 1 - p + p * exp lambda.
+  Proof.
+    case: (Req_dec p 1).
+    { move => ->; move: (exp_pos lambda) => H; fourier. }
+    move => p_neq1.
+    have H1: 0 < 1 - p.
+    { move: p_leq1; case => H; try fourier.
+      by elimtype False; apply: p_neq1. }
+    apply: Rplus_lt_le_0_compat => //.
+    apply: Rmult_le_pos.
+    { by apply: expValR_ge0 => x; case: (f_range i0 x). }
+    left; apply: exp_pos.
+  Qed.    
+  
+  Lemma phi_simpl :
+    exp (phi * mR) = exp (-lambda * mR * q) * (1 - p + p * exp lambda) ^ m.
+  Proof.
+    rewrite /phi ln_mult; last first.
+    { apply: one_minus_p_etc_gt0. }
+    { apply: exp_pos. }
+    rewrite ln_exp Rmult_plus_distr_r exp_plus; f_equal.
+    { by rewrite Rmult_assoc [q * mR]Rmult_comm Rmult_assoc. }
+    rewrite exp_mult exp_ln => //.
+    apply: one_minus_p_etc_gt0. 
+  Qed.
+
+  Lemma chernoff0 : probOfR d (fun x => Rle_lt_dec q (phat x)) <= exp (phi * mR).
+  Proof.
+    apply: Rle_trans; first by apply: probOfR_phat_q_bound.
+    rewrite big_product_expValR_simpl phi_simpl; f_equal; apply: Rle_refl.
+  Qed.    
+  End LAMBDA.
+End chernoff.
