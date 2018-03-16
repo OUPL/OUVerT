@@ -5,7 +5,7 @@ Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 
-Require Import QArith Reals Rpower Ranalysis Fourier.
+Require Import QArith Reals Rpower Ranalysis Fourier MVT.
 
 Lemma ln_le (x y : R) : (0 < x -> x <= y -> ln x <= ln y)%R.
 Proof.
@@ -286,11 +286,75 @@ Proof.
   apply: pow_lt; apply: exp_pos.    
 Qed.
 
+Lemma exp_le_inv : forall x y : R, exp x <= exp y -> x <= y.
+Proof.
+  intros. inversion H.
+  left. apply exp_lt_inv; auto.
+  right. apply exp_inv. auto. 
+Qed.
+
+Lemma ln_upper_01_aux_bot c : 
+  0 = 1 - 0 + 0 * exp c - exp (c * 0).
+Proof.
+  rewrite Rmult_0_r exp_0. ring.
+Qed.
+
+Lemma ln_upper_01_aux_mid c : 
+  0 <= 1 - (1/2) + (1/2) * exp c - exp (c * (1/2)).
+Proof.
+Admitted.
+
+Lemma ln_upper_01_aux_top c : 
+  0 = 1 - 1 + 1 * exp c - exp (c * 1).
+Proof.
+  rewrite Rmult_1_r Rmult_1_l. ring.
+Qed.
+
+Lemma ln_upper_01_aux_deriv c :
+  derivable (fun x => 1 - x + x * exp c - exp (c * x)).
+Proof.
+  apply derivable_minus.
+  apply derivable_plus.
+  apply derivable_minus.
+  apply derivable_const.
+  apply derivable_id.
+  apply derivable_mult.
+  apply derivable_id.
+  apply derivable_const.
+  apply derivable_comp.
+  apply derivable_mult.
+  apply derivable_const.
+  apply derivable_id.
+  apply derivable_exp.
+Qed.
+
 Lemma ln_upper_01 x c :
   0 < x < 1 ->
   c * x <= ln (1 - x + x * exp c).
 Proof.
-  case => H1 H2.
+  intros.
+  apply exp_le_inv.
+  rewrite exp_ln.
+  move: (Rtotal_order x (1/2)) => H0.
+  apply Rge_le.
+  apply Rminus_ge.
+  apply Rle_ge.
+  set f := fun x => 1 - x + x * exp c - exp (c * x).
+  replace (1 - x + x * exp c - exp (c * x)) with (f x).
+  destruct H0 as [Hup | [Hhalf | Hdown]]; intros.
+  + replace 0 with (f 0). left.
+    eapply derive_increasing_interv with
+      (a:= 0) (b := 1/2) (pr := ln_upper_01_aux_deriv c).
+    fourier.
+    intros. admit.
+    split; fourier.
+    split. destruct H. fourier. fourier. destruct H; auto.    
+    rewrite {2} (ln_upper_01_aux_bot c) /f. auto. 
+  + subst. rewrite /f. apply (ln_upper_01_aux_mid c).
+  + replace 0 with (f 1). admit.
+    rewrite (ln_upper_01_aux_top c) /f. auto. 
+  + rewrite /f; auto.
+  + admit.
 Admitted. (*TODO: Sam? :-)*)
 
 Lemma exp_upper_01 x c :
