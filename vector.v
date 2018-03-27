@@ -44,6 +44,7 @@ Module Type VECTOR.
   Parameter any : (Ix.t -> P.t -> bool) -> t -> option (Ix.t * P.t).
   Parameter of_fun : (Ix.t -> P.t) -> t.
   Parameter mk_sparse : t -> t.
+  Parameter argmax : (P.t -> P.t -> bool) -> t -> Ix.t.
 
   Parameter sparse : t -> Prop.
   Parameter mk_sparse_sparse : forall m, sparse (mk_sparse m).
@@ -215,6 +216,16 @@ Module Vector (B : BOUND) (P : PAYLOAD) <: VECTOR.
   (* a slow map that doesn't assume anything *)
   Definition maps (f : Ix.t -> P.t -> P.t) (m : t) : t :=
     of_fun (fun ix => f ix (get ix m)).
+
+  (* Given a lt function, find the index of the maximum element. If
+     two elements are equal, the smaller index is chosen. *)
+  Definition argmax (lt : P.t -> P.t -> bool) (m : t) : Ix.t :=
+    let (i, _) := M.fold (fun k v (acc : Ix.t * P.t) =>
+                            let (i, max) := acc in
+                            if lt max v then (k, v)
+                            else (i, max))
+                         m (Ix.t0, P.t0) in i.
+
 
   (* SPARSITY PROOFS *)
   Definition mk_sparse (m : t) : t := of_fun (fun ix => get ix m).
