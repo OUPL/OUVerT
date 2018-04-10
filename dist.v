@@ -676,6 +676,24 @@ Section chernoff.
   Proof.
     apply: Rle_trans; first by apply: probOfR_phat_q_bound.
     rewrite big_product_expValR_simpl phi_simpl; f_equal; apply: Rle_refl.
+  Qed.
+  End LAMBDA.  
+
+  Definition lambda_min := (q * (1 - p)) / ((1 - q) * p).
+
+  Lemma lambda_min_gt0 : 0 < lambda_min.
+  Admitted.    
+  
+  Lemma phi_lambda_min : phi lambda_min = -(RE (fun _:T => q) (fun _ => p)).
+  Proof.
+    rewrite /phi/lambda_min/RE.
+  Admitted.
+
+  Lemma chernoff1 :
+    probOfR d (fun x => Rle_lt_dec q (phat x)) <=
+    exp (-(RE (fun _:T => p + eps) (fun _ => p)) * mR).
+  Proof.
+    rewrite -phi_lambda_min; apply: chernoff0.
+    by apply: lambda_min_gt0.
   Qed.    
-  End LAMBDA.
 End chernoff.
