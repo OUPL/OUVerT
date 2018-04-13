@@ -233,6 +233,34 @@ Proof.
   move => H H1; case: (big_sum_lt_aux H) => //.
 Qed.
 
+Lemma big_product_perm T (cs1 cs2 : seq T) (H : Permutation cs1 cs2) f :
+  (big_product cs1 (fun c => f c) = big_product cs2 (fun c => f c))%R.
+Proof.
+  elim: H => //=.
+  { move => x l l' H -> //. }
+  { by move => x y l; rewrite -Rmult_assoc [f y * f x]Rmult_comm Rmult_assoc. }
+  move => l l' l'' H /= -> H2 -> //.
+Qed.
+
+Lemma big_product_cat T (cs1 cs2 : seq T) f :
+  (big_product (cs1++cs2) (fun c => f c) =
+   big_product cs1 (fun c => f c) * big_product cs2 (fun c => f c))%R.
+Proof.
+  elim: cs1 => /=; first by rewrite Rmult_1_l.
+  move=> a l IH; rewrite IH /=.
+  rewrite [((_ * big_product l (fun c => f c) * _))%R]Rmult_assoc //.
+Qed.
+
+Lemma big_product_split T (cs : seq T) f (p : pred T) :
+  (big_product cs f = big_product (filter p cs) f * big_product (filter (predC p) cs) f)%R.
+Proof.
+  rewrite ->big_product_perm with (cs2 := filter p cs ++ filter (predC p) cs); last first.
+  { elim: cs => // a l /= H; case: (p a) => /=.
+    { by constructor. }
+      by apply: Permutation_cons_app. }
+  by rewrite big_product_cat.
+Qed.    
+
 Lemma big_product0 (T : eqType) (cs : seq T) c :
   c \in cs -> 
   big_product cs (fun _ => 0) = 0.
