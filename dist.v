@@ -373,7 +373,7 @@ Section markovR.
     rewrite /expValR; elim: (enum T) => /=; try apply: Rle_refl.
     move => x l H; apply: Rplus_le_le_0_compat => //.
     by apply: Rmult_le_pos.
-  Qed.      
+  Qed.
 
   Lemma expValR_linear g h : expValR d (fun x => g x + h x) = expValR d g + expValR d h.
   Proof.
@@ -593,6 +593,7 @@ Section chernoff.
   
   Definition i0 : 'I_m := Ordinal m_gt0.
   Definition p := expValR d (f i0).
+  Variable p_nontrivial : 0 < p < 1. (*required to construct lambda_min*)
   
   Lemma expVal_independence c :
     expValR (prodR d_prod) (fun p => big_product (enum 'I_m) (fun i => exp (c * f i (p i)))) =
@@ -609,8 +610,22 @@ Section chernoff.
 
   Variable eps : R.
   Variable eps_gt0 : 0 < eps.
-
+  Variable eps_lt_1p : eps < 1 - p.
+  (*This above assumption, which is required to show that lambda_min > 0, 
+    is strange in the sense that it limits the values epsilon we can choose 
+    to [0, 1-p).*)
+  
   Definition q := p + eps.
+  Lemma q_nontrivial : 0 < q < 1. (*required to construct lambda_min*)
+  Proof.
+    rewrite /q; split.
+    { apply: Rplus_le_lt_0_compat => //.
+      by apply: expValR_ge0 => // x; case: (f_range i0 x). }
+    apply: Rlt_le_trans.
+    { apply: Rplus_le_lt_compat; last by apply: eps_lt_1p.
+      apply: Rle_refl. }
+    fourier.
+  Qed.    
 
   Lemma lt_p_q : p < q.
   Proof.
@@ -620,6 +635,17 @@ Section chernoff.
     apply: Rle_refl.
   Qed.
 
+  Lemma lt_p_p2_eps : 0 < p - (p*(p + eps)).
+  Proof.
+    apply: Rlt_Rminus; rewrite Rmult_plus_distr_l.
+    apply: (@Rlt_le_trans _ (p*p + p*(1-p)) _).
+    { apply: Rplus_lt_compat_l.
+      apply Rmult_lt_compat_l => //.
+      by case: p_nontrivial. }
+    rewrite Rmult_plus_distr_l Rmult_1_r [p + _]Rplus_comm -Rplus_assoc.
+    rewrite -Ropp_mult_distr_r Rplus_opp_r Rplus_0_l; apply: Rle_refl. 
+  Qed.
+  
   Lemma p_leq1 : p <= 1.
   Proof.
     rewrite /p/expValR -d_dist; apply: big_sum_le; last first.
@@ -703,14 +729,16 @@ Section chernoff.
 
   Definition phi := ln (exp (-lambda*q) * (1 - p + p * exp lambda)).
 
+  Lemma one_minus_p_gt0 : p<>1 -> 0 < 1 - p.
+  Proof.
+    by move => p_neq1; move: p_leq1; case => H; try fourier.
+  Qed.
+  
   Lemma one_minus_p_etc_gt0 : 0 < 1 - p + p * exp lambda.
   Proof.
     case: (Req_dec p 1).
     { move => ->; move: (exp_pos lambda) => H; fourier. }
-    move => p_neq1.
-    have H1: 0 < 1 - p.
-    { move: p_leq1; case => H; try fourier.
-      by elimtype False; apply: p_neq1. }
+    move => p_neq1; move: (one_minus_p_gt0 p_neq1) => H.
     apply: Rplus_lt_le_0_compat => //.
     apply: Rmult_le_pos.
     { by apply: expValR_ge0 => x; case: (f_range i0 x). }
@@ -748,13 +776,17 @@ Section chernoff.
       by move => x; case: (f_range i0 x). }
     { move => x; rewrite -(Rmult_0_r 0); apply: Rmult_le_compat; try apply: Rle_refl.
       { by left. }
-      (*apply: phat_ge0.*) admit. }
-    { admit. }
+      apply: Rmult_le_pos.
+      { rewrite -[/INR m]Rmult_1_l.
+        apply: Rle_mult_inv_pos; try fourier.
+        by apply: lt_0_INR; apply/ltP. }
+      by apply: big_sum_ge0 => x0; case: (f_range x0 (x x0)). }
+    { move => x; apply: prodR_nonneg => //. }
     have ->: -(lambda * mR * q) = -lambda * mR * q.
     { by rewrite 2!Ropp_mult_distr_l. }
     apply Rmult_le_compat_l; first by left; apply: exp_pos.
     apply: big_sum_le => c H2; apply: Rmult_le_compat_l.
-    { admit. }
+    { apply: prodR_nonneg => //. }
     have ->:
       lambda * mR * (/mR * big_sum (enum 'I_m) (fun i => f i (c i)))
     = lambda * big_sum (enum 'I_m) (fun i => f i (c i)).
@@ -762,7 +794,7 @@ Section chernoff.
       { apply: mR_neq0. }
       rewrite Rmult_1_l //. }
     rewrite big_sum_mult_left -big_product_exp_sum; apply: Rle_refl.
-  Admitted.
+  Qed.
 
   Lemma probOfR_phat_q_bound : 
     phat_ge_q <= 
@@ -781,17 +813,31 @@ Section chernoff.
   Qed.
   End LAMBDA.  
 
-  Definition lambda_min := (q * (1 - p)) / ((1 - q) * p).
+  Definition lambda_min := ln ((q * (1 - p)) / ((1 - q) * p)).
 
   Lemma lambda_min_gt0 : 0 < lambda_min.
-  Admitted.    
+  Proof.
+    apply: exp_lt_inv; rewrite exp_0 /lambda_min.
+    have Hlt: 1 < q * (1 - p) / ((1 - q) * p).
+    { rewrite Rmult_minus_distr_l Rmult_1_r.
+      rewrite [(1-q)*p]Rmult_comm Rmult_minus_distr_l Rmult_1_r.
+      rewrite Rmult_comm /q; move: lt_p_p2_eps; move: (p*(p+eps)) => r H.
+      apply: (Rmult_lt_reg_r (p-r)) => //.
+      rewrite Rmult_1_l Rmult_assoc Rinv_l; last first.
+      { move => H2; rewrite H2 in H; apply: (Rlt_irrefl _ H). }
+      rewrite Rmult_1_r; apply: Rplus_lt_compat_r; fourier. }
+    rewrite exp_ln => //.
+    apply: Rlt_trans; last by apply: Hlt.
+    fourier.
+  Qed.    
   
   Lemma phi_lambda_min : phi lambda_min = -(RE (fun _:T => q) (fun _ => p)).
   Proof.
-    rewrite /phi/lambda_min/RE.
+    rewrite /phi/lambda_min/RE exp_ln.
+    { 
   Admitted.
 
-  Lemma chernoff1 :phat_ge_q <= exp (-(RE (fun _:T => p + eps) (fun _ => p)) * mR).
+  Lemma chernoff1 : phat_ge_q <= exp (-(RE (fun _:T => p + eps) (fun _ => p)) * mR).
   Proof.
     rewrite -phi_lambda_min; apply: chernoff0.
     by apply: lambda_min_gt0.
