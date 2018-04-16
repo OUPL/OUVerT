@@ -834,7 +834,6 @@ Section chernoff.
   Lemma phi_lambda_min : phi lambda_min = -(RE (fun _:T => q) (fun _ => p)).
   Proof.
     rewrite /phi/lambda_min/RE exp_ln.
-    { 
   Admitted.
 
   Lemma chernoff1 : phat_ge_q <= exp (-(RE (fun _:T => p + eps) (fun _ => p)) * mR).
