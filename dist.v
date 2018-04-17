@@ -463,16 +463,6 @@ Section prodR.
 
   Definition prodR : {ffun 'I_m -> T} -> R :=
     fun p => big_product (enum 'I_m) (fun i : 'I_m => d i (p i)).
-
-  Lemma big_product_distr_sum (I J : finType) (F : I -> J -> R) :
-    big_product (enum I) (fun i => big_sum (enum J) (fun j => F i j)) =
-    big_sum (enum [finType of {ffun I -> J}])
-            (fun f : {ffun I -> J} => big_product (enum I) (fun i => F i (f i))).
-  Proof.
-    elim: (enum I) => //=.
-    { admit. }
-    move => a l /= ->.
-  Admitted.  
   
   Lemma prodR_dist : big_sum (enum [finType of {ffun 'I_m -> T}]) prodR = 1.
   Proof.
@@ -510,11 +500,71 @@ Section prodR.
       by []. }
     rewrite /prodR -big_product_split //.
   Qed.
-
+  
   Lemma prodR_marginal f i :
     big_sum (enum {ffun 'I_m -> T}) (fun p0 => prodR p0 * f i (p0 i)) =
     big_sum (enum T) (fun x : T => d i x * f i x).
   Proof.
+    have ->:
+      big_sum (enum {ffun 'I_m -> T}) (fun p0 => prodR p0 * f i (p0 i)) 
+    = big_sum (enum {ffun 'I_m -> T}) (fun p0 => 
+        (d i (p0 i) *
+         big_product (filter (predC (pred1 i)) (enum 'I_m)) (fun j => d j (p0 j))) * 
+        f i (p0 i)).
+    { apply: big_sum_ext => // => p; rewrite (prodR_split i) //. }
+    rewrite 2!big_sum_sum -(marginal_unfoldR i).
+    set (F (x:T) y := 
+           d i (y i) *
+           big_product [seq x <- enum 'I_m | (predC (pred1 i)) x]
+             (fun j : ordinal_finType m => d j (y j)) *
+           f i (y i)).
+    change (\big[bigops.Rplus/0]_(p:[finType of (T*{ffun 'I_m->T})] | p.2 i == p.1) F p.1 p.2 =
+            \big[bigops.Rplus/0]_i0 (d i i0 * f i i0)).
+    set (P (x:T) := predT x).
+    set (Q (x:T) (y:{ffun 'I_m->T}) := if x == y i then true else false).
+    have ->:
+      \big[bigops.Rplus/0]_(p:[finType of (T*{ffun 'I_m->T})] | p.2 i == p.1) F p.1 p.2
+    = \big[bigops.Rplus/0]_(p:[finType of (T*{ffun 'I_m->T})]
+                           | P p.1 && Q p.1 p.2) F p.1 p.2.
+    { apply: eq_big => // x /=; rewrite /Q eq_sym; case: (x.1 == x.2 i)%B => //. }
+    rewrite -(@pair_big_dep R 0 Rplus_com_law T [finType of {ffun 'I_m -> T}] P Q F).
+    rewrite /F /P /Q /=; apply: eq_big => // k _.
+    have ->:
+      \big[Rplus/0]_(j:[finType of {ffun 'I_m ->T}] | if k == j i then true else false)
+        (d i (j i) * big_product [seq x <- enum 'I_m | x != i] (fun j0 : 'I_m => d j0 (j j0)) * f i (j i)) 
+    = \big[Rplus/0]_(j:[finType of {ffun 'I_m->T}] | if k == j i then true else false)
+        (d i k * big_product [seq x <- enum 'I_m | x != i] (fun j0 : 'I_m => d j0 (j j0)) * f i k).
+    { apply: eq_big => // ix.
+      case Heq: (k == ix i)%B => // _; move: (eqP Heq) => <- //. }
+    rewrite -big_sum_sumP.
+    set (C := d i k).
+    set (D := f i k).
+    set (cs := [seq x <- _ | _]).
+    clear F; set (F i0 := C * big_product [seq x <- enum 'I_m | x != i] (fun j0 : 'I_m => d j0 (i0 j0)) * D).
+    change (big_sum cs F = C * D).
+    set (G i0 := big_product [seq x <- enum 'I_m | x != i] (fun j0 : 'I_m => d j0 (i0 j0))).
+    have ->:
+      big_sum cs (fun i0 : [finType of {ffun 'I_m -> T}] => F i0)
+    = big_sum cs (fun i0 : [finType of {ffun 'I_m -> T}] => (C*D) * G i0).
+    { by apply: big_sum_ext => // x; rewrite /F /G Rmult_assoc [_ * D]Rmult_comm -Rmult_assoc. }
+    rewrite big_sum_scalar -[C * D]Rmult_1_r; f_equal; first by rewrite Rmult_1_r.
+    clear - d_dist G; rewrite /G /cs /=; clear G cs.
+    rewrite big_sum_sumP.
+    have ->:
+      \big[bigops.Rplus/0]_(i0:[finType of {ffun 'I_m->T}] | if k == i0 i then true else false)
+       big_product [seq x <- enum 'I_m | x != i] (fun j0 : 'I_m => d j0 (i0 j0)) 
+    = \big[bigops.Rplus/0]_(i0:[finType of {ffun 'I_m->T}] | if k == i0 i then true else false)
+       \big[bigops.Rtimes/1]_(x | x != i) d x (i0 x).
+    { apply: eq_big => // x _; rewrite big_product_prodP //. }
+    rewrite big_mkcond.
+    have ->:
+      \big[bigops.Rplus/0]_(i0:{ffun 'I_m->T})
+       (if if (k == i0 i)%B then true else false then \big[Rtimes/1]_(x | x != i) d x (i0 x) else 0)
+    = \big[bigops.Rplus/0]_(i0:{ffun 'I_m->T})
+       (if (k == i0 i)%B then \big[Rtimes/1]_(x | x != i) d x (i0 x) else 0).
+    { apply: eq_big => // ix _; case: (k == ix i)%B => //. }
+    rewrite -(marginal_unfoldR i) /=.
+    (* HERE *)
   Admitted.
 End prodR.    
 
