@@ -475,6 +475,38 @@ Section prodR.
     by rewrite big_product_constant pow1.
   Qed.
 
+  Lemma prodR_sub_dist (i:'I_m) (x:T) :
+    \big[Rplus/0]_(p : {ffun 'I_m->T} | p i == x) \big[Rtimes/1]_(j | j!=i) d j (p j) = 1.
+  Proof.
+    set (F j x := d j x).
+    set (P (j:'I_m) := (i!=j)%B).
+    set (Q (j:'I_m) (y:T) := if (i==j)%B then (x==y)%B else true).
+    have ->:
+      \big[Rplus/0]_(p:{ffun 'I_m->T} | p i == x) \big[Rtimes/1]_(j | j != i) F j (p j)
+    = \big[Rplus/0]_(p in pfamily x P Q) \big[Rtimes/1]_(j | P j) F j (p j).
+    { rewrite /pfamily_mem /= /finfun.family_mem/=/in_mem/=/P/Q.
+      apply: eq_big => //= y; rewrite /Q /=.
+      { rewrite /in_mem /=; apply/eqP; case Heq: [forall x0, _].
+        { move: Heq; move/forallP/(_ i); rewrite /in_mem /=.
+          by rewrite /P eq_refl /in_mem/=/in_mem/=; move/eqP => <-. }
+        move => Heq2; subst x; move: Heq; move/existsP; case => i'; rewrite /in_mem /=.
+        rewrite /P; case Heq: (i == i')%B => /=.
+        { by move: (eqP Heq) => ->; move/negP; rewrite eq_refl. }
+        by []. }
+      by move/eqP => H; rewrite /F; apply: eq_big => // j; rewrite eq_sym. }
+    rewrite -(@big_distr_big_dep R 0 1 Rtimes bigops.Rplus _ _ x P Q F).
+    have Heq: forall ix, ix!=i -> \big[bigops.Rplus/0]_(j | Q ix j) F ix j = 1.
+    { move => ix /eqP Hneq; rewrite /F/Q/=; case Heq: (i == ix)%B.
+      { by move: (eqP Heq) => Heq'; subst ix. }
+      by rewrite -big_sum_sum d_dist. }
+    have ->:
+      \big[Rtimes/1]_(i0 | P i0) \big[bigops.Rplus/0]_(j | Q i0 j) F i0 j
+    = \big[Rtimes/1]_(i0:'I_m | P i0) 1.
+    { apply: eq_big => //= ix; rewrite /F/P/Q; case: (i==ix)%B => // _.
+      by rewrite -big_sum_sum d_dist. }
+    rewrite big_const; elim: (card _) => //= n ->; rewrite Rmult_1_l //.
+  Qed.
+
   Lemma prodR_nonneg p : 0 <= prodR p.
   Proof. by apply: big_product_ge0. Qed.
 
@@ -548,24 +580,20 @@ Section prodR.
     = big_sum cs (fun i0 : [finType of {ffun 'I_m -> T}] => (C*D) * G i0).
     { by apply: big_sum_ext => // x; rewrite /F /G Rmult_assoc [_ * D]Rmult_comm -Rmult_assoc. }
     rewrite big_sum_scalar -[C * D]Rmult_1_r; f_equal; first by rewrite Rmult_1_r.
-    clear - d_dist G; rewrite /G /cs /=; clear G cs.
-    rewrite big_sum_sumP.
+    rewrite /G /cs /=; clear G cs; rewrite big_sum_sumP.
     have ->:
       \big[bigops.Rplus/0]_(i0:[finType of {ffun 'I_m->T}] | if k == i0 i then true else false)
        big_product [seq x <- enum 'I_m | x != i] (fun j0 : 'I_m => d j0 (i0 j0)) 
     = \big[bigops.Rplus/0]_(i0:[finType of {ffun 'I_m->T}] | if k == i0 i then true else false)
        \big[bigops.Rtimes/1]_(x | x != i) d x (i0 x).
     { apply: eq_big => // x _; rewrite big_product_prodP //. }
-    rewrite big_mkcond.
     have ->:
-      \big[bigops.Rplus/0]_(i0:{ffun 'I_m->T})
-       (if if (k == i0 i)%B then true else false then \big[Rtimes/1]_(x | x != i) d x (i0 x) else 0)
-    = \big[bigops.Rplus/0]_(i0:{ffun 'I_m->T})
-       (if (k == i0 i)%B then \big[Rtimes/1]_(x | x != i) d x (i0 x) else 0).
-    { apply: eq_big => // ix _; case: (k == ix i)%B => //. }
-    rewrite -(marginal_unfoldR i) /=.
-    (* HERE *)
-  Admitted.
+      \big[bigops.Rplus/0]_(i0:{ffun 'I_m->T} | if k == i0 i then true else false)
+        \big[Rtimes/1]_(x | x != i) d x (i0 x) =
+      \big[bigops.Rplus/0]_(i0:{ffun 'I_m->T} | i0 i == k) \big[Rtimes/1]_(x | x != i) d x (i0 x).
+    { apply: eq_big => // x; rewrite eq_sym; case: (x i == k)%B => //. }
+    apply: prodR_sub_dist.
+  Qed.
 End prodR.    
 
 Section convolution.
