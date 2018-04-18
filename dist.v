@@ -652,16 +652,17 @@ Section chernoff.
   
   Variable f : 'I_m -> T -> R.
   Variable f_range : forall i x, 0 <= f i x <= 1.
-  Variable f_identically_distributed :
-    forall i j : 'I_m, expValR d (f i) = expValR d (f j).
+  Definition identically_distributed := forall i j : 'I_m, expValR d (f i) = expValR d (f j).  
+  Variable f_identically_distributed : identically_distributed.
   (* Mutual independence of the f's: 
      -The expected value of the product of a function of the f_i's is equal to 
       the product of the expected value of the same function of the f_i's.
      -NOTE: this is a stronger assumption than pairwise independence. *)
-  Variable f_independent :
+  Definition mutual_independence :=
     forall g : R -> R, 
     expValR (prodR d_prod) (fun p => big_product (enum 'I_m) (fun i => g (f i (p i)))) =
     big_product (enum 'I_m) (fun i => expValR (prodR d_prod) (fun p => g (f i (p i)))).
+  Variable f_independent : mutual_independence.
 
   Definition mR := INR m.
   Lemma mR_gt0 : (0 < mR)%R.
