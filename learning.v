@@ -20,18 +20,19 @@ Section learning.
   Variable d_dist : big_sum (enum [finType of A*B]) d = 1.
   Variable d_nonneg : forall x, 0 <= d x.
 
-  Variable h : Hyp.
-
   Variable m : nat. (*The number of training samples*)
   Variable m_gt0 : (0 < m)%nat.  
   Definition mR := INR m.
   Definition i0 : 'I_m := Ordinal m_gt0.  
 
-  Definition X (i : 'I_m) : A*B -> R :=
-    fun xy => let: (x,y) := xy in if h x == y then 1%R else 0%R.
+  (** The hypothesis *)
+  Variable h : Hyp.
 
   (** The training set *)
   Variable T : 'I_m -> A*B.
+
+  Definition X (i : 'I_m) (xy : A*B) : R :=
+    let: (x,y) := xy in if h x == y then 1%R else 0%R.
   
   (** The empirical error of h on T *)
   Definition empErr := (big_sum (enum 'I_m) (fun i => X i (T i))) / mR.

@@ -425,12 +425,44 @@ End markovR.
 Section relative_entropy.
   Variable T : finType.
   Variables p q : T -> R.
-  Variable p_dist : big_sum (enum T) p = 1.
-  Variable p_nonneg : forall x, 0 <= p x.
-  Variable q_dist : big_sum (enum T) q = 1.
-  Variable q_nonneg : forall x, 0 <= q x.
   Definition RE := big_sum (enum T) (fun x => p x * ln (p x / q x)).
 End relative_entropy.
+
+Module Bernoulli.
+Section Bernoulli.
+  Variable p : R.
+  Variable p_range : 0 <= p <= 1.
+  Definition t (b : bool) : R := if b then p else 1 - p.
+  Lemma dist : big_sum (enum bool_finType) t = 1.
+  Proof.
+    rewrite /bool_finType /= /enum_mem /= Finite.EnumDef.enumDef /=.
+    by rewrite Rplus_0_r -Rplus_assoc [p + 1]Rplus_comm Rplus_assoc Rplus_opp_r Rplus_0_r.
+  Qed.
+  Lemma nonneg x : 0 <= t x.
+  Proof.
+    case: p_range => H1 H2; case: x => //=.
+    fourier.
+  Qed.
+End Bernoulli.
+End Bernoulli.
+
+Section relative_entropy_Bernoulli.
+  Variables p q : R.
+  Definition p_dist := Bernoulli.t p.
+  Definition q_dist := Bernoulli.t q.  
+
+  Definition RE_Bernoulli : R := RE p_dist q_dist.
+End relative_entropy_Bernoulli.
+
+Section relative_entropy_lemmas.
+  Variables p eps : R.
+  Variable p_range : 0 <= p <= 1.
+  Variable eps_range : 0 < eps <= 1 - p.
+  
+  Lemma RE_bounded_below : RE_Bernoulli (p + eps) p >= 2 * eps^2.
+  Proof.
+  Admitted.  
+End relative_entropy_lemmas.
 
 Section markovR_exp.
   Variable T : finType.
@@ -910,14 +942,35 @@ Section chernoff.
     fourier.
   Qed.    
   
-  Lemma phi_lambda_min : phi lambda_min = -(RE (fun _:T => q) (fun _ => p)).
+  Lemma phi_lambda_min : phi lambda_min = -(RE (Bernoulli.t (p + eps)) (Bernoulli.t p)).
   Proof.
     rewrite /phi/lambda_min/RE exp_ln.
   Admitted.
 
-  Lemma chernoff1 : phat_ge_q <= exp (-(RE (fun _:T => p + eps) (fun _ => p)) * mR).
+  Lemma chernoff1 : phat_ge_q <= exp (-(RE (Bernoulli.t (p + eps)) (Bernoulli.t p)) * mR).
   Proof.
     rewrite -phi_lambda_min; apply: chernoff0.
     by apply: lambda_min_gt0.
   Qed.    
+
+  Lemma chernoff2 : phat_ge_q <= exp (-2%R * eps^2 * mR).
+  Proof.
+    apply: Rle_trans; first by apply: chernoff1.
+    rewrite -3!Ropp_mult_distr_l !exp_Ropp; apply: Rinv_le_contravar.
+    { apply: exp_pos. }
+    have H: (RE_Bernoulli (p + eps) p >= 2%R * eps^2).
+    { apply: RE_bounded_below.
+      { case: p_nontrivial => H1 H2.
+        split; apply: Rlt_le => //. }
+      split => //.
+      by apply: Rlt_le. }
+    case: H => H2.
+    { left; apply: exp_increasing; simpl.
+      rewrite -!Rmult_assoc; apply: (Rmult_lt_compat_r mR).
+      { apply: mR_gt0. }
+      apply: Rgt_lt.
+      by rewrite /RE_Bernoulli/p_dist/q_dist/= -!Rmult_assoc in H2. }
+    rewrite /RE_Bernoulli/p_dist/q_dist in H2; rewrite H2.
+    apply: Rle_refl.
+  Qed.
 End chernoff.
