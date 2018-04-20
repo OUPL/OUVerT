@@ -419,6 +419,46 @@ Section markovR.
   Qed.
 End markovR.
 
+Section union_bound.
+  Variable T : finType.
+  Variable N : nat.
+  Variable P : 'I_N -> pred T.
+  Variable d : T -> R.
+  Variable d_dist : big_sum (enum T) d = 1.
+  Variable d_nonneg : forall x, 0 <= d x.
+
+  Lemma union_bound :
+    probOfR d [pred x | [exists i, P i x]] <= \big[bigops.Rplus/0]_i probOfR d (P i).
+  Proof.
+    rewrite /probOfR big_sum_sumP.
+    have ->:
+      \big[bigops.Rplus/0]_i big_sum [seq x <- enum T | P i x] d
+    = \big[bigops.Rplus/0]_i \big[bigops.Rplus/0]_(x | P i x) d x.    
+    { apply: eq_big => // i _; rewrite big_sum_sumP.
+      apply: congr_big => //; rewrite enumT //. }
+    rewrite (@exchange_big_dep _ _ _ _ _ _ _ _ _ xpredT) => //.
+    rewrite big_mkcond -big_sum_sumP -big_sum_sum.
+    have ->:
+      big_sum [seq _ <- enum T | true] (fun i : T => if [exists i0, P i0 i] then d i else 0)
+    = big_sum (enum T) (fun i : T => if [exists i0, P i0 i] then d i else 0).
+    { by apply: big_sum_ext => //=; rewrite filter_predT. }
+    apply: big_sum_le => /= c H; case H2: [exists i0, P i0 c].
+    { case: (existsP H2) => x Hp; rewrite big_const_seq /=.
+      rewrite -size_filter.
+      have H3: (0 < size [seq i <- index_enum (ordinal_finType N) | P i c])%coq_nat.
+      { apply/ltP; rewrite -has_predT has_filter; apply/eqP.
+        have Hin: x \in [seq i <- index_enum (ordinal_finType N) | P i c].
+        { rewrite mem_filter; apply/andP; split => //. }
+        move: Hin; elim: (index_enum _) => // a l /=.
+        case: (P a c) => //. }
+      move: H3; case: (size _); first by move/ltP.
+      move => n _ /=; rewrite -{1}[d c]Rplus_0_r; apply: Rplus_le_compat_l.
+      elim: n => /=; first by apply: Rle_refl.
+      move => n IH; apply: Rplus_le_le_0_compat => //. }
+    rewrite -big_sum_sumP; apply: big_sum_ge0 => //.
+  Qed.    
+End union_bound.
+  
 (** Relative entropy RE(p||q) 
     NOTE: This definition is nonstandard in that we use natural rather 
     than binary log. *)

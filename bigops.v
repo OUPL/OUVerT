@@ -199,17 +199,6 @@ Proof.
     by move=> c H; apply: H3; rewrite in_cons; apply/orP; right.
 Qed.    
 
-Lemma big_sum_le (T : eqType) (cs : seq T) (f : T -> R) g :
-  (forall c, c \in cs -> f c <= g c)%R -> 
-  (big_sum cs f <= big_sum cs g)%R.
-Proof.
-  elim: cs=> //=.
-  { move=> _; apply: Rle_refl. }
-  move=> a l IH H1; apply Rplus_le_compat.
-  { by apply: H1; rewrite in_cons; apply/orP; left. }
-    by apply: IH=> c H; apply: H1; rewrite in_cons; apply/orP; right.
-Qed.
-
 Lemma big_sum_lt_aux (T : eqType) (cs : seq T) (f : T -> R) g :
   (forall c, c \in cs -> f c < g c)%R -> 
   cs=[::] \/ (big_sum cs f < big_sum cs g)%R.
@@ -421,6 +410,18 @@ Proof.
   f_equal.
   apply: congr_big => //; first by move => j; rewrite in_set1.
 Qed.
+
+Lemma big_sum_le (T : eqType) (cs : seq T) (f : T -> R) g :
+  (forall c, c \in cs -> f c <= g c)%R -> 
+  (big_sum cs f <= big_sum cs g)%R.
+Proof.
+  elim: cs=> //=.
+  { move=> _; apply: Rle_refl. }
+  move=> a l IH H1; apply Rplus_le_compat.
+  { by apply: H1; rewrite in_cons; apply/orP; left. }
+    by apply: IH=> c H; apply: H1; rewrite in_cons; apply/orP; right.
+Qed.
+
 
 (*TODO: All these bigops should really be consolidated at some point...sigh*)
 
