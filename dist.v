@@ -381,6 +381,27 @@ Section markovR.
     move => x l ->; rewrite Rmult_plus_distr_l -!Rplus_assoc -[(_ + _) + d x * h x]Rplus_comm.
     by rewrite -Rplus_assoc -[d x * h x + _]Rplus_comm.
   Qed.    
+
+  Lemma expValR_const c g : expValR d (fun x => c * g x) = c * expValR d g.
+  Proof.    
+    rewrite /expValR; elim: (enum T) => /=; first by rewrite Rmult_0_r.
+    move => x l ->; rewrite -Rmult_assoc [d x * _]Rmult_comm Rmult_assoc Rmult_plus_distr_l //.
+  Qed.
+    
+  Lemma expValR_Ropp g : expValR d (fun x => - g x) = - expValR d g.
+  Proof.
+    rewrite /expValR; elim: (enum T) => /=; first by rewrite Ropp_0.
+    move => x l ->; rewrite Ropp_plus_distr; f_equal.
+    by rewrite Ropp_mult_distr_r_reverse.
+  Qed.    
+
+  Lemma expValR_one : expValR d (fun _ : T => 1) = 1.
+  Proof.
+    rewrite /expValR.
+    have ->: big_sum (enum T) (fun x : T => d x * 1) = big_sum (enum T) (fun x : T => d x).
+    { by apply: big_sum_ext => //= x; rewrite Rmult_1_r. }
+    apply: d_dist.
+  Qed.    
   
   Lemma expValR_split (p : pred T) :
     expValR d f =
@@ -711,7 +732,7 @@ Section general_lemmas.
   Qed.
 End general_lemmas.
 
-Section chernoff.
+Section chernoff_geq.
   Variable T : finType.
   Variables d : T -> R.
   Variable d_dist : big_sum (enum T) d = 1.
@@ -993,7 +1014,7 @@ Section chernoff.
     by apply: lambda_min_gt0.
   Qed.    
 
-  Lemma chernoff2 : phat_ge_q <= exp (-2%R * eps^2 * mR).
+  Lemma chernoff_geq : phat_ge_q <= exp (-2%R * eps^2 * mR).
   Proof.
     apply: Rle_trans; first by apply: chernoff1.
     rewrite -3!Ropp_mult_distr_l !exp_Ropp; apply: Rinv_le_contravar.
@@ -1013,4 +1034,61 @@ Section chernoff.
     rewrite /RE_Bernoulli/p_dist/q_dist in H2; rewrite H2.
     apply: Rle_refl.
   Qed.
-End chernoff.
+End chernoff_geq.
+
+Section chernoff_leq.
+  Variable T : finType.
+  Variables d : T -> R.
+  Variable d_dist : big_sum (enum T) d = 1.
+  Variable d_nonneg : forall x, 0 <= d x.
+  Variable m : nat.
+  Variable m_gt0 : (0 < m)%nat.
+
+  Notation d_prod := (@d_prod T d m).
+  
+  Variable f : 'I_m -> T -> R.
+  Variable f_range : forall i x, 0 <= f i x <= 1.
+  Variable f_identically_distributed : identically_distributed d f.
+  Variable f_independent : mutual_independence d f.
+
+  Definition f_neg (i : 'I_m) (t : T) := 1 - f i t.
+
+  Lemma f_neg_range : forall i x, 0 <= f_neg i x <= 1.
+  Proof. move => i x; case: (f_range i x) => H1 H2; split; rewrite /f_neg; fourier. Qed.
+  Lemma f_neg_identically_distributed : identically_distributed d f_neg.
+  Proof.
+    move => i j; rewrite /f_neg; move: (f_identically_distributed i j) => H.
+    rewrite 2!expValR_linear; f_equal.
+    by rewrite 2!expValR_Ropp H.
+  Qed.
+  Lemma f_neg_independent : mutual_independence d f_neg.
+  Proof. by move => g; rewrite (f_independent (fun x => g (1 - x))). Qed.
+
+  Variable eps : R.
+  Variable eps_gt0 : 0 < eps.
+  Variable eps_lt_1p : eps < 1 - p d m_gt0 f_neg.
+  Variable p_nontrivial : 0 < p d m_gt0 f < 1. 
+  
+  Definition p_neg := p d m_gt0 f_neg.
+
+  Lemma p_neg_one_minus_p : p_neg = 1 - p d m_gt0 f.
+  Proof.
+    rewrite /p_neg /p /f_neg; rewrite expValR_linear expValR_Ropp /Rminus; f_equal.
+    apply: expValR_one => //.
+  Qed.    
+  
+  Lemma p_neg_nontrivial : 0 < p_neg < 1.
+  Proof. rewrite p_neg_one_minus_p; case: p_nontrivial => H1 H2; split; fourier. Qed.
+  
+  Lemma chernoff_leq : phat_ge_q d m_gt0 f_neg eps <= exp (-2%R * eps^2 * mR m).
+  Proof.
+    apply: chernoff_geq => //.
+    { apply: f_neg_range. }
+    { apply: f_neg_identically_distributed. }
+    { apply: f_neg_independent. }
+    apply: p_neg_nontrivial.
+  Qed.
+End chernoff_leq.  
+  
+  
+  

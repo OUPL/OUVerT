@@ -69,11 +69,12 @@ Section learning.
     { by apply: prodR_nonneg. }
     rewrite [2 * _]Rmult_comm.
     have Hle:
-       \big[Rplus/0]_(i:'I_#|Hyp|)
+       \big[Rplus/0]_(i in 'I_#|Hyp|)
          probOfR (T:=finfun_of_finType (ordinal_finType m) (prod_finType A B))
          (prodR (T:=prod_finType A B) (fun _ : 'I_m => d)) [eta P i]
     <= \big[Rplus/0]_(i in 'I_#|Hyp|) (2 * exp (-2%R * eps^2 * mR)).
-    { admit. }
+    { rewrite -2!big_sum_sumP; apply big_sum_le => c Hin.
+      admit. }
     apply: Rle_trans; first by apply: Hle.
     rewrite big_const card_ord; elim: #|Hyp|.
     { rewrite !Rmult_0_l; apply: Rle_refl. }
