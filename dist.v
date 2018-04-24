@@ -785,19 +785,9 @@ Section chernoff_geq.
   Variable eps_lt_1p : eps < 1 - p.
   (*This above assumption, which is required to show that lambda_min > 0, 
     is strange in the sense that it limits the values epsilon we can choose 
-    to [0, 1-p).*)
+    to (0, 1-p).*)
   
   Definition q := p + eps.
-  Lemma q_nontrivial : 0 < q < 1. (*required to construct lambda_min*)
-  Proof.
-    rewrite /q; split.
-    { apply: Rplus_le_lt_0_compat => //.
-      by apply: expValR_ge0 => // x; case: (f_range i0 x). }
-    apply: Rlt_le_trans.
-    { apply: Rplus_le_lt_compat; last by apply: eps_lt_1p.
-      apply: Rle_refl. }
-    fourier.
-  Qed.    
 
   Lemma lt_p_q : p < q.
   Proof.
@@ -1086,9 +1076,44 @@ Section chernoff_leq.
     { apply: f_neg_range. }
     { apply: f_neg_identically_distributed. }
     { apply: f_neg_independent. }
-    apply: p_neg_nontrivial.
+    { apply: p_neg_nontrivial. }
   Qed.
-End chernoff_leq.  
+End chernoff_leq.
+
+Section chernoff.
+  Variable T : finType.
+  Variables d : T -> R.
+  Variable d_dist : big_sum (enum T) d = 1.
+  Variable d_nonneg : forall x, 0 <= d x.
+  Variable m : nat.
+  Variable m_gt0 : (0 < m)%nat.
+
+  Notation d_prod := (@d_prod T d m).
   
-  
-  
+  Variable f : 'I_m -> T -> R.
+  Variable f_range : forall i x, 0 <= f i x <= 1.
+  Variable f_identically_distributed : identically_distributed d f.
+  Variable f_independent : mutual_independence d f.
+
+  Variable eps : R.
+  Variable eps_gt0 : 0 < eps.
+  (*NOTE: weird assumptions, required (?) to prove \lambda_min > 0*)
+  Variable eps_lt_p : eps < p d m_gt0 f.  
+  Variable eps_lt_1p : eps < 1 - p d m_gt0 f.
+  (*END: weird assumptions*)
+  Variable p_nontrivial : 0 < p d m_gt0 f < 1. 
+
+  Lemma chernoff_aux :
+    phat_ge_q d m_gt0 f eps + phat_ge_q d m_gt0 (f_neg f) eps <= 2 * exp (-2%R * eps^2 * mR m).
+  Proof.
+    rewrite double; apply: Rplus_le_compat.
+    { apply: chernoff_geq => //. }
+    apply: chernoff_leq => //.
+    rewrite -p_neg_one_minus_p /p_neg => //.
+    have ->: p d m_gt0 (f_neg (T:=T) (f_neg (T:=T) f)) = p d m_gt0 f.
+    { rewrite /p/expValR; apply: big_sum_ext => // x; f_equal.
+      by rewrite /f_neg /Rminus Ropp_minus_distr' Rplus_comm Rplus_assoc Rplus_opp_l Rplus_0_r. }
+    by apply: eps_lt_p.
+  Qed.
+End chernoff.
+
