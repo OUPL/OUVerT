@@ -1095,20 +1095,67 @@ Section chernoff.
   Variable f_identically_distributed : identically_distributed d f.
   Variable f_independent : mutual_independence d f.
 
-  Variable eps : R.
+  Variable eps delt : R.
   Variable eps_gt0 : 0 < eps.
+  Variable delt_gt0 : 0 < delt.
   (*NOTE: weird assumptions, required (?) to prove \lambda_min > 0*)
   Variable eps_lt_p : eps < p d m_gt0 f.  
-  Variable eps_lt_1p : eps < 1 - p d m_gt0 f.
+  Variable delt_lt_1p : delt < 1 - p d m_gt0 f.
   (*END: weird assumptions*)
   Variable p_nontrivial : 0 < p d m_gt0 f < 1. 
 
+  Definition min_eps_delt := Rmin eps delt.
+
+  Lemma Rle_0_min_eps_delt : 0 <= min_eps_delt.
+  Proof. by rewrite /min_eps_delt /Rmin; case: (Rle_dec _ _) => H; apply: Rlt_le. Qed.
+
+  Lemma Rlt_min_eps_delt_delt : min_eps_delt <> delt -> min_eps_delt < delt.
+  Proof. by rewrite /min_eps_delt /Rmin; case: (Rle_dec _ _); first by case. Qed.
+
+  Lemma Rlt_min_eps_delt_eps : min_eps_delt <> eps -> min_eps_delt < eps.
+  Proof.
+    rewrite /min_eps_delt /Rmin; case: (Rle_dec _ _) => //.
+    move/Rnot_le_gt => H1 H2; fourier.
+  Qed.    
+  
+  Lemma Rle_exp_delt_min : exp (- (2) * delt ^ 2 * mR m) <= exp (- (2) * min_eps_delt ^ 2 * mR m).
+  Proof.    
+    rewrite !Ropp_mult_distr_l_reverse 2!exp_Ropp; apply: Rinv_le_contravar.
+    { apply: exp_pos. }
+    case: (Req_dec (exp (2 * min_eps_delt ^ 2 * mR m)) (exp (2 * delt ^ 2 * mR m))).
+    { by move => ->; apply: Rle_refl. }
+    move => Hneq; left; apply: exp_increasing; apply: Rmult_lt_compat_r; first by apply: mR_gt0.
+    apply: Rmult_lt_compat_l; first by fourier.
+    rewrite -!tech_pow_Rmult /= 2!Rmult_1_r; apply: Rmult_le_0_lt_compat.
+    { apply: Rle_0_min_eps_delt. }
+    { apply: Rle_0_min_eps_delt. }      
+    { by apply: Rlt_min_eps_delt_delt => Heq; rewrite Heq in Hneq; apply: Hneq. }
+    by apply: Rlt_min_eps_delt_delt => Heq; rewrite Heq in Hneq; apply: Hneq.
+  Qed.    
+
+  Lemma Rle_exp_eps_min : exp (- (2) * eps ^ 2 * mR m) <= exp (- (2) * min_eps_delt ^ 2 * mR m).
+  Proof.    
+    rewrite !Ropp_mult_distr_l_reverse 2!exp_Ropp; apply: Rinv_le_contravar.
+    { apply: exp_pos. }
+    case: (Req_dec (exp (2 * min_eps_delt ^ 2 * mR m)) (exp (2 * eps ^ 2 * mR m))).
+    { by move => ->; apply: Rle_refl. }
+    move => Hneq; left; apply: exp_increasing; apply: Rmult_lt_compat_r; first by apply: mR_gt0.
+    apply: Rmult_lt_compat_l; first by fourier.
+    rewrite -!tech_pow_Rmult /= 2!Rmult_1_r; apply: Rmult_le_0_lt_compat.
+    { apply: Rle_0_min_eps_delt. }
+    { apply: Rle_0_min_eps_delt. }      
+    { by apply: Rlt_min_eps_delt_eps => Heq; rewrite Heq in Hneq; apply: Hneq. }
+    by apply: Rlt_min_eps_delt_eps => Heq; rewrite Heq in Hneq; apply: Hneq.
+  Qed.    
+  
   Lemma chernoff_aux :
-    phat_ge_q d m_gt0 f eps + phat_ge_q d m_gt0 (f_neg f) eps <= 2 * exp (-2%R * eps^2 * mR m).
+    phat_ge_q d m_gt0 f delt + phat_ge_q d m_gt0 (f_neg f) eps <=
+    2 * exp (-2%R * min_eps_delt^2 * mR m).
   Proof.
     rewrite double; apply: Rplus_le_compat.
-    { apply: chernoff_geq => //. }
-    apply: chernoff_leq => //.
+    { apply: Rle_trans; [apply: chernoff_geq => //|]; apply: Rle_exp_delt_min. }
+    apply: Rle_trans; [apply: chernoff_leq => //|]; last first.
+    { apply: Rle_exp_eps_min. }
     rewrite -p_neg_one_minus_p /p_neg => //.
     have ->: p d m_gt0 (f_neg (T:=T) (f_neg (T:=T) f)) = p d m_gt0 f.
     { rewrite /p/expValR; apply: big_sum_ext => // x; f_equal.
