@@ -1148,7 +1148,7 @@ Section chernoff.
     by apply: Rlt_min_eps_delt_eps => Heq; rewrite Heq in Hneq; apply: Hneq.
   Qed.    
   
-  Lemma chernoff_aux :
+  Lemma chernoff_aux1 :
     phat_ge_q d m_gt0 f delt + phat_ge_q d m_gt0 (f_neg f) eps <=
     2 * exp (-2%R * min_eps_delt^2 * mR m).
   Proof.
@@ -1161,6 +1161,89 @@ Section chernoff.
     { rewrite /p/expValR; apply: big_sum_ext => // x; f_equal.
       by rewrite /f_neg /Rminus Ropp_minus_distr' Rplus_comm Rplus_assoc Rplus_opp_l Rplus_0_r. }
     by apply: eps_lt_p.
+  Qed.
+
+  (*This bound unifies epsilon=delta*)
+  Lemma chernoff_aux2 (Heq : eps = delt) :
+    phat_ge_q d m_gt0 f eps + phat_ge_q d m_gt0 (f_neg f) eps <=
+    2 * exp (-2%R * eps^2 * mR m).
+  Proof.
+    have Heq2: eps = min_eps_delt.
+    { rewrite /min_eps_delt/Rmin; subst delt; case: (Rle_dec _ _) => //. }
+    rewrite {3}Heq2; apply: Rle_trans; last by apply: chernoff_aux1.
+    by rewrite Heq; apply: Rle_refl.
+  Qed.
+  
+  Definition p_hat x := / (mR m) * big_sum (enum 'I_m) (fun i => f i (x i)).
+  Definition p_exp := p d m_gt0 f.
+  
+  Lemma chernoff (Heq : eps = delt) :
+    probOfR (prodR (fun _ => d)) (fun x => Rle_lt_dec eps (Rabs (p_exp - p_hat x))) <=
+    2 * exp (-2%R * eps^2 * mR m).
+  Proof.
+    apply: Rle_trans; last by apply: (chernoff_aux2 Heq).
+    rewrite /phat_ge_q/conv/probOfR/q/= 3!big_sum_sumP; clear delt delt_gt0 delt_lt_1p Heq.
+    rewrite big_mkcond.
+    set (b1 := \big[bigops.Rplus/0]_(i | Rle_lt_dec _ _) _).
+    set (b2 := \big[bigops.Rplus/0]_(i | Rle_lt_dec _ _) _).
+    have ->: b1 = \big[bigops.Rplus/0]_(i:{ffun 'I_m->T})
+       (if is_left (Rle_lt_dec (p (T:=T) d m_gt0 f + eps)
+                               (/ INR m * big_sum (enum 'I_m) (fun i1 : 'I_m => f i1 (i i1))))
+        then prodR (T:=T) (fun _ : 'I_m => d) i else 0).
+    { by rewrite /b1 big_mkcond. }
+    have ->: b2 = \big[bigops.Rplus/0]_(i:{ffun 'I_m->T})
+       (if is_left (Rle_lt_dec (p (T:=T) d m_gt0 (f_neg (T:=T) f) + eps)
+                               (/ INR m * big_sum (enum 'I_m) (fun i1 : 'I_m => f_neg (T:=T) f i1 (i i1))))
+        then prodR (T:=T) (fun _ : 'I_m => d) i else 0).
+    { by rewrite /b2 big_mkcond. }
+    clear b1 b2.
+    set (b1 := \big[bigops.Rplus/0]_i (if _ then _ else _)).
+    set (b2 := \big[bigops.Rplus/0]_i (if _ then _ else _)).
+    set (b3 := \big[bigops.Rplus/0]_i (if _ then _ else _)).
+    have ->: b2 + b3 = bigops.Rplus b2 b3 by [].
+    rewrite /b2 /b3 -big_split /b1 -!big_sum_sumP; apply: big_sum_le => x /= Hin.
+    set (dP := prodR _); case: (Rle_lt_dec _ _) => Hle /=; last first.
+    { apply: Rplus_le_le_0_compat.
+      { case: (is_left _); [by apply: prodR_nonneg |fourier]. }
+      case: (is_left _); [by apply: prodR_nonneg |fourier]. }
+    (*have: eps <= |p-p_hat|*)
+    case: (Rle_lt_dec p_exp (p_hat x)); last first => Hle2.
+    { (*Case 1: p_hat < p*)
+      have Hle3: eps <= p_exp - p_hat x.
+      { move: Hle; rewrite Rabs_minus_sym /Rabs; case: (Rcase_abs _) => //= Hx Hy; fourier. }
+      have Hle4: p_hat x + eps <= p_exp by fourier.
+      case: (Rle_lt_dec (p _ _ f + _) _) => Hle5 /=.
+      { rewrite -{1}[dP x]Rplus_0_l; apply: Rplus_le_compat; first by apply: prodR_nonneg.
+        case: (Rle_lt_dec _ _) => /= y; [fourier|].
+        exfalso; rewrite /p_hat/mR/p_exp in Hle4; move: Hle4 Hle5.
+        move: (p _ _ _) => X; move: (/_ * _) => Y => H1 H2; fourier. }
+      rewrite Rplus_0_l; case: (Rle_lt_dec (_ + _)) => /= Hle6; first by apply: Rle_refl.
+      have Hle7:
+        / INR m * big_sum (enum 'I_m) (fun i1 : 'I_m => f_neg (T:=T) f i1 (x i1)) <
+        p_neg (T:=T) d m_gt0 f + eps.
+      { apply: Hle6. } clear Hle6.
+      exfalso; rewrite p_neg_one_minus_p in Hle7 => //.
+      have H8: p_hat x < p (T:=T) d m_gt0 f + eps by []. clear Hle5.
+      have H9: 1 - p_hat x < 1 - p (T:=T) d m_gt0 f + eps.
+      { apply: Rle_lt_trans; last by apply: Hle7.
+        rewrite /p_hat /f_neg big_sum_plus big_sum_nmul big_sum_constant size_enum_ord.
+        rewrite Rmult_1_r Rmult_plus_distr_l Rinv_l; last first.
+        { move => Heq; move: (mR_gt0 m_gt0); rewrite /mR Heq => Hlt; fourier. }
+        rewrite -Ropp_mult_distr_r; apply: Rle_refl. }
+      have H10: eps > p_exp - p_hat x. 
+      { clear - H8 H9; move: H8 H9; rewrite /p_exp; move: (p _ _) => p_exp => H1 H2.
+        fourier. }
+      fourier. }
+    (*Case 2: p_hat >= p*)
+    { have Hle3: eps <= p_hat x - p_exp.
+      { move: Hle; rewrite Rabs_minus_sym /Rabs; case: (Rcase_abs _) => //= Hx Hy; fourier. }
+      have Hle4: p_exp + eps <= p_hat x by fourier.
+      case: (Rle_lt_dec (p _ _ f + _) _) => Hle5 /=.
+      { rewrite -{1}[dP x]Rplus_0_r; apply: Rplus_le_compat_l.
+        case: (Rle_lt_dec _ _) => /= y; [|fourier].
+          by apply: prodR_nonneg. }
+      exfalso; rewrite /p_hat/mR/p_exp in Hle4; move: Hle4 Hle5.
+      move: (p _ _ _) => X; move: (/_ * _) => Y => H1 H2; fourier. }
   Qed.
 End chernoff.
 
