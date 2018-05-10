@@ -208,6 +208,9 @@ Module Vector (B : BOUND) (P : PAYLOAD) <: VECTOR.
 
   Definition to_list (m : t) : list (Ix.t * P.t) :=
     M.elements m.
+
+  Definition to_dense_list (m : t) : list (Ix.t * P.t) :=
+    rev (map (fun i => (i, get i m)) (enumerate Ix.t)).
   
   (* construct a vector from function f *)
   Definition of_fun (f : Ix.t -> P.t) : t :=
@@ -955,3 +958,18 @@ Module DVector (B : BOUND).
       v
       0%DRed.
 End DVector.
+
+
+Module MatrixPayload (B : BOUND) (P : PAYLOAD) <: PAYLOAD.
+  Module Vec := Vector B P.
+  Definition t := Vec.t.
+  Definition t0 : t := Vec.M.empty _.
+  Definition eq0 (d : t) := Vec.M.is_empty d.
+  Lemma eq0P d : reflect (d=t0) (eq0 d).
+  Proof.
+    rewrite /eq0 /Vec.M.is_empty /Vec.M.Raw.is_empty /t0.
+    case: d => x y /=; move: y; case: x => y; constructor => //.
+    case H: Vec.M.empty => [z w]; inversion H; subst.
+    f_equal; apply: proof_irrelevance.
+  Qed.
+End MatrixPayload.
