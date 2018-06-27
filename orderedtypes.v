@@ -76,7 +76,11 @@ End MyOrderedType_of_OrderedFinType.
 Module OrderedProd (A B : MyOrderedType) <: MyOrderedType.
   Definition t := (A.t*B.t)%type.
   Definition t0 := (A.t0, B.t0).
+  Existing Instance A.enumerable.
+  Existing Instance B.enumerable.  
   Definition enumerable  : Enumerable t := _.
+  Existing Instance A.showable.
+  Existing Instance B.showable.  
   Definition show_prod (p : A.t*B.t) : string :=
     let s1 := to_string p.1 in
     let s2 := to_string p.2 in
