@@ -103,6 +103,12 @@ Class Enum_ok A `{Enumerable A} : Type :=
       enum_total : forall a : A, In a (enumerate A)
     }.
 
+Class RefineTypeAxiomClass (T : finType)
+      (enumerateClass : Enumerable T) :=
+  refineTypeAxiom_fun :
+    enumerate T =i enum T /\ uniq (enumerate T).
+Notation "'enumerateP' T" := (@refineTypeAxiom_fun T _ _) (at level 30).
+
 Instance prodEnumerableInstance (aT bT : Type)
          (enumerableA : Enumerable aT)
          (enumerableB : Enumerable bT)

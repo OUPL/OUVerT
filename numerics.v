@@ -897,6 +897,11 @@ Section rat_to_R_lemmas.
     rewrite /rat_to_R /rat_to_Q /Q2R /= Ropp_mult_distr_l_reverse Rmult_1_l.
     by apply: Ropp_eq_compat; rewrite Rinv_1.
   Qed.
+
+  Lemma rat_to_R1n : rat_to_R (-1) = (-1)%R.
+  Proof.
+    rewrite rat_to_R_opp rat_to_R1 //.
+  Qed.  
 End rat_to_R_lemmas.
 
 Section Z_to_int.
