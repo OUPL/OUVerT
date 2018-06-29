@@ -300,10 +300,106 @@ Section chernoff_geq.
     fourier.
   Qed.    
   
-  Lemma phi_lambda_min : phi lambda_min = -(RE (Bernoulli.t (p + eps)) (Bernoulli.t p)).
+  Lemma phi_lambda_min : phi lambda_min = -(RE_Bernoulli (p + eps) p).
   Proof.
-    rewrite /phi/lambda_min/RE exp_ln.
-  Admitted. (*TODO: FILL*)
+    rewrite /phi/lambda_min RE_Bernoulli_def.
+    have H1: 0 < 1 - p + p * exp (ln (q * (1 - p) / ((1 - q) * p))).
+    { have H: 0 < 1 - p by fourier.
+      apply: Rlt_le_trans; first by apply: H.
+      rewrite -{1}[1-p]Rplus_0_r; apply: Rplus_le_compat_l.
+      case: p_nontrivial => H1 H2; apply: Rmult_le_pos; [fourier|]. 
+      by apply: Rlt_le; apply: exp_pos. }
+    simpl; rewrite ln_mult; [|by apply: exp_pos|] => //.
+    case: p_nontrivial => X1 X2.
+    have H8: p <> 0.
+    { lra. }
+    have H6: q <> 0.
+    { rewrite /q; lra. }
+    have H10: / p <> 0.
+    { by apply: Rinv_neq_0_compat. }
+    have H7: 1 - p <> 0.
+    { lra. }
+    have H11: 1 - q <> 0.
+    { rewrite /q; lra. }
+    have H9: / (1 - q) <> 0.
+    { by rewrite /q; apply: Rinv_neq_0_compat. }
+    have H3: q * (1 - p) <> 0.
+    { rewrite /q; apply: Rmult_integral_contrapositive; split; lra. }
+    have H4: / ((1 - q) * p) <> 0.
+    { rewrite /q; apply: Rinv_neq_0_compat; apply: Rmult_integral_contrapositive.
+      split; lra. }
+    have H5: (1 - q) * p <> 0.
+    { rewrite /q; apply: Rmult_integral_contrapositive; split; lra. }
+    have H12: / (1 - q) * / p <> 0.
+    { apply: Rmult_integral_contrapositive; split; lra. }
+    have H2: 0 < q * (1 - p) / ((1 - q) * p).
+    { apply: Rmult_lt_0_compat.
+      { rewrite /q; apply: Rmult_lt_0_compat; lra. }
+      rewrite /q; apply: Rinv_0_lt_compat.
+      apply: Rmult_lt_0_compat; lra. }
+    rewrite ln_exp exp_ln -/q // -ln_Rinv //.
+    have ->: / (q * (1 - p) / ((1 - q) * p)) = (p * (1 - q)) / (q * (1 - p)).
+    { rewrite !Rinv_mult_distr // !Rinv_involutive // /Rdiv Rinv_mult_distr //.
+      by rewrite [(p * _) * _]Rmult_comm [p * _]Rmult_comm. }
+    rewrite [ln _ * q]Rmult_comm.
+    have ->:
+      1 - p + p * (q * (1 - p) / ((1 - q) * p)) =
+      (1 - q) * (1 - p) / (1 - q) + q * (1 - p) / (1 - q).
+    { have X: 1 - p = (1 - q) * (1 - p) / (1 - q).
+      { rewrite /Rdiv [_ * /(1 - q)]Rmult_comm -Rmult_assoc -(Rinv_l_sym (1-q)) //.
+        by rewrite Rmult_1_l. }
+      rewrite {1}X; f_equal; rewrite /Rdiv [p * _]Rmult_comm Rinv_mult_distr //.
+      rewrite Rmult_assoc [_ * /p * p]Rmult_assoc -(Rinv_l_sym p) // Rmult_1_r //. }
+    have ->: (1 - q) * (1 - p) / (1 - q) + q * (1 - p) / (1 - q) = (1 - p) / (1 - q).
+    { rewrite -Rdiv_plus_distr.
+      have ->: (1 - q) * (1 - p) + q * (1 - p) = 1 - p.
+      { have ->: (1 - q) * (1 - p) = 1 - p - q + p * q by lra.
+        rewrite Rmult_minus_distr_l Rmult_1_r [q*p]Rmult_comm /Rminus.
+        rewrite [_ + p*q]Rplus_comm -Rplus_assoc Rplus_comm.
+        rewrite [p * q + _ + q]Rplus_assoc -[-_ + _]Rplus_assoc Rplus_opp_l Rplus_0_l.
+        rewrite Rplus_assoc Rplus_opp_l Rplus_0_r //. }
+      by []. }
+    have H13: 0 < p * (1 - q) / (q * (1 - p)).
+    { apply: Rmult_lt_0_compat.
+      { apply: Rmult_lt_0_compat => //; rewrite /q; lra. }
+      apply: Rinv_0_lt_compat; apply: Rmult_lt_0_compat; rewrite /q; lra. }
+    have H14: 0 < (1 - p) / (1 - q).
+    { apply: Rmult_lt_0_compat; rewrite /q; [lra|].
+      apply: Rinv_0_lt_compat; lra. }
+    have ->:
+      q * ln (p * (1 - q) / (q * (1 - p))) + ln ((1 - p) / (1 - q)) =
+      (q - 1) * ln (p * (1 - q) / (q * (1 - p))) +
+      ln ( (p * (1 - q) / (q * (1 - p))) * ((1 - p) / (1 - q)) ).
+    { rewrite ln_mult // -Rplus_assoc; f_equal; lra. }
+    have H15: 0 < p / q.
+    { apply: Rmult_lt_0_compat => //; apply Rinv_0_lt_compat; rewrite /q; lra. }
+    have H16: 0 < (1 - q) / (1 - p).
+    { apply: Rmult_lt_0_compat; rewrite /q; [lra|].
+      apply: Rinv_0_lt_compat; lra. }
+    have X3: p * (1 - q) / (q * (1 - p)) = (p / q) * ((1 - q) / (1 - p)).
+    { rewrite /Rdiv [p * (1 - q) * _]Rmult_assoc [(1 - q) * _]Rmult_comm -Rmult_assoc.
+      rewrite Rinv_mult_distr // -Rmult_assoc; lra. }    
+    have ->: ln (p * (1 - q) / (q * (1 - p))) = ln (p / q) + ln ((1 - q) / (1 - p)).
+    { rewrite X3 ln_mult //. }
+    have ->: p * (1 - q) / (q * (1 - p)) * ((1 - p) / (1 - q)) = p / q.
+    { rewrite X3 Rmult_assoc.
+      set (A := ((_ / _) * (_ / _))); have ->: A = 1.
+      { rewrite /A /Rdiv Rmult_assoc -[/_ * _]Rmult_assoc Rinv_l // Rmult_1_l Rinv_r //. }
+      by rewrite Rmult_1_r. }
+    have ->:
+      (q - 1) * (ln (p / q) + ln ((1 - q) / (1 - p))) + ln (p / q) =
+      q * ln (p / q) + (q - 1) * ln ((1 - q) / (1 - p)) by lra.
+    rewrite -[q * _ + _ * _]Ropp_involutive Ropp_plus_distr; f_equal.
+    rewrite Ropp_mult_distr_l.
+    have ->: - q * ln (p / q) = q * - ln (p / q) by lra.
+    rewrite -ln_Rinv //.
+    have H18: / q <> 0.
+    { by rewrite /q; apply: Rinv_neq_0_compat. }
+    have ->: /(p / q) = q / p.
+    { rewrite Rinv_mult_distr // Rinv_involutive // Rmult_comm //. }
+    f_equal.
+    rewrite Ropp_mult_distr_l Ropp_plus_distr Ropp_involutive Rplus_comm //.
+  Qed.
 
   Lemma chernoff1 : phat_ge_q <= exp (-(RE (Bernoulli.t (p + eps)) (Bernoulli.t p)) * mR).
   Proof.

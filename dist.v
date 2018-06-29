@@ -514,6 +514,14 @@ Section relative_entropy_Bernoulli.
   Definition q_dist := Bernoulli.t q.
 
   Definition RE_Bernoulli : R := RE p_dist q_dist.
+
+  Lemma RE_Bernoulli_def :
+    RE_Bernoulli = p * ln (p / q) + (1 - p) * ln ((1 - p) / (1 - q)).
+  Proof.
+    rewrite /RE_Bernoulli/RE.
+    have ->: enum bool_finType = [:: true; false] by rewrite enumT Finite.EnumDef.enumDef.
+    simpl; rewrite Rplus_0_r //.
+  Qed.    
 End relative_entropy_Bernoulli.
 
 Section TV_Bernoulli.
