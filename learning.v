@@ -5,8 +5,6 @@ Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 
-Require Import FunctionalExtensionality.
-
 Import GRing.Theory Num.Def Num.Theory.
 Require Import QArith Reals Rpower Ranalysis Fourier.
 
@@ -189,5 +187,6 @@ Section learning.
     Qed.
   End zero_one_loss.
 End learning.
-  
+
+
   
