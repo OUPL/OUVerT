@@ -298,3 +298,80 @@ Lemma ln_upper_01_aux_bot c :
 Proof.
   rewrite Rmult_0_r exp_0. ring.
 Qed.
+
+Lemma ln_upper_01_aux_mid c : 
+  0 <= 1 - (1/2) + (1/2) * exp c - exp (c * (1/2)).
+Proof.
+Admitted.
+
+Lemma ln_upper_01_aux_top c : 
+  0 = 1 - 1 + 1 * exp c - exp (c * 1).
+Proof.
+  rewrite Rmult_1_r Rmult_1_l. ring.
+Qed.
+
+Lemma ln_upper_01_aux_deriv c :
+  derivable (fun x => 1 - x + x * exp c - exp (c * x)).
+Proof.
+  apply derivable_minus.
+  apply derivable_plus.
+  apply derivable_minus.
+  apply derivable_const.
+  apply derivable_id.
+  apply derivable_mult.
+  apply derivable_id.
+  apply derivable_const.
+  apply derivable_comp.
+  apply derivable_mult.
+  apply derivable_const.
+  apply derivable_id.
+  apply derivable_exp.
+Qed.
+
+Lemma ln_upper_01 x c :
+  0 < x < 1 ->
+  c * x <= ln (1 - x + x * exp c).
+Proof.
+  intros.
+  apply exp_le_inv.
+  rewrite exp_ln.
+  move: (Rtotal_order x (1/2)) => H0.
+  apply Rge_le.
+  apply Rminus_ge.
+  apply Rle_ge.
+  set f := fun x => 1 - x + x * exp c - exp (c * x).
+  replace (1 - x + x * exp c - exp (c * x)) with (f x).
+  destruct H0 as [Hup | [Hhalf | Hdown]]; intros.
+  + replace 0 with (f 0). left.
+    eapply derive_increasing_interv with
+      (a:= 0) (b := 1/2) (pr := ln_upper_01_aux_deriv c).
+    fourier.
+    intros. admit.
+    split; fourier.
+    split. destruct H. fourier. fourier. destruct H; auto.    
+    rewrite {2} (ln_upper_01_aux_bot c) /f. auto. 
+  + subst. rewrite /f. apply (ln_upper_01_aux_mid c).
+  + replace 0 with (f 1). admit.
+    rewrite (ln_upper_01_aux_top c) /f. auto. 
+  + rewrite /f; auto.
+  + admit.
+Admitted. (*TODO: Sam? :-)*)
+
+Lemma exp_upper_01 x c :
+  0 <= x <= 1 ->
+  exp (c * x) <= 1 - x + x * exp c.
+Proof.
+  case => H1 H2; case: H1 => H1x; last first.
+  { subst x; rewrite Rmult_0_r exp_0 /Rminus Ropp_0 Rplus_0_r Rmult_0_l Rplus_0_r.
+    apply: Rle_refl. }
+  case: H2 => H2x; last first.
+  { subst x; rewrite Rmult_1_r Rmult_1_l; fourier. }
+  have Hx: 0 < 1 - x + x * exp c.
+  { rewrite -[0]Rplus_0_l; apply: Rplus_lt_compat; try fourier.
+    apply: Rmult_lt_0_compat => //; apply: exp_pos. }
+  move: (ln_upper_01 c (conj H1x H2x)); case.
+  { move/exp_increasing => H; left; apply: Rlt_le_trans; first by apply: H.
+    rewrite exp_ln //; apply: Rle_refl. }
+  move => ->; rewrite exp_ln //; apply: Rle_refl.
+Qed.  
+
