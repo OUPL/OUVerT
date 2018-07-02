@@ -29,3 +29,6 @@ Axiom pinsker_Bernoulli :
 Axiom gibbs_Bernoulli : 
   forall p q : R, 0 <= RE_Bernoulli p q.
 
+Axiom exp_upper_01 :
+  forall x c, 0 <= x <= 1 -> exp (c * x) <= 1 - x + x * exp c.
+
