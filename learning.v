@@ -14,9 +14,6 @@ Require Import bigops numerics expfacts dist chernoff.
 
 Section learning.
   Variables A B : finType.
-  Variable rty : numDomainType.
-
-  Definition Hyp : finType := [finType of {ffun A -> B}].
 
   Variable d : A*B -> R.
   Variable d_dist : big_sum (enum [finType of A*B]) d = 1.
@@ -28,15 +25,16 @@ Section learning.
   Definition i0 : 'I_m := Ordinal m_gt0.  
 
   (** Training sets *)
-  Definition training_set := [finType of {ffun 'I_m -> [finType of A*B]}].
+  Definition training_set : finType := [finType of {ffun 'I_m -> [finType of A*B]}].
 
   Section error_RV.
-    (** The (hypothesis-indexed) set random variables being evaluated *)
+    Variable Hyp : finType.    
+    (** The (hypothesis-indexed) set of random variables being evaluated *)
     Variable X : Hyp -> 'I_m -> A*B -> R.
     Variable X_range : forall h i x, 0 <= X h i x <= 1.
     
     (** The empirical error of h on T *)
-    Definition empErr (T : training_set) (h : Hyp) :=
+    Definition empErr (T : training_set) (h : Hyp) := 
       (big_sum (enum 'I_m) (fun i => X h i (T i))) / mR.
 
     (** The expected error of h on D *)
@@ -168,23 +166,26 @@ Section learning.
   End error_RV.
 
   Section zero_one_loss.
-    Definition loss01 (h : Hyp) (i : 'I_m) (xy : A*B) : R :=
-      let: (x,y) := xy in if h x == y then 0%R else 1%R.
+    Variable Weights : finType.
+    Variable predict : Weights -> A -> B.
+    
+    Definition loss01 (w : Weights) (i : 'I_m) (xy : A*B) : R :=
+      let: (x,y) := xy in if predict w x == y then 0%R else 1%R.
 
       Lemma chernoff_bound_loss01
         (eps : R) (eps_gt0 : 0 < eps)
-        (not_perfectly_learnable : forall h : Hyp, 0 < expErr loss01 h < 1)
-        (ind : forall h : Hyp, mutual_independence d (loss01 h)) :
+        (not_perfectly_learnable : forall w : Weights, 0 < expErr loss01 w < 1)
+        (ind : forall w : Weights, mutual_independence d (loss01 w)) :
       probOfR (prodR (fun _ : 'I_m => d))
               [pred T:training_set
               | [exists i : 'I_#|eps_Hyp loss01 eps|,
                  let: h := projT1 (enum_val i)
                  in Rle_lt_dec eps (Rabs (expErr loss01 h - empErr loss01 T h))]]
-      <= 2 * INR #|Hyp| * exp (-2%R * eps^2 * mR).
+      <= 2 * INR #|Weights| * exp (-2%R * eps^2 * mR).
     Proof.
       apply: chernoff_bound => //.
-      move => h i x; rewrite /loss01; case: x => a b.
-      case: (h a == b)%B; split; fourier. 
+      move => w i x; rewrite /loss01; case: x => a b.
+      case: (predict w a == b)%B; split; fourier. 
     Qed.
   End zero_one_loss.
 End learning.
