@@ -164,26 +164,26 @@ Section learning.
   End error_RV.
 
   Section zero_one_loss.
-    Variable Weights : finType.
-    Variable predict : Weights -> A -> B.
+    Variable Params : finType.
+    Variable predict : Params -> A -> B.
     
-    Definition loss01 (w : Weights) (i : 'I_m) (xy : A*B) : R :=
-      let: (x,y) := xy in if predict w x == y then 0%R else 1%R.
+    Definition loss01 (p : Params) (i : 'I_m) (xy : A*B) : R :=
+      let: (x,y) := xy in if predict p x == y then 0%R else 1%R.
 
       Lemma chernoff_bound_loss01
         (eps : R) (eps_gt0 : 0 < eps)
-        (not_perfectly_learnable : forall w : Weights, 0 < expErr loss01 w < 1)
-        (ind : forall w : Weights, mutual_independence d (loss01 w)) :
+        (not_perfectly_learnable : forall p : Params, 0 < expErr loss01 p < 1)
+        (ind : forall p : Params, mutual_independence d (loss01 p)) :
       probOfR (prodR (fun _ : 'I_m => d))
               [pred T:training_set
               | [exists i : 'I_#|eps_Hyp loss01 eps|,
                  let: h := projT1 (enum_val i)
                  in Rle_lt_dec eps (Rabs (expErr loss01 h - empErr loss01 T h))]]
-      <= 2 * INR #|Weights| * exp (-2%R * eps^2 * mR).
+      <= 2 * INR #|Params| * exp (-2%R * eps^2 * mR).
     Proof.
       apply: chernoff_bound => //.
-      move => w i x; rewrite /loss01; case: x => a b.
-      case: (predict w a == b)%B; split; fourier. 
+      move => p i x; rewrite /loss01; case: x => a b.
+      case: (predict p a == b)%B; split; fourier. 
     Qed.
   End zero_one_loss.
 End learning.
