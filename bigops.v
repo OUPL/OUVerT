@@ -90,10 +90,13 @@ Proof.
   by rewrite big_sum_cat.
 Qed.    
 
-Lemma big_sum_ge0 T (cs : seq T) f (H : forall x, 0 <= f x) : 0 <= big_sum cs f.
+Lemma big_sum_ge0 (T:eqType) (cs : seq T) f (H : forall x, x \in cs -> 0 <= f x)
+  : 0 <= big_sum cs f.
 Proof.
-  elim: cs => /=; first by apply: Rle_refl.
-  move => a l H2; rewrite -[0]Rplus_0_l; apply: Rplus_le_compat => //.
+  elim: cs H => /=; first by move => _; apply: Rle_refl.
+  move => a l IH H2; rewrite -[0]Rplus_0_l; apply: Rplus_le_compat => //.
+  by apply: H2 => /=; apply: mem_head.
+  by apply: IH => // x H3; apply: H2; rewrite/=/in_mem/=; apply/orP; right.
 Qed.  
 
 Lemma rat_to_R_sum T (cs : seq T) (f : T -> rat) :
@@ -125,6 +128,14 @@ Proof.
   elim: cs => //=.
   { by rewrite Rmult_0_r. }
   move => a l /=; rewrite Rmult_plus_distr_l => -> //.
+Qed.  
+
+Lemma big_sum_mult_right T (cs : seq T) c f :
+  big_sum cs f * c = big_sum cs (fun x => f x * c).
+Proof.
+  elim: cs => //=.
+  { by rewrite Rmult_0_l. }
+  move => a l /=; rewrite Rmult_plus_distr_r => -> //.
 Qed.  
 
 Fixpoint big_product (T : Type) (cs : seq T) (f : T -> R) : R :=
@@ -422,6 +433,74 @@ Proof.
     by apply: IH=> c H; apply: H1; rewrite in_cons; apply/orP; right.
 Qed.
 
+Lemma perm_eq_nil (T:eqType) (cs : seq T) : perm_eq [::] cs -> cs=[::].
+Proof.
+  move => H; apply: perm_eq_small => //.
+  by rewrite perm_eq_sym.
+Qed.    
+
+Lemma In_mem (T:eqType) (a:T) (cs : seq T) : List.In a cs <-> a \in cs.
+Proof.
+  elim: cs a => // a l IH ax; split.
+  { inversion 1; subst; first by rewrite mem_head.
+    by rewrite /in_mem/=; apply/orP; right; rewrite -(IH ax). }
+  rewrite /in_mem/=; case/orP; first by move/eqP => <-; left.
+  by move => H; right; rewrite IH.
+Qed.    
+
+Lemma uniq_NoDup (T:eqType) (cs : seq T) : uniq cs -> List.NoDup cs.
+Proof.
+  elim: cs.
+  { move => _; constructor. }
+  move => a l IH; rewrite cons_uniq; case/andP => H1 H2; constructor; last by apply: IH.
+  by move => Hnin; rewrite /in_mem/= in H1; apply: (negP H1); rewrite -In_mem.
+Qed.
+
+Lemma perm_eqi (T:eqType) (cs1 cs2 : seq T) :
+  uniq cs1 ->
+  uniq cs2 -> 
+  cs1 =i cs2 -> Permutation cs1 cs2.
+Proof.
+  move => U1 U2 H; apply: NoDup_Permutation.
+  by apply: uniq_NoDup.
+  by apply: uniq_NoDup.    
+  move => x; split => H2.
+  { by rewrite In_mem; rewrite -(H x); rewrite -In_mem. }
+  by rewrite In_mem; rewrite (H x); rewrite -In_mem.
+Qed.
+  
+Lemma perm_sub (T:eqType) (cs1 cs2 : seq T) :
+  uniq cs1 ->
+  uniq cs2 -> 
+  {subset cs1 <= cs2} -> 
+  Permutation cs1 [seq x <- cs2 | x \in cs1].
+Proof.
+  move => U1 U2 H.
+  have H2: Permutation cs1 [seq x <- cs1 | x \in cs2].
+  { elim: cs1 cs2 H {U1 U2} => // a l IH cs2 H /=.
+    case Hin: (a \in cs2) => //.
+    { by constructor; apply: IH => x H2; apply: H; rewrite /in_mem/=; apply/orP; right. }
+    by move: H; move/(_ a); rewrite mem_head; move/(_ erefl); rewrite Hin. }
+  apply: (Permutation_trans H2); move {H2}.
+  apply: perm_eqi; try apply: filter_uniq => //.
+  by move => x; rewrite 2!mem_filter andbC.
+Qed.
+  
+Lemma big_sum_le2 (T : eqType) (cs1 cs2 : seq T) (f : T -> R) :
+  uniq cs1 ->
+  uniq cs2 -> 
+  (forall c, c \in cs2 -> 0 <= f c)%R -> 
+  (forall c, c \in cs1 -> c \in cs2)%R -> 
+  (big_sum cs1 f <= big_sum cs2 f)%R.
+Proof.
+  move => U1 U2 H1 H2.
+  rewrite [big_sum cs2 _](big_sum_split _ _ [pred x | x \in cs1]).
+  rewrite -[big_sum cs1 _]Rplus_0_r; apply: Rplus_le_compat.
+  { have Hperm: Permutation cs1 [seq x <- cs2 | [pred x in cs1] x].
+    { by apply: perm_sub. }
+    rewrite (big_sum_perm Hperm); apply: Rle_refl. }
+  by apply: big_sum_ge0 => x; rewrite mem_filter; case/andP => _ H; apply: H1.
+Qed.  
 
 (*TODO: All these bigops should really be consolidated at some point...sigh*)
 

@@ -481,7 +481,48 @@ Section chernoff_leq.
   Qed.
 End chernoff_leq.
 
-Section chernoff.
+Section chernoff_onesided.
+  Variable T : finType.
+  Variables d : T -> R.
+  Variable d_dist : big_sum (enum T) d = 1.
+  Variable d_nonneg : forall x, 0 <= d x.
+  Variable m : nat.
+  Variable m_gt0 : (0 < m)%nat.
+
+  Notation d_prod := (@d_prod T d m).
+  
+  Variable f : 'I_m -> T -> R.
+  Variable f_range : forall i x, 0 <= f i x <= 1.
+  Variable f_identically_distributed : identically_distributed d f.
+  Variable f_independent : mutual_independence d f.
+
+  Variable eps : R.
+  Variable eps_gt0 : 0 < eps.
+  (*NOTE: the following assumptions are required to prove \lambda_min > 0*)  
+  Variable eps_lt_1p : eps < 1 - p d m_gt0 f.
+  Variable p_nontrivial : 0 < p d m_gt0 f < 1.
+  (*END: the following assumptions*)    
+  
+  Lemma chernoff_aux1 :
+    phat_ge_q d m_gt0 f eps <= exp (-2%R * eps^2 * mR m).
+  Proof.
+    apply: Rle_trans; [apply: chernoff_geq => //|].
+    apply: Rle_refl.
+  Qed.
+
+  Definition p_hat x := / (mR m) * big_sum (enum 'I_m) (fun i => f i (x i)).
+  Definition p_exp := p d m_gt0 f.
+  
+  Lemma chernoff :
+    probOfR (prodR (fun _ => d)) (fun x => Rle_lt_dec (p_exp + eps) (p_hat x)) <=
+    exp (-2%R * eps^2 * mR m).
+  Proof.
+    apply: Rle_trans; last by apply: chernoff_aux1.
+    apply: Rle_refl.
+  Qed.    
+End chernoff_onesided.
+
+Section chernoff_twosided.
   Variable T : finType.
   Variables d : T -> R.
   Variable d_dist : big_sum (enum T) d = 1.
@@ -499,11 +540,11 @@ Section chernoff.
   Variable eps delt : R.
   Variable eps_gt0 : 0 < eps.
   Variable delt_gt0 : 0 < delt.
-  (*NOTE: weird assumptions, required (?) to prove \lambda_min > 0*)
+  (*NOTE: the following assumptions are required to prove \lambda_min > 0*)
   Variable eps_lt_p : eps < p d m_gt0 f.  
   Variable delt_lt_1p : delt < 1 - p d m_gt0 f.
-  (*END: weird assumptions*)
-  Variable p_nontrivial : 0 < p d m_gt0 f < 1. 
+  Variable p_nontrivial : 0 < p d m_gt0 f < 1.
+  (*END: the following assumptions*)  
 
   Definition min_eps_delt := Rmin eps delt.
 
@@ -549,7 +590,7 @@ Section chernoff.
     by apply: Rlt_min_eps_delt_eps => Heq; rewrite Heq in Hneq; apply: Hneq.
   Qed.    
   
-  Lemma chernoff_aux1 :
+  Lemma chernoff_twosided_aux1 :
     phat_ge_q d m_gt0 f delt + phat_ge_q d m_gt0 (f_neg f) eps <=
     2 * exp (-2%R * min_eps_delt^2 * mR m).
   Proof.
@@ -565,24 +606,24 @@ Section chernoff.
   Qed.
 
   (*This bound unifies epsilon=delta*)
-  Lemma chernoff_aux2 (Heq : eps = delt) :
+  Lemma chernoff_twosided_aux2 (Heq : eps = delt) :
     phat_ge_q d m_gt0 f eps + phat_ge_q d m_gt0 (f_neg f) eps <=
     2 * exp (-2%R * eps^2 * mR m).
   Proof.
     have Heq2: eps = min_eps_delt.
     { rewrite /min_eps_delt/Rmin; subst delt; case: (Rle_dec _ _) => //. }
-    rewrite {3}Heq2; apply: Rle_trans; last by apply: chernoff_aux1.
+    rewrite {3}Heq2; apply: Rle_trans; last by apply: chernoff_twosided_aux1.
     by rewrite Heq; apply: Rle_refl.
   Qed.
+
+  Notation p_exp := (p_exp d m_gt0 f).
+  Notation p_hat := (p_hat f).
   
-  Definition p_hat x := / (mR m) * big_sum (enum 'I_m) (fun i => f i (x i)).
-  Definition p_exp := p d m_gt0 f.
-  
-  Lemma chernoff (Heq : eps = delt) :
+  Lemma chernoff_twosided (Heq : eps = delt) :
     probOfR (prodR (fun _ => d)) (fun x => Rle_lt_dec eps (Rabs (p_exp - p_hat x))) <=
     2 * exp (-2%R * eps^2 * mR m).
   Proof.
-    apply: Rle_trans; last by apply: (chernoff_aux2 Heq).
+    apply: Rle_trans; last by apply: (chernoff_twosided_aux2 Heq).
     rewrite /phat_ge_q/conv/probOfR/q/= 3!big_sum_sumP; clear delt delt_gt0 delt_lt_1p Heq.
     rewrite big_mkcond.
     set (b1 := \big[bigops.Rplus/0]_(i | Rle_lt_dec _ _) _).
@@ -646,5 +687,5 @@ Section chernoff.
       exfalso; rewrite /p_hat/mR/p_exp in Hle4; move: Hle4 Hle5.
       move: (p _ _ _) => X; move: (/_ * _) => Y => H1 H2; fourier. }
   Qed.
-End chernoff.
+End chernoff_twosided.
 
