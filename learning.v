@@ -117,25 +117,50 @@ Section learning.
       by apply/existsP; exists (enum_rank h); rewrite enum_rankK.
     Qed.
     
+    Lemma empVal_le1 T h : empVal T h <= 1.
+    Proof.
+      rewrite /empVal; set (f := big_sum _ _).
+      have H: f <= mR.
+      { have H1: f <= big_sum (enum 'I_m) (fun _ => 1).
+        { rewrite /f; apply: big_sum_le => /= i _.
+          by case: (X_range h i (T i)). }
+        apply: Rle_trans; first by apply: H1.
+        rewrite big_sum_constant Rmult_1_r; apply: le_INR.
+        rewrite size_enum_ord; apply/leP => //. }
+      have H1: f / mR <= mR / mR.
+      { rewrite /Rdiv; apply: Rmult_le_compat_r => //.
+        rewrite -[/mR]Rmult_1_l; apply: Rle_mult_inv_pos.
+        fourier.
+        have ->: 0 = INR 0 by [].
+        apply: lt_INR; apply/ltP => //. }
+      apply: Rle_trans; first by apply: H1.
+      rewrite /Rdiv Rinv_r; first by apply: Rle_refl.
+      apply: not_0_INR => Heq; move: m_gt0; rewrite Heq //.
+    Qed.
+
     Lemma chernoff_bound3
-          (private_state:Type)
-          (proj_training_set : private_state -> training_set)
-          (proj_hyp : private_state -> Hyp)
-          (eps : R) (eps_gt0 : 0 < eps) (s: private_state) :
-      let: T := proj_training_set s in 
-      let: h := proj_hyp s in 
-      1 - expVal h <= eps \/
+          (learn : training_set -> Hyp) (eps : R) (eps_gt0 : 0 < eps) :
       probOfR (prodR (fun _ : 'I_m => d))
-        [pred T:training_set | Rle_lt_dec (expVal h + eps) (empVal T h)]
+        [pred T:training_set | 
+         let: h := learn T in 
+         Rlt_le_dec (expVal h + eps) (empVal T h)]
       <= INR #|eps_Hyp eps| * exp (-2%R * eps^2 * mR).
     Proof.
-      case: (Rlt_le_dec eps (1 - expVal (proj_hyp s))); last by move => pf; left.
-      move => pf; right; apply: Rle_trans; last by apply: chernoff_bound2.
+      apply: Rle_trans; last by apply: chernoff_bound2.
       apply: probOfR_le; first by apply: prodR_nonneg.
-      move => h /= H; apply/existsP.
-      have H2: Rlt_le_dec eps (1 - expVal (proj_hyp s)).
-      { case: (Rlt_le_dec eps (1 - expVal (proj_hyp s))) pf => // b H2; fourier. }
-      by exists (exist _ (proj_hyp s) H2).
+      move => T /= H; apply/existsP.
+      rewrite /eps_Hyp.
+      have X1: expVal (learn T) + eps < empVal T (learn T).
+      { move: H.
+        case: (Rlt_le_dec (expVal (learn T) + eps) (empVal T (learn T))) => //. }
+      move: (empVal_le1 T (learn T)) => X2.
+      have X3: eps < 1 - expVal (learn T) by fourier.
+      have X4: Rlt_le_dec eps (1 - expVal (learn T)).
+      { case: (Rlt_le_dec eps (1 - expVal (learn T))) => //.
+        move => b; fourier. }
+      exists (exist _ (learn T) X4) => /=.
+      case: (Rle_lt_dec (expVal (learn T) + eps) (empVal T (learn T))) => //.
+      move => b; fourier.
     Qed.
       
     Lemma eps_Hyp_card eps : (#|eps_Hyp eps| <= #|Hyp|)%nat.
@@ -145,19 +170,14 @@ Section learning.
     Qed.    
 
     Lemma chernoff_bound
-          (private_state:Type)
-          (proj_training_set : private_state -> training_set)
-          (proj_hyp : private_state -> Hyp)
-          (eps : R) (eps_gt0 : 0 < eps) (s: private_state) :
-      let: T := proj_training_set s in 
-      let: h := proj_hyp s in 
-      1 - expVal h <= eps \/
+          (learn : training_set -> Hyp) (eps : R) (eps_gt0 : 0 < eps) :
       probOfR (prodR (fun _ : 'I_m => d))
-        [pred T:training_set | Rle_lt_dec (expVal h + eps) (empVal T h)]
+        [pred T:training_set | 
+         let: h := learn T in 
+         Rlt_le_dec (expVal h + eps) (empVal T h)]
       <= INR #|Hyp| * exp (-2%R * eps^2 * mR).
     Proof.
-      case: (chernoff_bound3 proj_training_set proj_hyp eps_gt0 s); first by move => H; left.
-      move => H; right; apply: Rle_trans; first by apply: H.
+      apply: Rle_trans; first by apply: chernoff_bound3.
       apply Rmult_le_compat_r; first by apply: Rlt_le; apply: exp_pos.
       apply: le_INR; apply/leP; apply: eps_Hyp_card.
     Qed.      
@@ -298,39 +318,29 @@ Section learning.
   Section zero_one_accuracy.
     Variable Params : finType. (*the type of parameters*)
     Variable predict : Params -> A -> B. (*the prediction function*)
-    
+
     Definition accuracy01 (p : Params) (i : 'I_m) (xy : A*B) : R :=
       let: (x,y) := xy in if predict p x == y then 1%R else 0%R.    
     Definition loss01 (p : Params) (i : 'I_m) (xy : A*B) : R :=
       1 - accuracy01 p i xy.
 
-    (*For any pair of processes that generate, given a private_state, 
-      a training_set and set of Params, *)
-    Variable private_state : Type.
-    Variable sample_training_set : private_state -> training_set.
-    Variable learn : private_state -> Params.
+    (*For any function from training_set to Params, assuming joint independence
+      and that the target class isn't perfectly representable:*)
+    Variable learn : training_set -> Params.
+    Variable mut_ind : forall p : Params, mutual_independence d (accuracy01 p).
+    Variable not_perfectly_learnable : forall p : Params, 0 < expVal accuracy01 p < 1.
 
-    (*we get the the following result for any eps, stating that either: 
-        1) hypothesis h has expected 0-1 loss lower than eps, or 
-        2) the probability that the expected accuracy of h is more than eps lower 
-      than the empirical accuracy of h on T is less than |Params| * exp(-2eps*m), 
+    (*we get the the following result for any eps: the probability that 
+      the expected accuracy of h is more than eps lower than the empirical 
+      accuracy of h on T is less than |Params| * exp(-2eps*m), 
       where m is the number of training examples in T.*)
-    Lemma chernoff_bound_accuracy01
-        (eps : R) (eps_gt0 : 0 < eps) (s : private_state)
-        (not_perfectly_learnable : forall p : Params, 0 < expVal accuracy01 p < 1)
-        (mut_ind : forall p : Params, mutual_independence d (accuracy01 p)) :
-      let h := learn s in
-      let T := sample_training_set s in 
-      expVal loss01 h <= eps \/ 
-      probOfR (prodR (fun _ : 'I_m => d))
+    Lemma chernoff_bound_accuracy01 (eps : R) (eps_gt0 : 0 < eps) :
+      probOfR (prodR (fun _ : 'I_m => d)) 
               [pred T:training_set
-              | Rle_lt_dec (expVal accuracy01 h + eps) (empVal accuracy01 T h)]
+              | let: h := learn T in 
+                Rlt_le_dec (expVal accuracy01 h + eps) (empVal accuracy01 T h)]
       <= INR #|Params| * exp (-2%R * eps^2 * mR).
     Proof.
-      move => h T.
-      have ->: expVal (Hyp:=Params) loss01 h = 1 - expVal accuracy01 h.
-      { rewrite /expVal/loss01 expValR_linear /= expValR_sumconst => //.
-        rewrite expValR_Ropp //. }
       apply chernoff_bound => // p i x; rewrite /accuracy01; case: x => a b.
       case: (predict p a == b)%B; split; fourier. 
     Qed.
