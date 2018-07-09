@@ -502,6 +502,43 @@ Proof.
   by apply: big_sum_ge0 => x; rewrite mem_filter; case/andP => _ H; apply: H1.
 Qed.  
 
+Lemma big_sum_le3 (T : eqType) (cs1 cs2 : seq T) (f g : T -> R) :
+  uniq cs1 ->
+  uniq cs2 -> 
+  (forall c, c \in cs2 -> 0 <= g c)%R -> 
+  (forall c, c \in cs1 -> c \in cs2)%R ->
+  (forall c, c \in cs1 -> f c <= g c)%R -> 
+  (big_sum cs1 f <= big_sum cs2 g)%R.
+Proof.
+  move => U1 U2 H1 H2 H.
+  rewrite [big_sum cs2 _](big_sum_split _ _ [pred x | x \in cs1]).
+  rewrite -[big_sum cs1 _]Rplus_0_r; apply: Rplus_le_compat.
+  { have Hperm: Permutation cs1 [seq x <- cs2 | [pred x in cs1] x].
+    { by apply: perm_sub. }
+    rewrite (big_sum_perm Hperm). 
+    apply: big_sum_le => c /= Hin; apply: H. 
+    rewrite mem_filter in Hin; case: (andP Hin) => Hx Hy //. }
+  apply: big_sum_ge0 => x; rewrite mem_filter; case/andP => Hx Hy; apply: H1 => //.
+Qed.  
+
+Lemma big_sum_pred (T:eqType) (cs:seq T) (f:T -> R) (p:pred T) :
+  big_sum cs (fun t => if p t then f t else 0) =
+  big_sum [seq t <- cs | p t] f.
+Proof.
+  elim: cs => // a l IH /=; case H: (p a) => /=.
+  { by rewrite IH. }
+  by rewrite IH Rplus_0_l.
+Qed.
+
+Lemma big_sum_pred2 (T:eqType) (cs:seq T) (f g:T -> R) (p:pred T) :
+  big_sum cs (fun t => f t * if p t then g t else 0) =
+  big_sum [seq t <- cs | p t] (fun t => f t * g t).
+Proof.
+  elim: cs => // a l IH /=; case H: (p a) => /=.
+  { by rewrite IH. }
+  by rewrite IH Rmult_0_r Rplus_0_l.
+Qed.
+
 (*TODO: All these bigops should really be consolidated at some point...sigh*)
 
 (** Q bigops *)
