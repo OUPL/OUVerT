@@ -19,7 +19,9 @@ Section relative_entropy_lemmas.
   Lemma RE_Bernoulli_bounded_below : 
     RE_Bernoulli (p + eps) p >= 2 * eps^2.
   Proof.
-    move: (pinsker_Bernoulli (p+eps) p) => H.
+    have p_eps_ax: 0<=p+eps<=1 by lra.
+    have p_ax: 0<=p<=1 by lra.
+    move: (pinsker_Bernoulli p_eps_ax p_ax) => H.
     have Hx: TV_Bernoulli (p+eps) p = eps.
     { rewrite TV_Bernoulli_eq.
       have ->: Rabs (p + eps - p) = Rabs eps.
@@ -27,7 +29,7 @@ Section relative_entropy_lemmas.
       case: eps_range => H1 H2; rewrite Rabs_right => //; lra. }
     have H2: RE_Bernoulli (p + eps) p / 2 >= eps*eps.
     { move: H; rewrite Hx; clear Hx.
-      move: (gibbs_Bernoulli (p+eps) p).
+      move: (gibbs_Bernoulli p_eps_ax p_ax).
       move: (RE_Bernoulli _ _)=>X HX.
       have: 0 <= X/2 by lra.
       move: (X/2) => Y HX2 H2.
@@ -415,7 +417,7 @@ Section chernoff_geq.
     have H: (RE_Bernoulli (p + eps) p >= 2%R * eps^2).
     { apply: RE_Bernoulli_bounded_below.
       case: p_nontrivial => H1 H2.
-      split => //; apply: Rlt_le => //. }
+      split => //; apply: Rlt_le => //. lra. }
     case: H => H2.
     { left; apply: exp_increasing; simpl.
       rewrite -!Rmult_assoc; apply: (Rmult_lt_compat_r mR).

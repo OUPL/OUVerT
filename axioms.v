@@ -23,9 +23,11 @@ Require Import dist.
     in information theory. *)
 
 Axiom pinsker_Bernoulli : 
-  forall p q : R, 
+  forall (p q:R) (p_ax:0<=p<=1) (q_ax:0<=q<=1), 
   sqrt (RE_Bernoulli p q / 2) >= TV_Bernoulli p q.
 
-Axiom gibbs_Bernoulli : 
-  forall p q : R, 0 <= RE_Bernoulli p q.
+Axiom gibbs_Bernoulli :
+  forall (p q:R) (p_ax:0<=p<=1) (q_ax:0<=q<=1),   
+  0 <= RE_Bernoulli p q.
+  
 
