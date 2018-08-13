@@ -4,7 +4,7 @@
 ##   \VV/  #                                                                 ##
 ##    //   #                                                                 ##
 ###############################################################################
-## GNUMakefile for Coq 8.8.0
+## GNUMakefile for Coq 8.8.1
 
 # For debugging purposes (must stay here, don't move below)
 INITIAL_VARS := $(.VARIABLES)
@@ -43,8 +43,8 @@ CAMLP5OPTIONS     := $(COQMF_CAMLP5OPTIONS)
 CAMLFLAGS         := $(COQMF_CAMLFLAGS)
 HASNATDYNLINK     := $(COQMF_HASNATDYNLINK)
 
-Makefile.conf: 
-	coq_makefile -R . OUVerT -arg '-w none' bigops.v compile.v dist.v dyadic.v extrema.v listlemmas.v maplemmas.v numerics.v orderedtypes.v strings.v vector.v expfacts.v axioms.v chernoff.v learning.v -o Makefile
+Makefile.conf: _CoqProject
+	coq_makefile -f _CoqProject -o Makefile
 
 # This file can be created by the user to hook into double colon rules or
 # add any other Makefile code he may need
@@ -176,7 +176,7 @@ COQDOCLIBS?=$(COQLIBS_NOML)
 # The version of Coq being run and the version of coq_makefile that
 # generated this makefile
 COQ_VERSION:=$(shell $(COQC) --print-version | cut -d " " -f 1)
-COQMAKEFILE_VERSION:=8.8.0
+COQMAKEFILE_VERSION:=8.8.1
 
 COQSRCLIBS?= $(foreach d,$(COQ_SRC_SUBDIRS), -I "$(COQLIB)$(d)")
 
@@ -216,7 +216,7 @@ ifdef DSTROOT
 DESTDIR := $(DSTROOT)
 endif
 
-concat_path = $(if $(1),$(1)/$(subst $(COQMF_WINDRIVE),/,$(2)),$(2))
+concat_path = $(if $(1),$(1)/$(if $(COQMF_WINDRIVE),$(subst $(COQMF_WINDRIVE),/,$(2)),$(2)),$(2))
 
 COQLIBINSTALL = $(call concat_path,$(DESTDIR),$(COQLIB)user-contrib)
 COQDOCINSTALL = $(call concat_path,$(DESTDIR),$(DOCDIR)user-contrib)
@@ -371,7 +371,7 @@ real-all: $(VOFILES) $(if $(USEBYTE),bytefiles,optfiles)
 .PHONY: real-all
 
 real-all.timing.diff: $(VOFILES:.vo=.v.timing.diff)
-.PHONE: real-all.timing.diff
+.PHONY: real-all.timing.diff
 
 bytefiles: $(CMOFILES) $(CMAFILES)
 .PHONY: bytefiles
@@ -729,7 +729,7 @@ $(addsuffix .d,$(MLPACKFILES)): %.mlpack.d: %.mlpack
 # If this makefile is created using a _CoqProject we have coqdep get
 # options from it. This avoids argument length limits for pathological
 # projects. Note that extra options might be on the command line.
-VDFILE_FLAGS:=$(if ,-f ,) $(CMDLINE_COQLIBS) $(CMDLINE_VFILES)
+VDFILE_FLAGS:=$(if _CoqProject,-f _CoqProject,) $(CMDLINE_COQLIBS) $(CMDLINE_VFILES)
 
 $(VDFILE).d: $(VFILES)
 	$(SHOW)'COQDEP VFILES'

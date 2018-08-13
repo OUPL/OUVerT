@@ -368,6 +368,15 @@ Section markovR.
   Definition expValR (d f : T -> R) := big_sum (enum T) (fun x => d x * f x).
   Definition PREDR (x : T) : bool := Rle_lt_dec a (f x).
 
+  Lemma probOfR_le (p q : pred T) : (forall x, p x -> q x) -> probOfR d p <= probOfR d q.
+  Proof.
+    move => H; rewrite /probOfR.
+    apply: big_sum_le2; try solve[apply: filter_uniq; apply: enum_uniq].
+    { move => c _; apply: d_nonneg. }
+    move => c; rewrite !mem_filter; case/andP => H1 H2; apply/andP; split => //.
+    by apply: (H _ H1).
+  Qed.
+    
   Lemma expValR_ge0 : 0 <= expValR d f.
   Proof.
     rewrite /expValR; elim: (enum T) => /=; try apply: Rle_refl.
@@ -387,7 +396,12 @@ Section markovR.
     rewrite /expValR; elim: (enum T) => /=; first by rewrite Rmult_0_r.
     move => x l ->; rewrite -Rmult_assoc [d x * _]Rmult_comm Rmult_assoc Rmult_plus_distr_l //.
   Qed.
-    
+
+  Lemma expValR_sumconst c : expValR d (fun x => c) = c.
+  Proof.    
+    by rewrite /expValR -big_sum_mult_right d_dist Rmult_1_l. 
+  Qed.
+  
   Lemma expValR_Ropp g : expValR d (fun x => - g x) = - expValR d g.
   Proof.
     rewrite /expValR; elim: (enum T) => /=; first by rewrite Ropp_0.
@@ -436,7 +450,7 @@ Section markovR.
     apply: Rle_trans; first by apply: H.
     rewrite -[big_sum _ _]Rplus_0_r Rplus_assoc; apply: Rplus_le_compat_l.
     rewrite Rplus_0_l; apply: big_sum_ge0 => x; rewrite -[0](Rmult_0_l 0).
-    apply: Rmult_le_compat => //; apply: Rle_refl.
+    move => _; apply: Rmult_le_compat => //; apply: Rle_refl.
   Qed.
 End markovR.
 

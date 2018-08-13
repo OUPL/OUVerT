@@ -9,7 +9,7 @@ From mathcomp Require Import all_algebra.
 
 Import GRing.Theory Num.Def Num.Theory.
 
-Require Import dyadic.
+Require Import OUVerT.dyadic.
 
 (** This file defines conversions between Ssreflect/MathComp and
     Coq Standard Library implementations of various numeric types, 
