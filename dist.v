@@ -376,7 +376,16 @@ Section markovR.
     move => c; rewrite !mem_filter; case/andP => H1 H2; apply/andP; split => //.
     by apply: (H _ H1).
   Qed.
-    
+
+  Lemma probOfR_le_1 (p:pred T) : probOfR d p <= 1.
+  Proof.
+    rewrite /probOfR -d_dist; apply: big_sum_le2.
+    { apply: filter_uniq; apply: enum_uniq. }
+    { apply: enum_uniq. }
+    { move => c Hin; apply: d_nonneg. }
+    by move => c; rewrite mem_filter; case/andP.
+  Qed.
+  
   Lemma expValR_ge0 : 0 <= expValR d f.
   Proof.
     rewrite /expValR; elim: (enum T) => /=; try apply: Rle_refl.
@@ -523,7 +532,6 @@ End Bernoulli.
 
 Section relative_entropy_Bernoulli.
   Variables p q : R.
-  Variable p_range : 0 <= p <= 1.
   Definition p_dist := Bernoulli.t p.
   Definition q_dist := Bernoulli.t q.
 
@@ -535,7 +543,7 @@ Section relative_entropy_Bernoulli.
     rewrite /RE_Bernoulli/RE.
     have ->: enum bool_finType = [:: true; false] by rewrite enumT Finite.EnumDef.enumDef.
     simpl; rewrite Rplus_0_r //.
-  Qed.    
+  Qed.
 End relative_entropy_Bernoulli.
 
 Section TV_Bernoulli.

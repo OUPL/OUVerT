@@ -74,7 +74,7 @@ Section chernoff_geq.
   
   Definition i0 : 'I_m := Ordinal m_gt0.
   Definition p := expValR d (f i0).
-  Variable p_nontrivial : 0 < p < 1. (*required to construct lambda_min*)
+  Variable p_nontrivial : 0 < p < 1. (*required to construct lambda_min*)  
   
   Lemma expVal_independence c :
     expValR (prodR d_prod) (fun p => big_product (enum 'I_m) (fun i => exp (c * f i (p i)))) =
@@ -284,6 +284,18 @@ Section chernoff_geq.
   Qed.
   End LAMBDA.  
 
+  Lemma chernoff0_lambda_ge0 (lambda:R) (lambda_ge0 : 0 <= lambda) :
+    phat_ge_q <= exp (phi lambda * mR).
+  Proof.
+    case: lambda_ge0; first by move => Hlt; apply: chernoff0.
+    rewrite phi_simpl => <-; rewrite exp_0 Rmult_1_r.
+    have ->: -0 * mR * q = 0 by lra.
+    have ->: 1 - p + p = 1 by lra.
+    rewrite exp_0 /phat_ge_q /conv; apply: Rle_trans.
+    { apply: probOfR_le_1; [by apply: prodR_dist|by apply: prodR_nonneg]. }
+    by rewrite pow1 Rmult_1_r; apply: Rle_refl.
+  Qed.    
+  
   Definition lambda_min := ln ((q * (1 - p)) / ((1 - q) * p)).
 
   Lemma lambda_min_gt0 : 0 < lambda_min.
@@ -300,9 +312,10 @@ Section chernoff_geq.
     rewrite exp_ln => //.
     apply: Rlt_trans; last by apply: Hlt.
     fourier.
-  Qed.    
+  Qed. 
   
-  Lemma phi_lambda_min : phi lambda_min = -(RE_Bernoulli (p + eps) p).
+  Lemma phi_lambda_min :
+    phi lambda_min = -(RE_Bernoulli (p + eps) p).
   Proof.
     rewrite /phi/lambda_min RE_Bernoulli_def.
     have H1: 0 < 1 - p + p * exp (ln (q * (1 - p) / ((1 - q) * p))).
@@ -407,7 +420,7 @@ Section chernoff_geq.
   Proof.
     rewrite -phi_lambda_min; apply: chernoff0.
     by apply: lambda_min_gt0.
-  Qed.    
+  Qed. 
 
   Lemma chernoff_geq : phat_ge_q <= exp (-2%R * eps^2 * mR).
   Proof.
