@@ -137,7 +137,7 @@ Section learning.
       rewrite /Rdiv Rinv_r; first by apply: Rle_refl.
       apply: not_0_INR => Heq; move: m_gt0; rewrite Heq //.
     Qed.
-
+    
     Lemma chernoff_bound3
           (learn : training_set -> Hyp) (eps : R) (eps_gt0 : 0 < eps) :
       probOfR (prodR (fun _ : 'I_m => d))
@@ -182,6 +182,20 @@ Section learning.
       apply: le_INR; apply/leP; apply: eps_Hyp_card.
     Qed.      
     
+    Lemma chernoff_bound_holdout
+          (h : Hyp) (eps : R) (eps_gt0 : 0 < eps) (eps_lt : eps < 1 - expVal h) :
+      probOfR (prodR (fun _ : 'I_m => d))
+        [pred T:training_set | 
+         Rlt_le_dec (expVal h + eps) (empVal T h)]
+      <= exp (-2%R * eps^2 * mR).
+    Proof.
+      apply: Rle_trans; last by apply: (@chernoff_bound_h h _ _ eps _ _).
+      apply: probOfR_le.
+      { move => x; apply: prodR_nonneg => _ y; apply: d_nonneg. }
+      move => x /=; case: (Rlt_le_dec _ _) => // H1 _.
+      case: (Rle_lt_dec _ _) => // H2; fourier. 
+    Qed.      
+
     Definition eps_Hyp_condition_twosided (eps : R) :=
       [pred h : Hyp | Rlt_le_dec eps (Rmin (expVal h) (1 - expVal h))].
     
@@ -344,6 +358,22 @@ Section learning.
       apply chernoff_bound => // p i x; rewrite /accuracy01; case: x => a b.
       case: (predict p a == b)%B; split; fourier. 
     Qed.
+
+    (*Here's the holdout version of the above lemma (the additional condition 
+      on epsilon appears to fall out -- cf. Mulzer's tutorial on Chernoff bound proofs).*)
+    Lemma chernoff_bound_accuracy01_holdout
+          (h : Params) (eps : R) (eps_gt0 : 0 < eps) (eps_lt : eps < 1 - expVal accuracy01 h) :
+      probOfR (prodR (fun _ : 'I_m => d)) 
+              [pred T:training_set
+              | Rlt_le_dec (expVal accuracy01 h + eps) (empVal accuracy01 T h)]
+      <= exp (-2%R * eps^2 * mR).
+    Proof.
+      apply: Rle_trans; last first.
+      { apply: chernoff_bound_holdout => //; last by apply: eps_lt.
+        move => hx i x; rewrite /accuracy01; case: x => a b.
+        case: (predict _ _ == _)%B; split; fourier. }
+      apply: Rle_refl.
+    Qed.      
   End zero_one_accuracy.
 End learning.
 
