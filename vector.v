@@ -973,3 +973,38 @@ Module MatrixPayload (B : BOUND) (P : PAYLOAD) <: PAYLOAD.
     f_equal; apply: proof_irrelevance.
   Qed.
 End MatrixPayload.
+
+(* Added for compatibility with gstew5/cage/winnow.v *)
+Module DConstraintMatrixPayload (B : BOUND) <: PAYLOAD.
+  Module DVec := DVector B. Include DVec.
+  Definition label := bool.
+  Definition t : Type := (Vec.t * label).
+  Definition t0 : t := (Vec.M.empty _, false).
+  Definition eq0 (d : t) := Vec.M.is_empty (fst d) && negb (snd d).
+  Lemma eq0P d : reflect (d=t0) (eq0 d).
+  Proof.
+    rewrite /eq0 /Vec.M.is_empty /Vec.M.Raw.is_empty /t0.
+    case: d => d; case.
+    { case: d => x y /=; move: y; case: x => y; constructor => //. }
+    case: d => x y /=; move: y; case: x => y; constructor => //.     
+    case H: Vec.M.empty => [z w]; inversion H; subst.
+    f_equal; f_equal; apply: proof_irrelevance.
+  Qed.    
+  Definition u := {m : t & {f : Vec.ty & Vec.match_vecs (fst m) f}}.
+  Program Definition u_of_t (m : t) : u :=
+    existT _ m _.
+  Next Obligation.
+    set (f := [ffun i : 'I_B.n =>
+              u_of_t (Vec.get (Vec.Ix_of_Ordinal i) m.1)] : Vec.ty).
+    refine (existT _ f _).
+    by move => i; rewrite /f ffunE Vec.Ix_of_Ordinal_Ix t_of_u_t.
+  Qed.
+  Definition t_of_u (f : u) : t := projT1 f.
+  Lemma t_of_u_t : forall t0 : t, t_of_u (u_of_t t0) = t0.
+  Proof. by []. Qed.
+End DConstraintMatrixPayload.
+
+Module DConstraintMatrix (NumFeatures : BOUND) (NumConstraints : BOUND).
+  Module Constraint := DConstraintMatrixPayload NumFeatures. Include Constraint.
+  Module CMatrix := Vector NumConstraints Constraint.
+End DConstraintMatrix.  
