@@ -227,7 +227,7 @@ Module Vector (B : BOUND) (P : PAYLOAD) <: VECTOR.
                             let (i, max) := acc in
                             if lt max v then (k, v)
                             else (i, max))
-                         m (Ix.t0, P.t0) in i.
+                         m (Ix.t0, get Ix.t0 m) in i.
 
 
   (* SPARSITY PROOFS *)
