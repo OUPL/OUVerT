@@ -209,8 +209,9 @@ Module Vector (B : BOUND) (P : PAYLOAD) <: VECTOR.
   Definition to_list (m : t) : list (Ix.t * P.t) :=
     M.elements m.
 
+  (* This returns the elements in the ascending order by index. *)
   Definition to_dense_list (m : t) : list (Ix.t * P.t) :=
-    rev (map (fun i => (i, get i m)) (enumerate Ix.t)).
+    map (fun i => (i, get i m)) (enumerate Ix.t).
   
   (* construct a vector from function f *)
   Definition of_fun (f : Ix.t -> P.t) : t :=
