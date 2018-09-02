@@ -17,7 +17,7 @@ To use OUVerT files in another development, simply import them with OUVerT.filen
 
 # ORGANIZATION
 
-Following are the primary directories and files in the development:
+Following are the primary files in the development:
 
 * [axioms.v](https://github.com/OUPL/OUVerT/blob/master/axioms.v): Axiomatizes Pinsker's and Gibb's inequalities
 * [bigops.v](https://github.com/OUPL/OUVerT/blob/master/bigops.v): Computable Ssreflect-style bigops
