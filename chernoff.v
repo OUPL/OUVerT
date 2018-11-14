@@ -13,15 +13,14 @@ Require Import bigops numerics expfacts dist axioms.
 
 Section relative_entropy_lemmas.
   Variables p eps : R.
-  Variable p_range : 0 < p <= 1.
-  Variable eps_range : 0 < eps <= 1 - p.
+  Variable p_range : 0 < p < 1.
+  Variable eps_range : 0 < eps < 1 - p.
 
   Lemma RE_Bernoulli_bounded_below : 
     RE_Bernoulli (p + eps) p >= 2 * eps^2.
   Proof.
-    have p_eps_ax: 0<=p+eps<=1 by lra.
-    have p_ax: 0<=p<=1 by lra.
-    move: (pinsker_Bernoulli p_eps_ax p_ax) => H.
+    have p_eps_ax: 0<p+eps<1 by lra.
+    move: (pinsker_Bernoulli p_eps_ax p_range) => H.
     have Hx: TV_Bernoulli (p+eps) p = eps.
     { rewrite TV_Bernoulli_eq.
       have ->: Rabs (p + eps - p) = Rabs eps.
@@ -29,7 +28,7 @@ Section relative_entropy_lemmas.
       case: eps_range => H1 H2; rewrite Rabs_right => //; lra. }
     have H2: RE_Bernoulli (p + eps) p / 2 >= eps*eps.
     { move: H; rewrite Hx; clear Hx.
-      move: (gibbs_Bernoulli p_eps_ax p_ax).
+      move: (gibbs_Bernoulli p_eps_ax p_range).
       move: (RE_Bernoulli _ _)=>X HX.
       have: 0 <= X/2 by lra.
       move: (X/2) => Y HX2 H2.
