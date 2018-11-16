@@ -644,3 +644,92 @@ Proof.
   move => ->; rewrite exp_ln //; apply: Rle_refl.
 Qed.  
 
+
+(* Lemmas in support of Gibbs' inequality. *)
+
+Lemma exp_minus_1_minus_x_at_1 :
+  exp (1-1) - 1 = 0.
+Proof.
+  replace (exp (1-1)) with 1. field.
+  rewrite <- exp_0 at 1. f_equal. field.
+Qed.
+
+Lemma derivable_exp_minus_1_minus_x  : derivable (fun x => exp(x-1) -x). 
+Proof.
+  rewrite /derivable => x.
+  apply derivable_pt_minus.
+  replace (fun x0 : R => exp (x0 -1)) with
+    (comp (fun x => exp x) (fun x => x - 1)).
+  apply derivable_pt_comp.
+  apply derivable_pt_minus.
+  apply derivable_pt_id.
+  apply derivable_pt_const.
+  apply derivable_pt_exp. auto.
+  apply derivable_pt_id.
+Defined.
+
+Lemma deriv_at_point_exp_minus_1_minus_x : 
+  forall x pf,
+    derive_pt (fun x => exp(x-1) -x) x pf = exp(x-1) -1.
+Proof.
+  intros. rewrite (pr_nu _ _ _ (derivable_exp_minus_1_minus_x x)).
+  rewrite /derivable_exp_minus_1_minus_x.
+  rewrite derive_pt_minus
+          derive_pt_comp
+          derive_pt_minus
+          derive_pt_id
+          derive_pt_const 
+          derive_pt_exp.
+  field.
+Qed.
+
+Lemma deriv_at_point_exp_minus_1_minus_x_deriv_on_0_1 :
+  forall x pf, 0 < x < 1 -> derive_pt (fun x => exp(x-1) - x) x pf < 0.
+Proof.
+  intros. rewrite deriv_at_point_exp_minus_1_minus_x.
+  suffices: (exp (x - 1) < 1).
+  intros. fourier.
+  replace 1 with (exp 0) at 2.
+  apply exp_increasing. destruct H. fourier.
+  apply exp_0.
+Qed.
+
+Lemma deriv_at_point_exp_minus_1_minus_x_deriv_on_1_inf :
+  forall x pf, 1 < x -> 0 < derive_pt (fun x => exp(x-1) - x) x pf.
+Proof.
+  intros. rewrite deriv_at_point_exp_minus_1_minus_x.
+  suffices: (1 < exp (x - 1)).
+  intros. fourier.
+  replace 1 with (exp 0) at 1.
+  apply exp_increasing. fourier.
+  apply exp_0.
+Qed.
+
+Lemma exp_minus_1_minus_x :
+  forall x, 0 < x -> 0 <= exp(x - 1) - x.
+Proof.
+  intros.
+  case: (Rtotal_order x 1).
+  - intros. rewrite <- exp_minus_1_minus_x_at_1. left.
+    set (f := fun x => exp (x - 1) - x).
+    replace (exp (1 - 1) - 1) with (f 1); try auto.
+    replace (exp (x - 1) - x) with (f x); try auto.
+    assert (0 < 1) by fourier.
+    eapply (derive_decreasing_interv H0).
+    intros. apply deriv_at_point_exp_minus_1_minus_x_deriv_on_0_1.
+    auto. split; fourier.
+    split; fourier. auto.
+  - intros. destruct b. subst. right.
+    replace (exp (1-1)) with 1. field.
+    rewrite <- exp_0 at 1. f_equal. field.
+  - intros. rewrite <- exp_minus_1_minus_x_at_1. left.
+    set (f := fun x => exp (x - 1) - x).
+    replace (exp (1 - 1) - 1) with (f 1); try auto.
+    replace (exp (x - 1) - x) with (f x); try auto.
+    assert (1 < x + 1) by fourier.
+    eapply (derive_increasing_interv _ _ f _ H1).
+    intros. apply deriv_at_point_exp_minus_1_minus_x_deriv_on_1_inf.
+    destruct H2; fourier. split; fourier. split; fourier. fourier.
+  Unshelve.
+    all: apply derivable_exp_minus_1_minus_x.
+Qed.

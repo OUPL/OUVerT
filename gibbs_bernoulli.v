@@ -10,14 +10,16 @@ Require Import Coq.Classes.RelationClasses.
 
 Require Import QArith Reals Rpower Ranalysis Fourier Lra.
 
-Require Import dist.
+Require Import dist expfacts.
 
 Lemma ln_minus_1 x : 0 < x -> ln x <= x - 1.
 Proof.
   intros Hx.
   apply expfacts.exp_le_inv.
   rewrite exp_ln; auto.
-Admitted.
+  suff: (0 <= exp (x - 1) - x); try lra.
+  apply exp_minus_1_minus_x; auto.
+Qed.
 
 Lemma ln_div x y : 0 < x -> 0 < y -> ln (x / y) = ln x - ln y.
 Proof.
@@ -66,6 +68,7 @@ Proof.
 Qed.
 
 
+(** Gibbs' inequality for Bernoulli distributions. *)
 Theorem gibbs_Bernoulli :
   forall (p q:R) (p_ax:0<p<1) (q_ax:0<q<1),
   0 <= RE_Bernoulli p q.
