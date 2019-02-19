@@ -40,7 +40,7 @@ Section relative_entropy_lemmas.
   Qed.
 End relative_entropy_lemmas.
 
-Section chernoff_geq.
+Section mutual_independence.
   Variable T : finType.
   Variables d : T -> R.
   Variable d_dist : big_sum (enum T) d = 1.
@@ -63,8 +63,35 @@ Section chernoff_geq.
     forall g : R -> R, 
     expValR (prodR d_prod) (fun p => big_product (enum 'I_m) (fun i => g (f i (p i)))) =
     big_product (enum 'I_m) (fun i => expValR d (fun x => g (f i x))).
-  Variable f_independent : mutual_independence.
+  Definition mutual_independence' :=
+    expValR (prodR d_prod) (fun p => big_product (enum 'I_m) (fun i => f i (p i))) =
+    big_product (enum 'I_m) (fun i => expValR d (fun x => f i x)).
+  Definition mutual_independence'_dec :=
+    Req_dec
+     (expValR (prodR d_prod) (fun p => big_product (enum 'I_m) (fun i => f i (p i))))
+     (big_product (enum 'I_m) (fun i => expValR d (fun x => f i x))).
+End mutual_independence.
 
+Section chernoff_geq.
+  Variable T : finType.
+  Variables d : T -> R.
+  Variable d_dist : big_sum (enum T) d = 1.
+  Variable d_nonneg : forall x, 0 <= d x.
+  Variable m : nat.
+  Variable m_gt0 : (0 < m)%nat.
+
+  Notation d_prod := (@d_prod T d m).
+  
+  Variable f : 'I_m -> T -> R.
+  Variable f_range : forall i x, 0 <= f i x <= 1.
+  Variable f_identically_distributed : @identically_distributed T d m f.
+  Lemma f_independent : @mutual_independence T d m f.
+  Proof.
+    rewrite /mutual_independence => g; rewrite /expValR /= big_product_distr_sum /=.
+    rewrite /prodR /d_prod; apply: big_sum_ext => // p.
+    by rewrite -big_product_assoc.
+  Qed.    
+  
   Definition mR := INR m.
   Lemma mR_gt0 : (0 < mR)%R.
   Proof. by apply: lt_0_INR; apply/ltP. Qed.
@@ -453,7 +480,6 @@ Section chernoff_leq.
   Variable f : 'I_m -> T -> R.
   Variable f_range : forall i x, 0 <= f i x <= 1.
   Variable f_identically_distributed : identically_distributed d f.
-  Variable f_independent : mutual_independence d f.
 
   Definition f_neg (i : 'I_m) (t : T) := 1 - f i t.
 
@@ -465,8 +491,6 @@ Section chernoff_leq.
     rewrite 2!expValR_linear; f_equal.
     by rewrite 2!expValR_Ropp H.
   Qed.
-  Lemma f_neg_independent : mutual_independence d f_neg.
-  Proof. by move => g; rewrite (f_independent (fun x => g (1 - x))). Qed.
 
   Variable eps : R.
   Variable eps_gt0 : 0 < eps.
@@ -489,8 +513,7 @@ Section chernoff_leq.
     apply: chernoff_geq => //.
     { apply: f_neg_range. }
     { apply: f_neg_identically_distributed. }
-    { apply: f_neg_independent. }
-    { apply: p_neg_nontrivial. }
+    apply: p_neg_nontrivial.
   Qed.
 End chernoff_leq.
 
@@ -507,7 +530,6 @@ Section chernoff_onesided.
   Variable f : 'I_m -> T -> R.
   Variable f_range : forall i x, 0 <= f i x <= 1.
   Variable f_identically_distributed : identically_distributed d f.
-  Variable f_independent : mutual_independence d f.
 
   Variable eps : R.
   Variable eps_gt0 : 0 < eps.
@@ -548,7 +570,6 @@ Section chernoff_twosided.
   Variable f : 'I_m -> T -> R.
   Variable f_range : forall i x, 0 <= f i x <= 1.
   Variable f_identically_distributed : identically_distributed d f.
-  Variable f_independent : mutual_independence d f.
 
   Variable eps delt : R.
   Variable eps_gt0 : 0 < eps.

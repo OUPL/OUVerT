@@ -1,7 +1,7 @@
 Set Implicit Arguments.
 Unset Strict Implicit.
 
-Require Import NArith QArith Reals Rpower Ranalysis Fourier Permutation.
+Require Import NArith QArith Reals Rpower Ranalysis Fourier Lra Permutation.
 
 Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import all_ssreflect.
@@ -209,6 +209,16 @@ Proof.
   { by move=> c H; apply: H2; rewrite in_cons; apply/orP; right. }
     by move=> c H; apply: H3; rewrite in_cons; apply/orP; right.
 Qed.    
+
+Lemma big_product_assoc (T: finType) (F G : T -> R) :
+  big_product (enum T) (fun i : T => F i) *
+  big_product (enum T) (fun i : T => G i) =
+  big_product (enum T) (fun i : T => F i * G i).
+Proof.
+  clear - F G; elim: (enum T) => //=.
+  { by rewrite Rmult_1_r. }
+  move => i l /= IH; symmetry; rewrite -IH; lra.
+Qed.  
 
 Lemma big_sum_lt_aux (T : eqType) (cs : seq T) (f : T -> R) g :
   (forall c, c \in cs -> f c < g c)%R -> 
