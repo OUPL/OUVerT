@@ -9,6 +9,7 @@ From mathcomp Require Import all_algebra.
 
 Import GRing.Theory Num.Def Num.Theory.
 
+
 Require Import OUVerT.dyadic.
 
 (** This file defines conversions between Ssreflect/MathComp and
@@ -18,6 +19,153 @@ Require Import OUVerT.dyadic.
       - rat <-> Q
       - rat -> R
  *)
+
+
+Class Numeric (T:Type) :=
+  mkNumeric {
+      plus: T -> T -> T;
+      neg : T->T;
+      mult: T -> T -> T;
+      plus_id: T;
+      mult_id: T;
+      of_nat: nat -> T;
+
+      le: T->T->Prop;
+      lt: T->T->Prop;
+
+      plus_id_l: forall t, plus plus_id t = t;
+      plus_comm: forall t1 t2, plus t1 t2 = plus t2 t1;
+      plus_assoc: forall t1 t2 t3, plus t1 (plus t2 t3) = plus (plus t1 t2) t3;
+      plus_neg_l: forall t1, plus (neg t1) t1 = plus_id;
+      plus_neg_distr: forall t1 t2, neg (plus t1 t2) = plus (neg t1) (neg t2);
+
+      mult_id_l: forall t, mult mult_id t = t;
+      mult_comm: forall t1 t2, mult t1 t2 = mult t2 t1;
+      mult_assoc: forall t1 t2 t3, mult (mult t1 t2) t3 = mult t1 (mult t2 t3);
+      mult_distr_l: forall t1 t2 t3, mult t1 (plus t2 t3) = plus (mult t1 t2) (mult t1 t3);
+      mult_plus_id_l: forall t, mult plus_id t = plus_id;
+
+
+
+      le_lt_or_eq: forall t1 t2, lt t1 t2 \/ t1 = t2 -> le t1 t2;
+      plus_le_compat: forall t1 t2 t3 t4, le t1 t2 /\ le t3 t4 -> le (plus t1 t3) (plus t2 t4);
+      plus_lt_le_compat: forall t1 t2 t3 t4, lt t1 t2 /\ le t3 t4 -> lt (plus t1 t3) (plus t2 t4);
+      plus_lt_compat: forall t1 t2 t3 t4, lt t1 t2 /\ lt t3 t4 -> lt (plus t1 t3) (plus t2 t4);
+      lt_plus_id_mult_id: lt plus_id mult_id;
+      mult_le_compat:
+        forall r1 r2 r3 r4,le  plus_id r1 -> le plus_id r3 -> le r1 r2 -> le r3 r4 ->
+           le (mult r1  r3) (mult r2  r4);
+      mult_lt_compat:
+        forall r1 r2 r3 r4,le  plus_id r1 -> le plus_id r3 -> lt r1 r2 -> lt r3 r4 ->
+           lt (mult r1  r3) (mult r2  r4);
+
+      of_nat_plus_id: of_nat O = plus_id;
+      of_nat_succ_l: forall n : nat, of_nat (S n) = plus mult_id (of_nat (n));
+
+
+    }.
+      
+
+Section use_Numeric.
+  Context (Nt:Type) `{Numeric Nt}.
+
+  Lemma le_plus_id_mult_id: le plus_id mult_id.
+  Proof.
+    apply le_lt_or_eq.
+    left.
+    apply lt_plus_id_mult_id.
+  Qed.
+      
+
+  Lemma le_refl: forall t, le t t.
+  Proof.
+    intros.
+    apply le_lt_or_eq.
+    auto.
+  Qed.
+      
+
+  Lemma plus_id_r: forall t, plus t plus_id = t.
+  Proof.
+    intros.
+    rewrite plus_comm.
+    apply plus_id_l.
+  Qed.
+
+  Lemma plus_neg_r: forall t, plus t (neg t) = plus_id.
+  Proof.
+    intros.
+    rewrite plus_comm.
+    apply plus_neg_l.
+  Qed.
+ 
+  Lemma mult_plus_id_r: forall t, mult t plus_id = plus_id.
+  Proof.
+    intros.
+    rewrite mult_comm.
+    apply mult_plus_id_l.
+  Qed.
+
+  Lemma mult_id_r: forall t, mult t mult_id = t.
+  Proof.
+    intros.
+    rewrite mult_comm.
+    apply mult_id_l.
+  Qed.
+
+  Lemma mult_distr_r: forall t1 t2 t3, mult (plus t2 t3) t1 = plus (mult t2 t1) (mult t3 t1).
+  Proof.
+    intros.
+    rewrite mult_comm.
+    rewrite -> mult_comm with t2 t1.
+    rewrite -> mult_comm with t3 t1.
+    apply mult_distr_l.
+  Qed.
+  
+  Lemma neg_plus_id: neg plus_id = plus_id.
+  Proof.
+    rewrite <- plus_id_l with (neg plus_id).
+    apply plus_neg_r.
+  Qed.
+
+  Lemma plus_elim_r: forall t1 t2 t3: Nt, plus t2 t1 = plus t3 t1 -> t2 = t3.
+  Proof.
+    intros.
+    rewrite <- plus_id_r with t2.
+    rewrite <- plus_neg_r with t1.
+    rewrite plus_assoc.
+    rewrite H0.
+    rewrite <- plus_assoc.
+    rewrite plus_neg_r.
+    apply plus_id_r.
+  Qed.
+
+  Lemma plus_elim_l: forall t1 t2 t3 : Nt, plus t1 t2 = plus t1 t3 -> t2 = t3.
+  Proof.
+    intros.
+    apply plus_elim_r with t1.
+    rewrite plus_comm.
+    rewrite H0.
+    apply plus_comm.
+  Qed.
+    
+      
+  Lemma rplus_assoc: forall t1 t2 t3, plus (plus t1 t2) t3 = plus t1  (plus t2 t3).
+  Proof.
+    intros.
+    rewrite plus_assoc.
+    auto.
+  Qed.
+      
+      
+
+
+    
+  
+
+End use_Numeric. 
+
+
 
 Section int_to_Z.
   Variable i : int.
