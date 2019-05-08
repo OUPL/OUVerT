@@ -19,54 +19,298 @@ Require Import OUVerT.dyadic.
       - rat <-> Q
       - rat -> R
  *)
+Delimit Scope Numeric_scope with Num.
+
+Open Scope Num.
 
 
 Class Numeric (T:Type) :=
   mkNumeric {
-      plus: T -> T -> T;
-      neg : T->T;
-      mult: T -> T -> T;
+      plus: T -> T -> T where "n + m" := (plus n m) : Num;
+      neg : T->T where "- n" := (neg n) : Num;
+      mult: T -> T -> T where "n * m" := (mult n m) : Num;
+      of_nat: nat -> T;
       plus_id: T;
       mult_id: T;
-      of_nat: nat -> T;
-
-      le: T->T->Prop;
-      lt: T->T->Prop;
-
-      plus_id_l: forall t, plus plus_id t = t;
-      plus_comm: forall t1 t2, plus t1 t2 = plus t2 t1;
-      plus_assoc: forall t1 t2 t3, plus t1 (plus t2 t3) = plus (plus t1 t2) t3;
-      plus_neg_l: forall t1, plus (neg t1) t1 = plus_id;
-      plus_neg_distr: forall t1 t2, neg (plus t1 t2) = plus (neg t1) (neg t2);
-
-      mult_id_l: forall t, mult mult_id t = t;
-      mult_comm: forall t1 t2, mult t1 t2 = mult t2 t1;
-      mult_assoc: forall t1 t2 t3, mult (mult t1 t2) t3 = mult t1 (mult t2 t3);
-      mult_distr_l: forall t1 t2 t3, mult t1 (plus t2 t3) = plus (mult t1 t2) (mult t1 t3);
-      mult_plus_id_l: forall t, mult plus_id t = plus_id;
+      
 
 
+      le: T->T->Prop where "n <= m" := (le n m) : Num;
+      lt: T->T->Prop where "n < m" := (lt n m) : Num;
 
-      le_lt_or_eq: forall t1 t2, lt t1 t2 \/ t1 = t2 -> le t1 t2;
-      plus_le_compat: forall t1 t2 t3 t4, le t1 t2 /\ le t3 t4 -> le (plus t1 t3) (plus t2 t4);
-      plus_lt_le_compat: forall t1 t2 t3 t4, lt t1 t2 /\ le t3 t4 -> lt (plus t1 t3) (plus t2 t4);
-      plus_lt_compat: forall t1 t2 t3 t4, lt t1 t2 /\ lt t3 t4 -> lt (plus t1 t3) (plus t2 t4);
-      lt_plus_id_mult_id: lt plus_id mult_id;
-      mult_le_compat:
-        forall r1 r2 r3 r4,le  plus_id r1 -> le plus_id r3 -> le r1 r2 -> le r3 r4 ->
-           le (mult r1  r3) (mult r2  r4);
+      plus_id_l: forall t, plus_id + t = t;
+      plus_comm: forall t1 t2, (t1 + t2) = t2 + t1;
+      plus_assoc: forall t1 t2 t3, t1 + (t2 + t3) = (t1 + t2) + t3;
+      plus_neg_l: forall t1, (-t1) + t1 = plus_id;
+      plus_neg_distr: forall t1 t2, -(t1 + t2) = (-t1) + (-t2);
+
+      mult_id_l: forall t, mult_id * t = t;
+      mult_comm: forall t1 t2, t1 * t2 = t2 * t1;
+      mult_assoc: forall t1 t2 t3,  t1 * (t2 * t3) = (t1 * t2) * t3;
+      mult_distr_l: forall t1 t2 t3, t1 * (t2 + t3) = (t1 * t2) + (t1 * t3);
+      mult_plus_id_l: forall t, plus_id * t = plus_id;
+
+
+
+      le_lt_or_eq: forall t1 t2, t1 < t2 \/ t1 = t2 -> t1 <= t2;
+      plus_le_compat: forall t1 t2 t3 t4,  t1 <= t2 ->  t3 <= t4 -> (t1 + t3) <= (t2 + t4);
+      plus_lt_le_compat: forall t1 t2 t3 t4, t1 < t2 -> t3  <= t4 -> (t1 + t3 ) < (t2 + t4);
+      plus_lt_compat: forall t1 t2 t3 t4, t1 < t2 -> t3 < t4 -> (t1 + t3) < (t2 + t4);
+      lt_plus_id_mult_id: plus_id < mult_id;
+      mult_le_compat: 
+        forall r1 r2 r3 r4,plus_id <= r1 -> plus_id <= r3 -> r1  <= r2 -> r3 <= r4 ->
+           (r1 *  r3) <= (r2 *  r4);
       mult_lt_compat:
-        forall r1 r2 r3 r4,le  plus_id r1 -> le plus_id r3 -> lt r1 r2 -> lt r3 r4 ->
-           lt (mult r1  r3) (mult r2  r4);
+        forall r1 r2 r3 r4, plus_id <= r1 -> plus_id <= r3 -> r1  < r2 -> r3 < r4 ->
+           (r1 * r3) < (r2 *  r4);
 
       of_nat_plus_id: of_nat O = plus_id;
-      of_nat_succ_l: forall n : nat, of_nat (S n) = plus mult_id (of_nat (n));
+      of_nat_succ_l: forall n : nat, of_nat (S n) = mult_id + (of_nat (n));
 
 
     }.
       
 
+
+
+
+
+Lemma Rplus_assoc_reverse:forall t1 t2 t3, (Rplus t1 (Rplus t2 t3))%R = Rplus (Rplus t1 t2)  t3.
+Proof.
+  intros. rewrite Rplus_assoc. auto. 
+Qed. 
+
+Lemma Rmult_assoc_reverse:forall t1 t2 t3, (Rmult t1 (Rmult t2 t3))%R = Rmult (Rmult t1 t2)  t3.
+Proof.
+  intros. rewrite Rmult_assoc. auto. 
+Qed. 
+
+
+Lemma Rle_lt_or_eq: forall t1 t2, Rlt t1 t2 \/ t1 = t2 -> Rle t1 t2.
+Proof.
+  intros.
+  unfold Rle.
+  destruct H; auto.
+Qed.
+
+Lemma Rlt_not_eq_0_r: forall x : R, 0 < x -> x  <> 0.
+Proof.
+  intros.
+  apply Rlt_not_eq in H.
+  auto.
+Qed.
+
+
+Lemma Rmult_lt_compat: forall r1 r2 r3 r4 : R, R0 <= r1 -> R0 <= r3 -> r1 < r2 -> r3 < r4 -> r1 * r3 < r2 * r4.
+Proof.
+  intros.
+  apply Rle_lt_or_eq_dec in H.
+  apply Rle_lt_or_eq_dec in H0.
+  assert (r1 < r2). apply H1.
+  assert (r3 < r4). apply H2.
+  destruct H; destruct H0.
+  {
+    apply Rmult_lt_compat_l with (/r1) r1 r2 in H1.
+    2: { apply Rinv_0_lt_compat. auto. }
+    rewrite Rinv_l in H1.
+    2:{ apply Rlt_not_eq_0_r. auto. }
+    apply Rmult_lt_compat_l with (/r4) r3 r4 in H2.
+    2:{ apply Rinv_0_lt_compat. apply Rlt_trans with r3; auto. }
+    rewrite Rinv_l in H2.
+    2:{ apply Rlt_not_eq_0_r. apply Rlt_trans with r3; auto. }
+    assert(/r4 * r3 < /r1 * r2 ). 
+    { 
+      apply Rlt_trans with 1; auto.
+    }
+    apply Rmult_lt_compat_l with r4 ( /r4 * r3) (/r1 * r2) in H.
+    2:{ apply Rlt_trans with r3; auto. }
+    apply Rmult_lt_compat_r with r1 (r4 * (/ r4 * r3)) (r4 * (/r1 * r2)) in H; auto.
+    rewrite <- Rmult_assoc in H.
+    rewrite Rinv_r in H; try  (apply Rlt_not_eq_0_r; apply Rlt_trans with r3; auto).
+    rewrite Rmult_1_l in H.
+    rewrite Rmult_assoc in H.
+    rewrite -> Rmult_comm with (/r1) r2 in H.
+    rewrite -> Rmult_assoc with r2 (/r1) r1 in H.
+    rewrite Rinv_l in H; try( apply Rlt_not_eq_0_r; auto).
+    rewrite Rmult_1_r in H. 
+    rewrite -> Rmult_comm with r3 r1 in H.
+    rewrite -> Rmult_comm with r4 r2 in H.
+    apply H.
+  }
+  {
+    rewrite <- e.
+    rewrite Rmult_0_r.
+    apply Rmult_lt_0_compat.
+    { apply Rlt_trans with r1; auto. }
+    rewrite <- e in H2.
+    auto.
+  }
+  {
+    rewrite <- e.
+    rewrite Rmult_0_l.
+    apply Rmult_lt_0_compat.
+    {
+      rewrite <- e in H3.
+      auto.
+    }
+    apply Rlt_trans with r3; auto.
+  }
+  rewrite <- e.    
+  rewrite Rmult_0_l.
+  apply Rmult_lt_0_compat.
+  { rewrite <- e in H1. auto. }
+  rewrite <- e0 in H4. auto.
+Qed.
+
+
+Theorem INR_0: INR O = R0.
+auto. Qed.
+
+Lemma INR_succ_l: (forall n, INR (S n) = 1 + (INR n)).
+Proof.
+  intros.
+  rewrite S_INR.
+  apply Rplus_comm.
+Qed.
+
+Instance Numeric_R: Numeric R :=
+  @mkNumeric
+    R
+    Rplus
+    Ropp
+    Rmult
+
+    INR
+    R0
+    R1 
+
+    Rle
+    Rlt
+
+    Rplus_0_l
+    Rplus_comm
+    Rplus_assoc_reverse
+    Rplus_opp_l
+    Ropp_plus_distr
+    
+    Rmult_1_l
+    Rmult_comm
+    Rmult_assoc_reverse
+    Rmult_plus_distr_l
+    Rmult_0_l
+
+    Rle_lt_or_eq
+    Rplus_le_compat
+    Rplus_lt_le_compat
+    Rplus_lt_compat
+
+    Rlt_zero_1
+    Rmult_le_compat
+    Rmult_lt_compat
+    
+    INR_0
+    INR_succ_l    
+.
+
+
+
+Open Scope Z_scope.
+
+
+Lemma Zle_lt_or_eq: forall x y : Z, Z.lt x y \/ x = y -> Z.le x y.
+Proof. intros. rewrite Z.lt_eq_cases. apply H. Qed.
+
+Lemma Z0_lt_1: Z.lt 0 1.
+Proof. unfold Z.lt.  auto. Qed.
+
+
+
+
+Lemma Zplus_lt_le_compat: forall t1 t2 t3 t4 : Z, Z.lt t1 t2 -> Z.le t3 t4 -> Z.lt (Z.add t1 t3) (Z.add t2 t4).
+Proof.
+ intros.
+  apply Z.add_lt_le_mono; auto.
+Qed.
+    
+Lemma Zplus_lt_compat: forall t1 t2 t3 t4 : Z, Z.lt t1 t2 -> Z.lt t3 t4 -> Z.lt (Z.add t1 t3) (Z.add t2 t4).
+Proof.
+ intros.
+  apply Z.add_lt_le_mono; auto.
+  apply Zle_lt_or_eq.
+  left.
+  apply H0.
+Qed.
+
+
+Lemma Z_mult_le_compat: forall (r1 r2 r3 r4 : Z), (Z0 <= r1 -> Z0 <= r3 -> r1  <= r2 -> r3 <= r4 ->
+           (r1 *  r3) <= (r2 *  r4))%Z.
+Proof.
+  intros.
+  apply Zmult_le_compat; auto.
+Qed.
+
+
+Lemma Z_mult_lt_compat: (forall (r1 r2 r3 r4 : Z), Z0 <= r1 -> Z0 <= r3 -> r1  < r2 -> r3 < r4 ->
+           (r1 * r3) < (r2 *  r4))%Z.
+Proof.
+  intros.
+  apply Zmult_lt_compat; auto.
+Qed.
+
+Lemma Z_of_nat_0: Z.of_nat O = Z0. 
+Proof. auto. Qed.
+
+Lemma Z_of_nat_succ_l: (forall n, Z.of_nat (S n) = (Zpos (1)%positive) + (Z.of_nat n)) % Z.
+Proof.
+  intros.
+  rewrite Nat2Z.inj_succ.
+  rewrite Z.add_1_l.
+  auto.
+Qed.
+
 Section use_Numeric.
+Instance Numeric_z : Numeric Z :=
+  @mkNumeric
+    Z
+    Z.add
+    Z.opp
+    Z.mul
+    Z.of_nat
+    Z0
+    (Zpos (1)%positive)
+
+    Z.le
+    Z.lt
+
+    Z.add_0_l
+    Z.add_comm
+    Z.add_assoc
+    Z.add_opp_diag_l
+    Z.opp_add_distr
+    
+    Z.mul_1_l
+    Z.mul_comm
+    Z.mul_assoc
+    Z.mul_add_distr_l
+    Z.mul_0_l
+
+    Zle_lt_or_eq    
+    Z.add_le_mono
+    Zplus_lt_le_compat
+    Zplus_lt_compat
+    Z0_lt_1
+    Z_mult_le_compat
+    Z_mult_lt_compat
+
+    Z_of_nat_0
+    Z_of_nat_succ_l
+.
+
+
+
+ 
+
+
   Context (Nt:Type) `{Numeric Nt}.
 
   Lemma le_plus_id_mult_id: le plus_id mult_id.
