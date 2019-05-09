@@ -9,8 +9,13 @@ From mathcomp Require Import all_algebra.
 
 Import GRing.Theory Num.Def Num.Theory.
 
+Require Import dyadic.
+
+
 
 Require Import OUVerT.dyadic.
+
+
 
 (** This file defines conversions between Ssreflect/MathComp and
     Coq Standard Library implementations of various numeric types, 
@@ -50,12 +55,10 @@ Class Numeric (T:Type) :=
       mult_distr_l: forall t1 t2 t3, t1 * (t2 + t3) = (t1 * t2) + (t1 * t3);
       mult_plus_id_l: forall t, plus_id * t = plus_id;
 
-
-
       le_lt_or_eq: forall t1 t2, t1 < t2 \/ t1 = t2 -> t1 <= t2;
       plus_le_compat: forall t1 t2 t3 t4,  t1 <= t2 ->  t3 <= t4 -> (t1 + t3) <= (t2 + t4);
       plus_lt_le_compat: forall t1 t2 t3 t4, t1 < t2 -> t3  <= t4 -> (t1 + t3 ) < (t2 + t4);
-      plus_lt_compat: forall t1 t2 t3 t4, t1 < t2 -> t3 < t4 -> (t1 + t3) < (t2 + t4);
+      (*plus_lt_compat: forall t1 t2 t3 t4, t1 < t2 -> t3 < t4 -> (t1 + t3) < (t2 + t4);*)
       lt_plus_id_mult_id: plus_id < mult_id;
       mult_le_compat: 
         forall r1 r2 r3 r4,plus_id <= r1 -> plus_id <= r3 -> r1  <= r2 -> r3 <= r4 ->
@@ -72,6 +75,43 @@ Class Numeric (T:Type) :=
       
 
 
+
+Instance Numeric_D: Numeric (DRed.t) :=
+  @mkNumeric
+    DRed.t
+    DRed.add
+    DRed.opp
+    DRed.mult
+    
+    DRed.of_nat
+    DRed.t0
+    DRed.t1
+
+    Dle
+    Dlt
+  
+    DRed.add0l
+    DRed.addC
+    DRed.addA
+    DRed.addOppL
+    DRed.addNegDistr
+    
+    DRed.mult1L
+    DRed.multC
+    DRed.multA
+    DRed.multDistrL
+    DRed.mult0L
+
+    DRed.le_lt_or_eq
+    DRed.plus_le_compat
+    DRed.plus_lt_le_compat
+    DRed.lt_t0_t1
+    DRed.mult_le_compat
+    DRed.mult_lt_compat
+
+    DRed.of_natO
+    DRed.of_nat_succ_l
+.
 
 
 
@@ -202,7 +242,7 @@ Instance Numeric_R: Numeric R :=
     Rle_lt_or_eq
     Rplus_le_compat
     Rplus_lt_le_compat
-    Rplus_lt_compat
+    (*Rplus_lt_compat*)
 
     Rlt_zero_1
     Rmult_le_compat
@@ -297,7 +337,7 @@ Instance Numeric_z : Numeric Z :=
     Zle_lt_or_eq    
     Z.add_le_mono
     Zplus_lt_le_compat
-    Zplus_lt_compat
+    (*Zplus_lt_compat*)
     Z0_lt_1
     Z_mult_le_compat
     Z_mult_lt_compat
@@ -310,8 +350,25 @@ Instance Numeric_z : Numeric Z :=
 
  
 
+Open Scope Num.
 
-  Context (Nt:Type) `{Numeric Nt}.
+Context (Nt:Type) `{Numeric Nt}.
+
+  Lemma le_lt_weak: forall (n m : Nt), (lt n m -> le n  m).
+  Proof.
+    intros.
+    apply le_lt_or_eq.
+    left.
+    apply H0.
+  Qed.
+
+  Lemma plus_lt_compat: forall (t1 t2 t3 t4 : Nt), lt t1 t2 -> lt t3 t4 -> lt (plus t1 t3) (plus t2 t4).
+  Proof.
+    intros.
+    apply le_lt_weak in H1.
+    apply plus_lt_le_compat; auto.
+  Qed.
+    
 
   Lemma le_plus_id_mult_id: le plus_id mult_id.
   Proof.
