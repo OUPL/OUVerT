@@ -1271,7 +1271,9 @@ Module DRed.
   Qed.
 
   Program Definition of_nat (n : nat) : t :=
-    mk (Dmake (Z.of_nat n) 1) _.
+    mk (Dmake (2 * (Z.of_nat n)) 1) _.
+
+ 
 
 
   Lemma Dred_eq (d1 d2 : t) : (D_to_Q (d d1) == D_to_Q (d d2))%Q -> d1 = d2.
@@ -1356,6 +1358,203 @@ Module DRed.
     unfold lub, Dle in *; simpl.
     rewrite Dmult_ok in *.
     rewrite Dred_correct in *; auto.
+  Qed.
+
+  Lemma addOppL: forall d1, add (opp d1) d1 = t0.
+  Proof.
+    intros.
+    apply Dred_eq.
+    rewrite addP.    
+    simpl.
+    rewrite D_to_Q0.
+    rewrite Dred_correct.
+    rewrite Dopp_ok.
+    rewrite Qplus_comm.
+    apply Qplus_opp_r.
+  Qed.
+    
+  Lemma addNegDistr: forall d1 d2, opp (add d1 d2) = add (opp d1) (opp d2).
+  Proof.
+    intros.
+    apply Dred_eq.
+    rewrite addP.
+    repeat (rewrite oppP).
+    rewrite addP.
+    apply Qopp_plus.
+  Qed.
+
+
+  Lemma mult1L: forall d1, mult t1 d1 = d1.
+  Proof.
+    intros.
+    apply Dred_eq.
+    rewrite multP.
+    rewrite D_to_Q1.
+    apply Qmult_1_l.
+  Qed.
+
+  Lemma multDistrL: forall d1 d2 d3, mult d1 (add d2 d3) = add (mult d1 d2) (mult d1 d3).
+  Proof.
+    intros.
+    apply Dred_eq.
+    rewrite multP.
+    repeat (rewrite addP).
+    repeat (rewrite multP).
+    apply Qmult_plus_distr_r.
+  Qed.
+
+  Lemma mult0L: forall d1, mult t0 d1 = t0.
+  Proof.
+    intros.
+    apply Dred_eq.
+    rewrite multP.
+    rewrite D_to_Q0.
+    apply Qmult_0_l.
+  Qed.
+
+
+  Lemma le_lt_or_eq: forall (t1 t2 : t), Dlt t1 t2 \/ t1 = t2 -> Dle t1 t2.
+  Proof.
+    intros.
+    unfold Dle,Dlt in *.
+    apply Qle_lteq.
+    destruct H; auto.
+    rewrite H.
+    right.  
+    apply Qeq_refl.
+  Qed.
+
+  Lemma plus_le_compat: forall (t1 t2 t3 t4 : t) , Dle t1 t2 -> Dle t3  t4 -> Dle (add t1 t3) (add t2 t4).
+  Proof.
+    intros.
+    unfold Dle in *.
+    repeat (rewrite addP).
+    apply Qplus_le_compat; auto.
+  Qed.
+
+  Lemma plus_lt_le_compat: forall (t1 t2 t3 t4 : t), Dlt t1 t2 ->  Dle t3 t4 -> Dlt (add t1 t3 ) (add t2 t4).
+  Proof.
+    intros.
+    unfold Dle,Dlt in *.
+    repeat (rewrite addP).
+    apply Qplus_lt_le_compat; auto.
+  Qed.
+  
+  
+  Lemma lt_t0_t1: t0 < t1.
+  Proof.
+    unfold Dlt.
+    rewrite D_to_Q0.
+    rewrite D_to_Q1.
+    unfold Qlt, Z.lt.
+    auto. 
+  Qed.
+
+  Lemma mult_le_compat: 
+        forall (r1 r2 r3 r4 : t) , Dle t0 r1 -> Dle t0 r3 -> Dle r1  r2 -> Dle r3 r4 ->
+           Dle (mult r1 r3) (mult r2   r4).
+  Proof.
+    intros.
+    unfold Dle in *.
+    repeat (rewrite multP).
+    remember (D_to_Q r1) as q1.
+    remember (D_to_Q r2) as q2.
+    remember (D_to_Q r3) as q3.
+    remember (D_to_Q r4) as q4.
+    rewrite D_to_Q0 in *.
+    unfold Qle in *.
+    simpl in *.
+    rewrite Z.mul_1_r in *.
+    repeat (rewrite Pos2Z.inj_mul).
+    rewrite Z.mul_shuffle0.
+    rewrite Z.mul_assoc.
+    rewrite <- Z.mul_assoc.
+    rewrite Z.mul_shuffle0 with (Qnum q2) (Qnum q4) (QDen q1 * QDen q3)%Z.
+    rewrite Z.mul_assoc with (Qnum q2) (QDen q1) (QDen q3).
+    rewrite <- Z.mul_assoc with (Qnum q2 * QDen q1)%Z (QDen q3) (Qnum q4).
+    apply Zmult_le_compat; auto;
+    try( apply Zmult_le_0_compat; auto ; apply Pos2Z.pos_is_nonneg).
+    rewrite Z.mul_comm.
+    rewrite Z.mul_comm with (QDen q3) (Qnum q4).
+    auto.
+  Qed.
+
+   Lemma mult_lt_compat:
+        forall (r1 r2 r3 r4 : t), Dle t0 r1 -> Dle t0 r3 -> Dlt r1 r2 -> Dlt r3 r4 ->
+           Dlt (mult r1 r3) (mult r2 r4).
+  Proof.
+    intros.
+    unfold Dle,Dlt in *.
+    repeat (rewrite multP).
+    remember (D_to_Q r1) as q1.
+    remember (D_to_Q r2) as q2.
+    remember (D_to_Q r3) as q3.
+    remember (D_to_Q r4) as q4.
+    rewrite D_to_Q0 in *.
+    unfold Qlt in *.
+    simpl.
+    repeat (rewrite Pos2Z.inj_mul).
+    rewrite Z.mul_shuffle0.
+    rewrite Z.mul_assoc.
+    rewrite <- Z.mul_assoc.
+    rewrite Z.mul_shuffle0 with (Qnum q2) (Qnum q4) (QDen q1 * QDen q3)%Z.
+    rewrite Z.mul_assoc with (Qnum q2) (QDen q1) (QDen q3).
+    rewrite <- Z.mul_assoc with (Qnum q2 * QDen q1)%Z (QDen q3) (Qnum q4).
+    apply Zmult_lt_compat.
+    {
+      split; auto.
+      apply Zmult_le_0_compat.
+      {
+        unfold Qle in H.
+        simpl in *.
+        rewrite Z.mul_1_r in H.
+        auto.
+      }
+      apply Pos2Z.pos_is_nonneg.
+    }
+    split.
+    {
+      apply Zmult_le_0_compat.
+      { apply Pos2Z.pos_is_nonneg. }
+      unfold Qle in H0.
+      simpl in *.
+      rewrite Z.mul_1_r in H0.
+      auto.
+    }
+    rewrite Z.mul_comm.
+    rewrite Z.mul_comm with (QDen q3) (Qnum q4).
+    auto.
+  Qed.
+    
+  Lemma of_natO: of_nat O = t0.
+  Proof. auto. Qed.
+
+  Lemma of_natP: forall n : nat,  D_to_Q (of_nat n) = (Qmake (2 * (Z.of_nat n)) 2).
+  Proof. auto. Qed.
+
+  Lemma of_nat_succ_l: forall n : nat, of_nat (S n) = add t1 (of_nat (n)). 
+  Proof.
+    intros.
+    apply Dred_eq.
+    rewrite addP.
+    rewrite D_to_Q1.
+    repeat (rewrite of_natP).
+    simpl.
+    unfold Qeq.
+    unfold Z.of_nat.
+    simpl.
+    destruct n.
+    { rewrite Z.mul_0_l. auto. }
+    simpl.
+    rewrite Pos.mul_1_r.
+    rewrite Pos2Z.pos_xO.
+    rewrite Pos2Z.pos_xO with ((match Pos.of_succ_nat n with
+       | q~1 => (Pos.succ q)~0
+       | q~0 => q~1
+       | 1 => 2
+       end * 2))%positive.
+    simpl.
+    destruct (Pos.of_succ_nat n); auto.
   Qed.
 
   (* TODO: More lemmas here! *)
