@@ -21,6 +21,8 @@ Definition D_to_Q (d : D) :=
 Definition D0 : D := Dmake 0 1.
 Definition D1 : D := Dmake 2 1.
 
+
+
 Lemma D_to_Q0' : D_to_Q D0 = 0 # 2.
 Proof. auto. Qed.
 
@@ -1243,6 +1245,7 @@ Module DRed.
     apply Dred_complete; rewrite Dred_correct; apply Qeq_refl.
   Qed.
 
+
   Program Definition sub (d1 d2 : t) : t :=
     mk (Dred (Dsub d1.(d) d2.(d))) _.
   Next Obligation.
@@ -1266,6 +1269,10 @@ Module DRed.
   Next Obligation.
     apply Dred_complete; rewrite Dred_correct; apply Qeq_refl.            
   Qed.
+
+  Program Definition of_nat (n : nat) : t :=
+    mk (Dmake (Z.of_nat n) 1) _.
+
 
   Lemma Dred_eq (d1 d2 : t) : (D_to_Q (d d1) == D_to_Q (d d2))%Q -> d1 = d2.
   Proof.
