@@ -106,8 +106,7 @@ Section use_Numeric.
     }
     simpl.
     rewrite <- plus_id_l with plus_id.
-    apply le_plus_compat.
-    split.
+    apply plus_le_compat.
     { apply H'. apply mem_head. }
     apply IHcs.
     intros.
@@ -247,7 +246,6 @@ Proof.
   move=> a l IH H1.
   right.
   apply plus_lt_le_compat.
-  split.
   {
     apply H1.
     rewrite in_cons.
@@ -290,7 +288,7 @@ Lemma big_product_perm T (cs1 cs2 : seq T) (H' : Permutation cs1 cs2) f :
 Proof.
   elim: H' => //=.
   { move => x l l' H' -> //. }
-  { by move => x y l; rewrite -mult_assoc [mult (f y)  (f x)]mult_comm mult_assoc. }
+  { by move => x y l; rewrite mult_assoc [mult (f y)  (f x)]mult_comm mult_assoc. }
   move => l l' l'' H' /= -> H2 -> //.
 Qed.
 
@@ -340,9 +338,18 @@ Lemma big_product_lift (T : Type) (ts : seq T) f g
 Proof. by elim: ts => //= a l ->. Qed.
 
 
+
+
 Lemma big_product_constant T (cs : seq T) n :
-  (big_product cs (fun _ => n) = n ^ size cs)%R.
-Proof. elim: cs => //= _ l -> //. Qed.
+  (big_product cs (fun _ => n) = pow_nat n (size cs))%R.
+Proof.
+  induction cs.
+  { simpl. rewrite pow_natO. auto. }
+  simpl.
+  rewrite pow_nat_rec.
+  rewrite IHcs.
+  auto.
+Qed.
 
 Lemma big_product_exp_sum (T : eqType) (cs : seq T) (f : T -> R) :
   big_product cs (fun x => exp (f x)) = exp (big_sum cs f).
