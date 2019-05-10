@@ -34,6 +34,8 @@ Class Numeric (T:Type) :=
       plus: T -> T -> T where "n + m" := (plus n m) : Num;
       neg : T->T where "- n" := (neg n) : Num;
       mult: T -> T -> T where "n * m" := (mult n m) : Num;
+      pow_nat: T -> nat -> T where "n ^ m" := (pow n m) : Num;
+  
       of_nat: nat -> T;
       plus_id: T;
       mult_id: T;
@@ -69,7 +71,9 @@ Class Numeric (T:Type) :=
 
       of_nat_plus_id: of_nat O = plus_id;
       of_nat_succ_l: forall n : nat, of_nat (S n) = mult_id + (of_nat (n));
-
+      
+      pow_natO: forall t, pow_nat t O = mult_id;
+      pow_nat_rec: forall t n, pow_nat t (S n) = t * pow_nat t n;
 
     }.
       
@@ -82,6 +86,7 @@ Instance Numeric_D: Numeric (DRed.t) :=
     DRed.add
     DRed.opp
     DRed.mult
+    DRed.natPow
     
     DRed.of_nat
     DRed.t0
@@ -111,6 +116,8 @@ Instance Numeric_D: Numeric (DRed.t) :=
 
     DRed.of_natO
     DRed.of_nat_succ_l
+    DRed.natPowO
+    DRed.natPowRec
 .
 
 
@@ -213,12 +220,20 @@ Proof.
   apply Rplus_comm.
 Qed.
 
+
+Lemma RNatPowO: forall (r : R), pow r O = R1.
+Proof. auto. Qed.
+
+Lemma RNatPowRec: forall (r : R) (n : nat), pow r (S n) = Rmult r (pow r n).
+Proof. auto. Qed.
+
 Instance Numeric_R: Numeric R :=
   @mkNumeric
     R
     Rplus
     Ropp
     Rmult
+    pow
 
     INR
     R0
@@ -250,6 +265,8 @@ Instance Numeric_R: Numeric R :=
     
     INR_0
     INR_succ_l    
+    RNatPowO
+    RNatPowRec
 .
 
 
@@ -257,7 +274,7 @@ Instance Numeric_R: Numeric R :=
 Open Scope Z_scope.
 
 
-Lemma Zle_lt_or_eq: forall x y : Z, Z.lt x y \/ x = y -> Z.le x y.
+Lemma Zle_lt_or_eq2: forall x y : Z, Z.lt x y \/ x = y -> Z.le x y.
 Proof. intros. rewrite Z.lt_eq_cases. apply H. Qed.
 
 Lemma Z0_lt_1: Z.lt 0 1.
@@ -276,7 +293,7 @@ Lemma Zplus_lt_compat: forall t1 t2 t3 t4 : Z, Z.lt t1 t2 -> Z.lt t3 t4 -> Z.lt 
 Proof.
  intros.
   apply Z.add_lt_le_mono; auto.
-  apply Zle_lt_or_eq.
+  apply Zle_lt_or_eq2.
   left.
   apply H0.
 Qed.
@@ -308,13 +325,20 @@ Proof.
   auto.
 Qed.
 
-Section use_Numeric.
+Lemma ZNatPowO: forall i, Zpower_nat i O = 1%Z.
+Proof. auto. Qed.
+
+Lemma ZNatPowRec: forall i n, Zpower_nat i (S n) = Z.mul i (Zpower_nat i n).
+Proof. auto. Qed.
+
 Instance Numeric_z : Numeric Z :=
   @mkNumeric
     Z
     Z.add
     Z.opp
     Z.mul
+    Zpower_nat
+
     Z.of_nat
     Z0
     (Zpos (1)%positive)
@@ -334,7 +358,7 @@ Instance Numeric_z : Numeric Z :=
     Z.mul_add_distr_l
     Z.mul_0_l
 
-    Zle_lt_or_eq    
+    Zle_lt_or_eq2    
     Z.add_le_mono
     Zplus_lt_le_compat
     (*Zplus_lt_compat*)
@@ -344,11 +368,15 @@ Instance Numeric_z : Numeric Z :=
 
     Z_of_nat_0
     Z_of_nat_succ_l
+    ZNatPowO
+    ZNatPowRec
+    
 .
 
 
 
  
+Section use_Numeric.
 
 Open Scope Num.
 
@@ -861,10 +889,12 @@ Proof.
   apply/ltP; omega.
 Qed.
 
+
 Lemma le_int_to_Z (s r : int) :
-  Zle (int_to_Z s) (int_to_Z r) ->
+  Z.le (int_to_Z s) (int_to_Z r) ->
   ler s r.  
 Proof.
+  
   move/Zle_lt_or_eq; case; first by move/lt_int_to_Z; apply/ltrW.
   move/int_to_Z_inj => -> //.
 Qed.  
