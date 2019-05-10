@@ -1228,6 +1228,7 @@ Proof.
   rewrite H; auto.
 Qed.  
 
+
 Module DRed.
   Record t : Type :=
     mk { d :> D;
@@ -1273,7 +1274,11 @@ Module DRed.
   Program Definition of_nat (n : nat) : t :=
     mk (Dmake (2 * (Z.of_nat n)) 1) _.
 
- 
+  Program Fixpoint natPow (d : t) (n : nat) : t :=
+    match n with
+    | O => t1
+    | S n' => mult d (natPow d n')
+    end.
 
 
   Lemma Dred_eq (d1 d2 : t) : (D_to_Q (d d1) == D_to_Q (d d2))%Q -> d1 = d2.
@@ -1556,6 +1561,14 @@ Module DRed.
     simpl.
     destruct (Pos.of_succ_nat n); auto.
   Qed.
+
+
+  (**Trivial, but needed for numerics**)
+  Lemma natPowO: forall (d : t), natPow d O = t1.
+  Proof. auto. Qed.
+
+  Lemma natPowRec: forall (d : t) (n : nat), natPow d (S n) = mult d (natPow d n).
+  Proof. auto. Qed.
 
   (* TODO: More lemmas here! *)
 End DRed.      
