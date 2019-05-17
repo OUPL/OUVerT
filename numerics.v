@@ -34,7 +34,7 @@ Class Numeric (T:Type) :=
       plus: T -> T -> T where "n + m" := (plus n m) : Num;
       neg : T->T where "- n" := (neg n) : Num;
       mult: T -> T -> T where "n * m" := (mult n m) : Num;
-      pow_nat: T -> nat -> T where "n ^ m" := (pow n m) : Num;
+      pow_nat: T -> nat -> T;
   
       of_nat: nat -> T;
       plus_id: T;
