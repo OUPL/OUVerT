@@ -427,6 +427,13 @@ Module Numerics.
           end
       end.
 
+      Definition list_max_default (l : list Nt) (def : Nt) : Nt :=
+      match list_max l with
+      | None => def
+      | Some x => x
+      end.
+      
+
       Fixpoint argmax {T : Type} (l : list T) (f : T -> Nt) : option T :=
       match l with
       | nil => None
@@ -438,6 +445,11 @@ Module Numerics.
         end)
       end.
 
+      Definition argmax_default {T : Type} (l : list T) (f : T -> Nt) (def : T) : T :=
+      match argmax l f with
+      | None => def
+      | Some x => x
+      end.
 
       Lemma le_lt_weak: forall (n m : Nt), (n < m -> n <= m).
       Proof.
