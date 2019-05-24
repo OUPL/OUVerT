@@ -12,13 +12,17 @@ Require Import OUVerT.numerics.
 
 Delimit Scope R_scope with R.
 
-Open Scope Num.
+Open Scope Numeric_scope.
+Delimit Scope Numeric_scope with Num.
+
 
 Section use_Numeric.
   Context (Nt:Type) `{Numeric Nt}.
+
+
   Fixpoint big_sum (T : Type) (cs : seq T) (f : T -> Nt) : Nt :=
     if cs is [:: c & cs'] then (plus (f c) (big_sum cs' f))
-    else plus_id%R.
+    else plus_id.
 
   Lemma big_sum_nmul (T : Type) (cs : seq T) (f : T -> Nt) :
     (big_sum cs (fun c => neg  (f c)) = neg  (big_sum cs [eta f])).
@@ -26,7 +30,7 @@ Section use_Numeric.
     induction cs.
     {
       simpl.
-      rewrite neg_plus_id.
+      rewrite Numerics.neg_plus_id.
       auto.
     }
     simpl.
@@ -60,7 +64,7 @@ Section use_Numeric.
   Lemma big_sum_scalar T (cs : seq T) r f :
     (big_sum cs (fun c => mult r (f c)) = mult r  (big_sum cs (fun c => f c))).
   Proof.
-      elim: cs=> /=; first by rewrite mult_plus_id_r.
+      elim: cs=> /=; first by rewrite Numerics.mult_plus_id_r.
        by move=> a l IH; rewrite IH /=; rewrite mult_distr_l.
   Qed.
 
@@ -68,7 +72,7 @@ Section use_Numeric.
     (big_sum cs (fun c => plus (f c) (g c)) =
      plus (big_sum cs (fun c => f c))  (big_sum cs (fun c => g c))).
   Proof.
-    elim: cs=> /=; first by rewrite plus_id_r.
+    elim: cs=> /=; first by rewrite Numerics.plus_id_r.
     move=> a l IH; rewrite IH /=.
     rewrite plus_assoc.
     rewrite plus_assoc.
@@ -93,7 +97,7 @@ Section use_Numeric.
   Proof.
     elim: H' => //=.
     { move => x l l' H' -> //. }
-    { by move => x y l; rewrite - rplus_assoc [plus (f y)  (f x)]plus_comm rplus_assoc. }
+    { by move => x y l; rewrite - Numerics.rplus_assoc [plus (f y)  (f x)]plus_comm Numerics.rplus_assoc. }
     move => l l' l'' H' /= -> H2 -> //.
   Qed.
 
@@ -113,7 +117,7 @@ Section use_Numeric.
     induction cs.
     {
       simpl.
-      apply le_refl.
+      apply Numerics.le_refl.
     }
     simpl.
     rewrite <- plus_id_l with plus_id.
@@ -147,13 +151,13 @@ Proof.
     rewrite mult_plus_id_l.
     rewrite of_nat_succ_l.
     rewrite of_nat_plus_id.
-    repeat( rewrite plus_id_r).
+    repeat( rewrite Numerics.plus_id_r).
     rewrite mult_id_l.
     auto.
   }
   intro x.
   repeat(rewrite of_nat_succ_l).
-  repeat(rewrite mult_distr_r).
+  repeat(rewrite Numerics.mult_distr_r).
   repeat(rewrite mult_id_l).
   auto.
 Qed.
@@ -164,7 +168,7 @@ Lemma big_sum_mult_right T (cs : seq T) c f :
 Proof.
   elim: cs => //=.
   { by rewrite mult_plus_id_l. }
-  move => a l /=; rewrite mult_distr_r => -> //.
+  move => a l /=; rewrite Numerics.mult_distr_r => -> //.
 Qed.  
 
 Fixpoint big_product (T : Type) (cs : seq T) (f : T -> Nt) : Nt :=
@@ -184,10 +188,10 @@ Lemma big_product_ge0 (T : eqType) (cs : seq T) (f : T -> Nt) :
   (le plus_id  (big_product cs f)).
 Proof.
   elim: cs=> /=.
-  { intros. apply le_plus_id_mult_id. }
+  { intros. apply Numerics.le_plus_id_mult_id. }
   move=> a l IH H'.
   rewrite <- mult_plus_id_l with plus_id.
-  apply mult_le_compat; try ( apply le_refl). 
+  apply mult_le_compat; try ( apply Numerics.le_refl). 
   {
     apply H'.
     rewrite in_cons.
@@ -214,7 +218,7 @@ Proof.
   { intros. apply lt_plus_id_mult_id. }
   move=> a l IH H'.
   rewrite <- mult_plus_id_l with plus_id.
-  apply mult_lt_compat; try ( apply le_refl). 
+  apply mult_lt_compat; try ( apply Numerics.le_refl). 
   {
     apply H'.
     rewrite in_cons.
@@ -237,7 +241,7 @@ Lemma big_product_le (T : eqType) (cs : seq T) (f : T -> Nt) g :
   (le (big_product cs f)  (big_product cs g)).
 Proof.
   elim: cs=> //=.
-  { move=> _ _ _; apply: le_refl. }
+  { move=> _ _ _; apply: Numerics.le_refl. }
   move=> a l IH H1 H2 H3; apply mult_le_compat.
   { by apply: H1; rewrite in_cons; apply/orP; left. }
   { apply: big_product_ge0.
@@ -277,7 +281,7 @@ Proof.
   {
     rewrite H0.
     simpl.
-    apply le_refl.
+    apply Numerics.le_refl.
   }
   apply le_lt_or_eq.
   left.
@@ -558,7 +562,7 @@ Lemma big_sum_le (T : eqType) (cs : seq T) (f : T -> Nt) g :
   (le (big_sum cs f) (big_sum cs g)).
 Proof.
   elim: cs=> //=.
-  { move=> _; apply: le_refl. }
+  { move=> _; apply: Numerics.le_refl. }
   move=> a l IH H1; apply plus_le_compat.
   { by apply: H1; rewrite in_cons; apply/orP; left. }
     by apply: IH=> c H'; apply: H1; rewrite in_cons; apply/orP; right.
@@ -619,7 +623,6 @@ Qed.
 
 
 
-
 Lemma big_sum_le3 (T : eqType) (cs1 cs2 : seq T) (f g : T -> Nt) :
   uniq cs1 ->
   uniq cs2 -> 
@@ -630,7 +633,7 @@ Lemma big_sum_le3 (T : eqType) (cs1 cs2 : seq T) (f g : T -> Nt) :
 Proof.
   move => U1 U2 H1 H2 H'.
   rewrite [big_sum cs2 _](big_sum_split _ _ [pred x | x \in cs1]).
-  rewrite -[big_sum cs1 _]plus_id_r; apply: plus_le_compat.
+  rewrite -[big_sum cs1 _]Numerics.plus_id_r; apply: plus_le_compat.
   { have Hperm: Permutation cs1 [seq x <- cs2 | [pred x in cs1] x].
     { by apply: perm_sub. }
     rewrite (big_sum_perm Hperm). 
@@ -654,7 +657,7 @@ Lemma big_sum_pred2 (T:eqType) (cs:seq T) (f g:T -> Nt) (p:pred T) :
 Proof.
   elim: cs => // a l IH /=; case H': (p a) => /=.
   { by rewrite IH. }
-  by rewrite IH mult_plus_id_r plus_id_l.
+  by rewrite IH Numerics.mult_plus_id_r plus_id_l.
 Qed.
 
 End use_Numeric2.

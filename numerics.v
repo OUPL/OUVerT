@@ -3,18 +3,19 @@ Unset Strict Implicit.
 
 Require Import NArith QArith Qreals Reals Fourier.
 
+
+
+Require Import OUVerT.dyadic.
+Import List.
+Import ListNotations.
+
+
 Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 
+
 Import GRing.Theory Num.Def Num.Theory.
-
-Require Import dyadic.
-
-
-
-Require Import OUVerT.dyadic.
-
 
 
 (** This file defines conversions between Ssreflect/MathComp and
@@ -24,14 +25,16 @@ Require Import OUVerT.dyadic.
       - rat <-> Q
       - rat -> R
  *)
-Delimit Scope Numeric_scope with Num.
 
-Open Scope Num.
+Delimit Scope Numeric_scope with Num.
+Local Open Scope Numeric_scope.
+
+
 
 
 Class Numeric (T:Type) :=
   mkNumeric {
-      plus: T -> T -> T where "n + m" := (plus n m) : Num;
+      plus: T -> T -> T where "n + m" := (plus n m) : Numeric_scope;
       neg : T->T where "- n" := (neg n) : Num;
       mult: T -> T -> T where "n * m" := (mult n m) : Num;
       pow_nat: T -> nat -> T;
@@ -68,6 +71,7 @@ Class Numeric (T:Type) :=
       mult_lt_compat:
         forall r1 r2 r3 r4, plus_id <= r1 -> plus_id <= r3 -> r1  < r2 -> r3 < r4 ->
            (r1 * r3) < (r2 *  r4);
+      lt_le_dec: forall t1 t2, {t1 < t2} + {t2 <= t1};
 
       of_nat_plus_id: of_nat O = plus_id;
       of_nat_succ_l: forall n : nat, of_nat (S n) = mult_id + (of_nat (n));
@@ -78,6 +82,11 @@ Class Numeric (T:Type) :=
     }.
       
 
+Infix "+" := plus : Numeric_scope.
+Notation "- n" := (neg n) : Numeric_scope.
+Infix "*" := mult : Numeric_scope.
+Infix "<" := lt : Numeric_scope.
+Infix "<=" := le : Numeric_scope.
 
 
 Instance Numeric_D: Numeric (DRed.t) :=
@@ -114,6 +123,8 @@ Instance Numeric_D: Numeric (DRed.t) :=
     DRed.mult_le_compat
     DRed.mult_lt_compat
 
+    DRed.lt_le_dec
+
     DRed.of_natO
     DRed.of_nat_succ_l
     DRed.natPowO
@@ -121,6 +132,8 @@ Instance Numeric_D: Numeric (DRed.t) :=
 .
 
 
+Delimit Scope R_scope with R_s.
+Open Scope R_scope.
 
 Lemma Rplus_assoc_reverse:forall t1 t2 t3, (Rplus t1 (Rplus t2 t3))%R = Rplus (Rplus t1 t2)  t3.
 Proof.
@@ -140,7 +153,7 @@ Proof.
   destruct H; auto.
 Qed.
 
-Lemma Rlt_not_eq_0_r: forall x : R, 0 < x -> x  <> 0.
+Lemma Rlt_not_eq_0_r: forall x : R, (Rlt R0 x -> x  <> R0)%R.
 Proof.
   intros.
   apply Rlt_not_eq in H.
@@ -148,13 +161,14 @@ Proof.
 Qed.
 
 
-Lemma Rmult_lt_compat: forall r1 r2 r3 r4 : R, R0 <= r1 -> R0 <= r3 -> r1 < r2 -> r3 < r4 -> r1 * r3 < r2 * r4.
+Lemma Rmult_lt_compat: forall r1 r2 r3 r4 : R, 
+    (Rle R0 r1 -> Rle R0 r3 -> Rlt r1 r2 -> Rlt r3 r4 -> Rlt (Rmult r1 r3)  (Rmult r2  r4))%R.
 Proof.
   intros.
   apply Rle_lt_or_eq_dec in H.
   apply Rle_lt_or_eq_dec in H0.
-  assert (r1 < r2). apply H1.
-  assert (r3 < r4). apply H2.
+  assert (Rlt r1 r2)%R. apply H1.
+  assert (Rlt r3  r4)%R. apply H2.
   destruct H; destruct H0.
   {
     apply Rmult_lt_compat_l with (/r1) r1 r2 in H1.
@@ -165,11 +179,11 @@ Proof.
     2:{ apply Rinv_0_lt_compat. apply Rlt_trans with r3; auto. }
     rewrite Rinv_l in H2.
     2:{ apply Rlt_not_eq_0_r. apply Rlt_trans with r3; auto. }
-    assert(/r4 * r3 < /r1 * r2 ). 
+    assert(/r4 * r3 < /r1 * r2 )%R_s. 
     { 
       apply Rlt_trans with 1; auto.
     }
-    apply Rmult_lt_compat_l with r4 ( /r4 * r3) (/r1 * r2) in H.
+    apply Rmult_lt_compat_l with r4 ( /r4 * r3)%R_s (/r1 * r2)%R_s in H.
     2:{ apply Rlt_trans with r3; auto. }
     apply Rmult_lt_compat_r with r1 (r4 * (/ r4 * r3)) (r4 * (/r1 * r2)) in H; auto.
     rewrite <- Rmult_assoc in H.
@@ -213,7 +227,7 @@ Qed.
 Theorem INR_0: INR O = R0.
 auto. Qed.
 
-Lemma INR_succ_l: (forall n, INR (S n) = 1 + (INR n)).
+Lemma INR_succ_l: (forall n : nat, INR (S n) = Rplus 1 (INR n)).
 Proof.
   intros.
   rewrite S_INR.
@@ -262,6 +276,8 @@ Instance Numeric_R: Numeric R :=
     Rlt_zero_1
     Rmult_le_compat
     Rmult_lt_compat
+
+    Rlt_le_dec
     
     INR_0
     INR_succ_l    
@@ -270,9 +286,9 @@ Instance Numeric_R: Numeric R :=
 .
 
 
-
-Open Scope Z_scope.
-
+(**Undelimit Scope R_scope.
+Local Open Scope Z_scope.**)
+Delimit Scope Z_scope with Z.
 
 Lemma Zle_lt_or_eq2: forall x y : Z, Z.lt x y \/ x = y -> Z.le x y.
 Proof. intros. rewrite Z.lt_eq_cases. apply H. Qed.
@@ -331,6 +347,8 @@ Proof. auto. Qed.
 Lemma ZNatPowRec: forall i n, Zpower_nat i (S n) = Z.mul i (Zpower_nat i n).
 Proof. auto. Qed.
 
+
+
 Instance Numeric_z : Numeric Z :=
   @mkNumeric
     Z
@@ -366,6 +384,8 @@ Instance Numeric_z : Numeric Z :=
     Z_mult_le_compat
     Z_mult_lt_compat
 
+    Z_lt_le_dec
+ 
     Z_of_nat_0
     Z_of_nat_succ_l
     ZNatPowO
@@ -373,127 +393,161 @@ Instance Numeric_z : Numeric Z :=
     
 .
 
+Open Scope Numeric_scope.
+Delimit Scope Numeric_scope with Num.
 
 
- 
-Section use_Numeric.
 
-Open Scope Num.
+Module Numerics.
+  Section use_Numeric.
 
-Context (Nt:Type) `{Numeric Nt}.
 
-  Lemma le_lt_weak: forall (n m : Nt), (lt n m -> le n  m).
-  Proof.
-    intros.
-    apply le_lt_or_eq.
-    left.
-    apply H0.
-  Qed.
+    Context (Nt:Type) `{Numeric Nt}.
 
-  Lemma plus_lt_compat: forall (t1 t2 t3 t4 : Nt), lt t1 t2 -> lt t3 t4 -> lt (plus t1 t3) (plus t2 t4).
-  Proof.
-    intros.
-    apply le_lt_weak in H1.
-    apply plus_lt_le_compat; auto.
-  Qed.
-    
+      Lemma le_lt_dec: forall x y : Nt, ({le x y} + {lt y x})%Num.
+      Proof.
+        intros.
+        destruct lt_le_dec with y x; auto.
+      Qed.
 
-  Lemma le_plus_id_mult_id: le plus_id mult_id.
-  Proof.
-    apply le_lt_or_eq.
-    left.
-    apply lt_plus_id_mult_id.
-  Qed.
+      Definition Nt_ltb (x y : Nt) : bool :=
+      lt_le_dec x y.
+
+      Definition Nt_leb (x y : Nt) : bool :=
+      le_lt_dec x y.
+
+      Fixpoint list_max (l : list Nt) : option Nt :=
+        match l with
+        | nil => None
+        | x :: l' => 
+          match list_max l' with
+          | None => Some x
+          | Some x' =>
+            Some (if Nt_leb x x' then x' else x)
+          end
+      end.
+
+      Fixpoint argmax {T : Type} (l : list T) (f : T -> Nt) : option T :=
+      match l with
+      | nil => None
+      | x :: l' =>
+        (match argmax l' f with
+        | None => Some x
+        | Some x' =>
+          Some (if Nt_leb (f x) (f x') then x' else x)
+        end)
+      end.
+
+
+      Lemma le_lt_weak: forall (n m : Nt), (n < m -> n <= m).
+      Proof.
+        intros.
+        apply le_lt_or_eq.
+        left.
+        apply H0.
+      Qed.
+
+      Lemma plus_lt_compat: forall (t1 t2 t3 t4 : Nt), lt t1 t2 -> lt t3 t4 -> (lt (plus t1 t3) (plus t2 t4))%Num.
+      Proof.
+        intros.
+        apply le_lt_weak in H1.
+        apply plus_lt_le_compat; auto.
+      Qed.
+        
+
+      Lemma le_plus_id_mult_id: le plus_id mult_id.
+      Proof.
+        apply le_lt_or_eq.
+        left.
+        apply lt_plus_id_mult_id.
+      Qed.
+          
+
+      Lemma le_refl: forall t, le t t.
+      Proof.
+        intros.
+        apply le_lt_or_eq.
+        auto.
+      Qed.
+          
+
+      Lemma plus_id_r: forall t, plus t plus_id = t.
+      Proof.
+        intros.
+        rewrite plus_comm.
+        apply plus_id_l.
+      Qed.
+
+      Lemma plus_neg_r: forall t, plus t (neg t) = plus_id.
+      Proof.
+        intros.
+        rewrite plus_comm.
+        apply plus_neg_l.
+      Qed.
+     
+      Lemma mult_plus_id_r: forall t, mult t plus_id = plus_id.
+      Proof.
+        intros.
+        rewrite mult_comm.
+        apply mult_plus_id_l.
+      Qed.
+
+      Lemma mult_id_r: forall t, mult t mult_id = t.
+      Proof.
+        intros.
+        rewrite mult_comm.
+        apply mult_id_l.
+      Qed.
+
+      Lemma mult_distr_r: forall t1 t2 t3, mult (plus t2 t3) t1 = plus (mult t2 t1) (mult t3 t1).
+      Proof.
+        intros.
+        rewrite mult_comm.
+        rewrite -> mult_comm with t2 t1.
+        rewrite -> mult_comm with t3 t1.
+        apply mult_distr_l.
+      Qed.
       
+      Lemma neg_plus_id: neg plus_id = plus_id.
+      Proof.
+        rewrite <- plus_id_l with (neg plus_id).
+        apply plus_neg_r.
+      Qed.
 
-  Lemma le_refl: forall t, le t t.
-  Proof.
-    intros.
-    apply le_lt_or_eq.
-    auto.
-  Qed.
-      
+      Lemma plus_elim_r: forall t1 t2 t3: Nt, plus t2 t1 = plus t3 t1 -> t2 = t3.
+      Proof.
+        intros.
+        rewrite <- plus_id_r with t2.
+        rewrite <- plus_neg_r with t1.
+        rewrite plus_assoc.
+        rewrite H0.
+        rewrite <- plus_assoc.
+        rewrite plus_neg_r.
+        apply plus_id_r.
+      Qed.
 
-  Lemma plus_id_r: forall t, plus t plus_id = t.
-  Proof.
-    intros.
-    rewrite plus_comm.
-    apply plus_id_l.
-  Qed.
+      Lemma plus_elim_l: forall t1 t2 t3 : Nt, plus t1 t2 = plus t1 t3 -> t2 = t3.
+      Proof.
+        intros.
+        apply plus_elim_r with t1.
+        rewrite plus_comm.
+        rewrite H0.
+        apply plus_comm.
+      Qed.
+        
+          
+      Lemma rplus_assoc: forall t1 t2 t3, plus (plus t1 t2) t3 = plus t1  (plus t2 t3).
+      Proof.
+        intros.
+        rewrite plus_assoc.
+        auto.
+      Qed.
+          
+  End use_Numeric. 
+End Numerics.
 
-  Lemma plus_neg_r: forall t, plus t (neg t) = plus_id.
-  Proof.
-    intros.
-    rewrite plus_comm.
-    apply plus_neg_l.
-  Qed.
- 
-  Lemma mult_plus_id_r: forall t, mult t plus_id = plus_id.
-  Proof.
-    intros.
-    rewrite mult_comm.
-    apply mult_plus_id_l.
-  Qed.
-
-  Lemma mult_id_r: forall t, mult t mult_id = t.
-  Proof.
-    intros.
-    rewrite mult_comm.
-    apply mult_id_l.
-  Qed.
-
-  Lemma mult_distr_r: forall t1 t2 t3, mult (plus t2 t3) t1 = plus (mult t2 t1) (mult t3 t1).
-  Proof.
-    intros.
-    rewrite mult_comm.
-    rewrite -> mult_comm with t2 t1.
-    rewrite -> mult_comm with t3 t1.
-    apply mult_distr_l.
-  Qed.
-  
-  Lemma neg_plus_id: neg plus_id = plus_id.
-  Proof.
-    rewrite <- plus_id_l with (neg plus_id).
-    apply plus_neg_r.
-  Qed.
-
-  Lemma plus_elim_r: forall t1 t2 t3: Nt, plus t2 t1 = plus t3 t1 -> t2 = t3.
-  Proof.
-    intros.
-    rewrite <- plus_id_r with t2.
-    rewrite <- plus_neg_r with t1.
-    rewrite plus_assoc.
-    rewrite H0.
-    rewrite <- plus_assoc.
-    rewrite plus_neg_r.
-    apply plus_id_r.
-  Qed.
-
-  Lemma plus_elim_l: forall t1 t2 t3 : Nt, plus t1 t2 = plus t1 t3 -> t2 = t3.
-  Proof.
-    intros.
-    apply plus_elim_r with t1.
-    rewrite plus_comm.
-    rewrite H0.
-    apply plus_comm.
-  Qed.
-    
-      
-  Lemma rplus_assoc: forall t1 t2 t3, plus (plus t1 t2) t3 = plus t1  (plus t2 t3).
-  Proof.
-    intros.
-    rewrite plus_assoc.
-    auto.
-  Qed.
-      
-      
-
-
-    
-  
-
-End use_Numeric. 
-
+Close Scope Numeric_scope.
+Undelimit Scope Numeric_scope.
 
 
 Section int_to_Z.
@@ -517,7 +571,7 @@ Section int_to_Z.
     | Negz n => Z.neg (Pos.of_succ_nat n)
     end.
 
-  Lemma posint_to_positive (H : (0 < i)%R) :
+  Lemma posint_to_positive (H : (0< i)%R) :
     Z.pos int_to_positive = int_to_Z.
   Proof.
     rewrite /int_to_positive /int_to_Z.
