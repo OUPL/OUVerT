@@ -133,7 +133,7 @@ Instance Numeric_D: Numeric (DRed.t) :=
 
 
 Delimit Scope R_scope with R_s.
-Open Scope R_scope.
+Local Open Scope R_scope.
 
 Lemma Rplus_assoc_reverse:forall t1 t2 t3, (Rplus t1 (Rplus t2 t3))%R = Rplus (Rplus t1 t2)  t3.
 Proof.

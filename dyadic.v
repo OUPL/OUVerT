@@ -1570,6 +1570,19 @@ Module DRed.
   Lemma natPowRec: forall (d : t) (n : nat), natPow d (S n) = mult d (natPow d n).
   Proof. auto. Qed.
 
+  Lemma lt_le_dec: forall d1 d2, {d1 < d2} + {d2 <= d1}.
+  Proof. intros. unfold Dle. unfold Dlt. apply Qlt_le_dec. Qed.
+
+
+  Lemma le_lt_dec: forall d1 d2,  {d1 <= d2} + {d2 < d1}.
+  Proof.
+    intros.
+    unfold Dle.
+    unfold Dlt.
+    destruct Qlt_le_dec with (D_to_Q d2) (D_to_Q d1); auto.
+  Qed.
+
+
   (* TODO: More lemmas here! *)
 End DRed.      
 
