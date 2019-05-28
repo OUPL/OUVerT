@@ -6,7 +6,7 @@ From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 
 Import GRing.Theory Num.Def Num.Theory.
-Require Import QArith Reals Rpower Ranalysis Fourier.
+Require Import QArith Reals Rpower Ranalysis Fourier Lra.
 
 Require Import bigops numerics expfacts dist chernoff.
 
@@ -41,7 +41,6 @@ Section learning.
 
     Lemma chernoff_bound_h
         (h : Hyp)
-        (Hind : mutual_independence (T:=prod_finType A B) d (X h))
         (Hid : identically_distributed d (X h))        
         (eps : R) (eps_gt0 : 0 < eps) (Hyp_eps : eps < 1 - expVal h) :
     probOfR
@@ -64,9 +63,7 @@ Section learning.
     Definition eps_Hyp (eps : R) : finType := 
       [finType of {h : Hyp | Rlt_le_dec eps (1 - expVal h)}].
 
-    (** assume X_i are iid *)
     Variable identical : forall h : Hyp, identically_distributed d (X h).
-    Variable independent : forall h : Hyp, mutual_independence d (X h).
 
     Lemma chernoff_bound1 (eps : R) (eps_gt0 : 0 < eps) :
       probOfR (prodR (fun _ : 'I_m => d))
@@ -189,7 +186,7 @@ Section learning.
          Rlt_le_dec (expVal h + eps) (empVal T h)]
       <= exp (-2%R * eps^2 * mR).
     Proof.
-      apply: Rle_trans; last by apply: (@chernoff_bound_h h _ _ eps _ _).
+      apply: Rle_trans; last by apply: (@chernoff_bound_h h _ eps _ _).
       apply: probOfR_le.
       { move => x; apply: prodR_nonneg => _ y; apply: d_nonneg. }
       move => x /=; case: (Rlt_le_dec _ _) => // H1 _.
@@ -201,7 +198,6 @@ Section learning.
     
     Lemma chernoff_twosided_bound_h
         (h : Hyp)
-        (Hind : mutual_independence (T:=prod_finType A B) d (X h))
         (Hid : identically_distributed d (X h))        
         (eps : R) (eps_gt0 : 0 < eps) (Hyp_eps : eps_Hyp_condition_twosided eps h) :
     probOfR
@@ -341,7 +337,6 @@ Section learning.
     (*For any function from training_set to Params, assuming joint independence
       and that the target class isn't perfectly representable:*)
     Variable learn : training_set -> Params.
-    Variable mut_ind : forall p : Params, mutual_independence d (accuracy01 p).
     Variable not_perfectly_learnable : forall p : Params, 0 < expVal accuracy01 p < 1.
 
     (*we get the the following result for any eps: the probability that 

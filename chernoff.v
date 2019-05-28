@@ -40,7 +40,7 @@ Section relative_entropy_lemmas.
   Qed.
 End relative_entropy_lemmas.
 
-Section chernoff_geq.
+Section mutual_independence.
   Variable T : finType.
   Variables d : T -> R.
   Variable d_dist : big_sum (enum T) d = 1.
@@ -62,9 +62,36 @@ Section chernoff_geq.
   Definition mutual_independence :=
     forall g : R -> R, 
     expValR (prodR d_prod) (fun p => big_product (enum 'I_m) (fun i => g (f i (p i)))) =
-    big_product (enum 'I_m) (fun i => expValR (prodR d_prod) (fun p => g (f i (p i)))).
-  Variable f_independent : mutual_independence.
+    big_product (enum 'I_m) (fun i => expValR d (fun x => g (f i x))).
+  Definition mutual_independence' :=
+    expValR (prodR d_prod) (fun p => big_product (enum 'I_m) (fun i => f i (p i))) =
+    big_product (enum 'I_m) (fun i => expValR d (fun x => f i x)).
+  Definition mutual_independence'_dec :=
+    Req_dec
+     (expValR (prodR d_prod) (fun p => big_product (enum 'I_m) (fun i => f i (p i))))
+     (big_product (enum 'I_m) (fun i => expValR d (fun x => f i x))).
+End mutual_independence.
 
+Section chernoff_geq.
+  Variable T : finType.
+  Variables d : T -> R.
+  Variable d_dist : big_sum (enum T) d = 1.
+  Variable d_nonneg : forall x, 0 <= d x.
+  Variable m : nat.
+  Variable m_gt0 : (0 < m)%nat.
+
+  Notation d_prod := (@d_prod T d m).
+  
+  Variable f : 'I_m -> T -> R.
+  Variable f_range : forall i x, 0 <= f i x <= 1.
+  Variable f_identically_distributed : @identically_distributed T d m f.
+  Lemma f_independent : @mutual_independence T d m f.
+  Proof.
+    rewrite /mutual_independence => g; rewrite /expValR /= big_product_distr_sum /=.
+    rewrite /prodR /d_prod; apply: big_sum_ext => // p.
+    by rewrite -big_product_assoc.
+  Qed.    
+  
   Definition mR := INR m.
   Lemma mR_gt0 : (0 < mR)%R.
   Proof. by apply: lt_0_INR; apply/ltP. Qed.
@@ -77,14 +104,14 @@ Section chernoff_geq.
   
   Lemma expVal_independence c :
     expValR (prodR d_prod) (fun p => big_product (enum 'I_m) (fun i => exp (c * f i (p i)))) =
-    big_product (enum 'I_m) (fun i => expValR (prodR d_prod) (fun p => exp (c * f i (p i)))).
+    big_product (enum 'I_m) (fun i => expValR d (fun x => exp (c * f i x))).
   Proof.
     set (g x := exp (c * x)).
     change
       (expValR (prodR d_prod)
         (fun p => big_product (enum 'I_m) (fun i : ordinal_finType m => g (f i (p i)))) =
       big_product (enum 'I_m)
-        (fun i : ordinal_finType m => expValR (prodR d_prod) (fun p => g (f i (p i))))).
+        (fun i : ordinal_finType m => expValR d (fun x => g (f i x)))).
     by rewrite f_independent.
   Qed.
 
@@ -134,66 +161,65 @@ Section chernoff_geq.
   Lemma expValR_linear_approx : 
     exp (-lambda * mR * q) *
     big_product (enum 'I_m)
-      (fun i => expValR (prodR d_prod) (fun p => exp (lambda * f i (p i)))) <=
+      (fun i => expValR d (fun x => exp (lambda * f i x))) <=
     exp (-lambda * mR * q) *
     big_product (enum 'I_m)
-      (fun i => expValR (prodR d_prod) (fun p => 1 - f i (p i) + f i (p i) * exp lambda)).
+      (fun i => expValR d (fun x => 1 - f i x + f i x * exp lambda)).
   Proof.
     apply: Rmult_le_compat_l; first by left; apply: exp_pos.
     apply: big_product_le.
     { move => c Hin; apply: expValR_ge0; first by left; apply: exp_pos.
-      by apply: prodR_nonneg. }
-    { move => i Hin; apply: expValR_ge0 => p.
+      by apply: d_nonneg. }
+    { move => i Hin; apply: expValR_ge0 => x.
       { rewrite -[0]Rplus_0_l; apply: Rplus_le_compat.
-        { case: (f_range i (p i)) => _ Hleq; fourier. }
-        case: (f_range i (p i)) => H _; rewrite -[0](Rmult_0_r 0).
+        { case: (f_range i x) => _ Hleq; fourier. }
+        case: (f_range i x) => H _; rewrite -[0](Rmult_0_r 0).
         apply: Rmult_le_compat; try solve[apply: Rle_refl|by []].
         left; apply: exp_pos. }
-      by apply: prodR_nonneg. }
+      by apply: d_nonneg. }
     move => c Hin; apply: big_sum_le => x Hinx; apply: Rmult_le_compat_l.
-    { by apply: prodR_nonneg. }
+    { by apply: d_nonneg. }
     by apply: exp_upper_01.
   Qed.
 
   Lemma expValR_simpl i :
-    expValR (prodR d_prod) (fun p => 1 - f i (p i) + f i (p i) * exp lambda) =
+    expValR d (fun x => 1 - f i x + f i x * exp lambda) =
     1 - p + p * exp lambda.
   Proof.
     rewrite 2!expValR_linear/expValR => //.
-    have ->: big_sum (enum {ffun 'I_m -> T}) (fun p => prodR d_prod p * 1)
-           = big_sum (enum {ffun 'I_m -> T}) (prodR d_prod).
+    have ->: big_sum (enum T) (fun x => d x * 1)
+           = big_sum (enum T) (fun x => d x).
     { by apply: big_sum_ext => // x; apply: Rmult_1_r. }
-    rewrite prodR_dist => //.
     have ->:
-       big_sum (enum {ffun 'I_m -> T}) (fun p => prodR d_prod p * - f i (p i)) =
-      -big_sum (enum {ffun 'I_m -> T}) (fun p => prodR d_prod p * f i (p i)).
+       big_sum (enum T) (fun x => d x * - f i x) =
+      -big_sum (enum T) (fun x => d x * f i x).
     { rewrite -big_sum_nmul; apply: big_sum_ext => // x.
       by rewrite Ropp_mult_distr_r_reverse. }
     have ->:
-       big_sum (enum {ffun 'I_m -> T}) (fun p => prodR d_prod p * (f i (p i) * exp lambda)) =
-       big_sum (enum {ffun 'I_m -> T}) (fun p => exp lambda * (prodR d_prod p * f i (p i))).
+       big_sum (enum T) (fun x => d x * (f i x * exp lambda)) =
+       big_sum (enum T) (fun x => exp lambda * (d x * f i x)).
     { by apply big_sum_ext => // x; rewrite -Rmult_assoc Rmult_comm. }
     f_equal.
     { rewrite /p/expValR/Rminus; f_equal; f_equal => /=; rewrite /d_prod /=.
-      rewrite prodR_marginal => //.
+      apply: d_dist.
       apply: f_identically_distributed. }
     rewrite big_sum_scalar Rmult_comm; f_equal.
-    rewrite /p/expValR/Rminus; f_equal; f_equal => /=; rewrite /d_prod /=.
-    rewrite prodR_marginal => //.
-    apply: f_identically_distributed. 
+    rewrite /p/expValR/Rminus.
+    move: f_identically_distributed; rewrite /identically_distributed.
+    by move/(_ i i0); rewrite /expValR.
   Qed.    
   
   Lemma big_product_expValR_simpl_aux : 
     big_product
       (enum 'I_m)
-      (fun i => expValR (prodR d_prod) (fun p => 1 - f i (p i) + f i (p i) * exp lambda)) =
+      (fun i => expValR d (fun x => 1 - f i x + f i x * exp lambda)) =
     big_product (enum 'I_m) (fun i => 1 - p + p * exp lambda).
   Proof. by apply: big_product_ext => // p; rewrite expValR_simpl. Qed.
     
   Lemma big_product_expValR_simpl :
     big_product
       (enum 'I_m)
-      (fun i => expValR (prodR d_prod) (fun p => 1 - f i (p i) + f i (p i) * exp lambda)) =
+      (fun i => expValR d (fun x => 1 - f i x + f i x * exp lambda)) =
     (1 - p + p * exp lambda) ^ m.
   Proof. by rewrite big_product_expValR_simpl_aux big_product_constant size_enum_ord. Qed.  
 
@@ -234,7 +260,7 @@ Section chernoff_geq.
     phat_ge_q <=
     exp (-lambda * mR * q) *
     big_product (enum 'I_m)
-      (fun i => expValR (prodR d_prod) (fun p => exp (lambda * f i (p i)))).
+      (fun i => expValR d (fun x => exp (lambda * f i x))).
   Proof.
     rewrite -expVal_independence /phat_ge_q /conv.
     have H: 0 < lambda * mR.
@@ -270,7 +296,7 @@ Section chernoff_geq.
     phat_ge_q <= 
     exp (-lambda * mR * q) *
     big_product (enum 'I_m)
-      (fun i => expValR (prodR d_prod) (fun p => 1 - f i (p i) + f i (p i) * exp lambda)).
+      (fun i => expValR d (fun x => 1 - f i x + f i x * exp lambda)).
   Proof.
     apply: Rle_trans; first by apply: probOfR_phat_q.
     apply: expValR_linear_approx.
@@ -454,7 +480,6 @@ Section chernoff_leq.
   Variable f : 'I_m -> T -> R.
   Variable f_range : forall i x, 0 <= f i x <= 1.
   Variable f_identically_distributed : identically_distributed d f.
-  Variable f_independent : mutual_independence d f.
 
   Definition f_neg (i : 'I_m) (t : T) := 1 - f i t.
 
@@ -466,8 +491,6 @@ Section chernoff_leq.
     rewrite 2!expValR_linear; f_equal.
     by rewrite 2!expValR_Ropp H.
   Qed.
-  Lemma f_neg_independent : mutual_independence d f_neg.
-  Proof. by move => g; rewrite (f_independent (fun x => g (1 - x))). Qed.
 
   Variable eps : R.
   Variable eps_gt0 : 0 < eps.
@@ -490,8 +513,7 @@ Section chernoff_leq.
     apply: chernoff_geq => //.
     { apply: f_neg_range. }
     { apply: f_neg_identically_distributed. }
-    { apply: f_neg_independent. }
-    { apply: p_neg_nontrivial. }
+    apply: p_neg_nontrivial.
   Qed.
 End chernoff_leq.
 
@@ -508,7 +530,6 @@ Section chernoff_onesided.
   Variable f : 'I_m -> T -> R.
   Variable f_range : forall i x, 0 <= f i x <= 1.
   Variable f_identically_distributed : identically_distributed d f.
-  Variable f_independent : mutual_independence d f.
 
   Variable eps : R.
   Variable eps_gt0 : 0 < eps.
@@ -549,7 +570,6 @@ Section chernoff_twosided.
   Variable f : 'I_m -> T -> R.
   Variable f_range : forall i x, 0 <= f i x <= 1.
   Variable f_identically_distributed : identically_distributed d f.
-  Variable f_independent : mutual_independence d f.
 
   Variable eps delt : R.
   Variable eps_gt0 : 0 < eps.
