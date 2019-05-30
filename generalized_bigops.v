@@ -17,15 +17,15 @@ Delimit Scope Numeric_scope with Num.
 
 
 Section use_Numeric.
-  Context (Nt:Type) `{Numeric Nt}.
+  Context (Nt:Type) `{Numerics.Numeric Nt}.
 
 
   Fixpoint big_sum (T : Type) (cs : seq T) (f : T -> Nt) : Nt :=
-    if cs is [:: c & cs'] then (plus (f c) (big_sum cs' f))
-    else plus_id.
+    if cs is [:: c & cs'] then ((f c) + (big_sum cs' f))%Num
+    else Numerics.plus_id.
 
   Lemma big_sum_nmul (T : Type) (cs : seq T) (f : T -> Nt) :
-    (big_sum cs (fun c => neg  (f c)) = neg  (big_sum cs [eta f])).
+    (big_sum cs (fun c => -(f c)) = -(big_sum cs [eta f])).
   Proof.
     induction cs.
     {
@@ -35,7 +35,7 @@ Section use_Numeric.
     }
     simpl.
     rewrite IHcs.
-    rewrite plus_neg_distr.
+    rewrite Numerics.plus_neg_distr.
     auto.
   Qed.
 
@@ -62,33 +62,33 @@ Section use_Numeric.
   Qed.
 
   Lemma big_sum_scalar T (cs : seq T) r f :
-    (big_sum cs (fun c => mult r (f c)) = mult r  (big_sum cs (fun c => f c))).
+    (big_sum cs (fun c => r * (f c)) = r * (big_sum cs (fun c => f c))).
   Proof.
       elim: cs=> /=; first by rewrite Numerics.mult_plus_id_r.
-       by move=> a l IH; rewrite IH /=; rewrite mult_distr_l.
+       by move=> a l IH; rewrite IH /=; rewrite Numerics.mult_distr_l.
   Qed.
 
   Lemma big_sum_plus T (cs : seq T) f g :
-    (big_sum cs (fun c => plus (f c) (g c)) =
-     plus (big_sum cs (fun c => f c))  (big_sum cs (fun c => g c))).
+    (big_sum cs (fun c => (f c) + (g c)) =
+     (big_sum cs (fun c => f c)) + (big_sum cs (fun c => g c))).
   Proof.
     elim: cs=> /=; first by rewrite Numerics.plus_id_r.
     move=> a l IH; rewrite IH /=.
-    rewrite plus_assoc.
-    rewrite plus_assoc.
-    rewrite <- plus_assoc with (f a) (g a) (big_sum l [eta f]).
-    rewrite -> plus_comm with (g a) (big_sum l [eta f]).
-    rewrite plus_assoc.
+    rewrite Numerics.plus_assoc.
+    rewrite Numerics.plus_assoc.
+    rewrite <- Numerics.plus_assoc with (f a) (g a) (big_sum l [eta f]).
+    rewrite -> Numerics.plus_comm with (g a) (big_sum l [eta f]).
+    rewrite Numerics.plus_assoc.
     auto.
   Qed.
 
   Lemma big_sum_cat T (cs1 cs2 : seq T) f :
     (big_sum (cs1++cs2) (fun c => f c) =
-     plus (big_sum cs1 (fun c => f c))  (big_sum cs2 (fun c => f c))).
+     (big_sum cs1 (fun c => f c))  + (big_sum cs2 (fun c => f c))).
   Proof.
-    elim: cs1 => /=; first by rewrite plus_id_l.
+    elim: cs1 => /=; first by rewrite Numerics.plus_id_l.
     move=> a l IH; rewrite IH /=.
-    rewrite plus_assoc.
+    rewrite Numerics.plus_assoc.
     auto.
   Qed.
 
@@ -97,12 +97,12 @@ Section use_Numeric.
   Proof.
     elim: H' => //=.
     { move => x l l' H' -> //. }
-    { by move => x y l; rewrite - Numerics.rplus_assoc [plus (f y)  (f x)]plus_comm Numerics.rplus_assoc. }
+    { by move => x y l; rewrite - Numerics.plus_assoc_r [(f y) + (f x)]Numerics.plus_comm Numerics.plus_assoc_r. }
     move => l l' l'' H' /= -> H2 -> //.
   Qed.
 
   Lemma big_sum_split T (cs : seq T) f (p : pred T) :
-    (big_sum cs f = plus (big_sum (filter p cs) f)  (big_sum (filter (predC p) cs) f)).
+    (big_sum cs f = (big_sum (filter p cs) f) + (big_sum (filter (predC p) cs) f)).
   Proof.
     rewrite ->big_sum_perm with (cs2 := filter p cs ++ filter (predC p) cs); last first.
     { elim: cs => // a l /= H2; case: (p a) => /=.
@@ -111,8 +111,8 @@ Section use_Numeric.
     by rewrite big_sum_cat.
   Qed.  
 
-  Lemma big_sum_ge0 (T:eqType) (cs : seq T) f (H' : forall x, x \in cs -> le plus_id (f x))
-    : le plus_id (big_sum cs f).
+  Lemma big_sum_ge0 (T:eqType) (cs : seq T) f (H' : forall x, x \in cs -> Numerics.plus_id <= (f x))
+    : Numerics.plus_id <= (big_sum cs f).
   Proof.
     induction cs.
     {
@@ -120,8 +120,8 @@ Section use_Numeric.
       apply Numerics.le_refl.
     }
     simpl.
-    rewrite <- plus_id_l with plus_id.
-    apply plus_le_compat.
+    rewrite <- Numerics.plus_id_l with Numerics.plus_id.
+    apply Numerics.plus_le_compat.
     { apply H'. apply mem_head. }
     apply IHcs.
     intros.
@@ -131,49 +131,51 @@ Section use_Numeric.
     simpl in *.
     rewrite H0.
     apply orb_true_r.
-  Qed. 
+  Qed.
+
+ 
 
 
 
 Lemma big_sum_constant T (cs : seq T) n :
-  big_sum cs (fun _ => n) = mult ( of_nat (size cs)) n.
+  big_sum cs (fun _ => n) = ( Numerics.of_nat (size cs)) * n.
 Proof.
   elim: cs => //=.
   {
-    rewrite of_nat_plus_id.
-    rewrite mult_plus_id_l.
+    rewrite Numerics.of_nat_plus_id.
+    rewrite Numerics.mult_plus_id_l.
     auto.
   }
   move => t0 l ->.
   case: (size l).
   {
-    rewrite of_nat_plus_id.
-    rewrite mult_plus_id_l.
-    rewrite of_nat_succ_l.
-    rewrite of_nat_plus_id.
+    rewrite Numerics.of_nat_plus_id.
+    rewrite Numerics.mult_plus_id_l.
+    rewrite Numerics.of_nat_succ_l.
+    rewrite Numerics.of_nat_plus_id.
     repeat( rewrite Numerics.plus_id_r).
-    rewrite mult_id_l.
+    rewrite Numerics.mult_id_l.
     auto.
   }
   intro x.
-  repeat(rewrite of_nat_succ_l).
+  repeat(rewrite Numerics.of_nat_succ_l).
   repeat(rewrite Numerics.mult_distr_r).
-  repeat(rewrite mult_id_l).
+  repeat(rewrite Numerics.mult_id_l).
   auto.
 Qed.
 
 
 Lemma big_sum_mult_right T (cs : seq T) c f :
-  mult (big_sum cs f)  c = big_sum cs (fun x => mult ( f x)  c).
+  (big_sum cs f) * c = big_sum cs (fun x => ( f x) * c).
 Proof.
   elim: cs => //=.
-  { by rewrite mult_plus_id_l. }
+  { by rewrite Numerics.mult_plus_id_l. }
   move => a l /=; rewrite Numerics.mult_distr_r => -> //.
 Qed.  
 
 Fixpoint big_product (T : Type) (cs : seq T) (f : T -> Nt) : Nt :=
-  if cs is [:: c & cs'] then (mult(f c)  (big_product cs' f))
-  else mult_id.
+  if cs is [:: c & cs'] then ((f c) * (big_product cs' f))
+  else Numerics.mult_id.
 
 
 
@@ -184,14 +186,14 @@ Proof. by move=> <- H'; elim: cs=> //= a l ->; f_equal; apply: H'. Qed.
 
 
 Lemma big_product_ge0 (T : eqType) (cs : seq T) (f : T -> Nt) :
-  (forall c, c \in cs -> le plus_id (f c)) ->
-  (le plus_id  (big_product cs f)).
+  (forall c, c \in cs -> Numerics.plus_id <= (f c)) ->
+  (Numerics.plus_id <=  (big_product cs f)).
 Proof.
   elim: cs=> /=.
   { intros. apply Numerics.le_plus_id_mult_id. }
   move=> a l IH H'.
-  rewrite <- mult_plus_id_l with plus_id.
-  apply mult_le_compat; try ( apply Numerics.le_refl). 
+  rewrite <- Numerics.mult_plus_id_l with Numerics.plus_id.
+  apply Numerics.mult_le_compat; try ( apply Numerics.le_refl). 
   {
     apply H'.
     rewrite in_cons.
@@ -211,14 +213,14 @@ Qed.
 
 
 Lemma big_product_gt0 (T : eqType) (cs : seq T) (f : T -> Nt) :
-  (forall c, c \in cs -> lt plus_id (f c)) ->
-  (lt plus_id (big_product cs f)).
+  (forall c, c \in cs -> Numerics.plus_id < (f c)) ->
+  (Numerics.plus_id < (big_product cs f)).
 Proof.
   elim: cs=> /=.
-  { intros. apply lt_plus_id_mult_id. }
+  { intros. apply Numerics.lt_plus_id_mult_id. }
   move=> a l IH H'.
-  rewrite <- mult_plus_id_l with plus_id.
-  apply mult_lt_compat; try ( apply Numerics.le_refl). 
+  rewrite <- Numerics.mult_plus_id_l with Numerics.plus_id.
+  apply Numerics.mult_lt_compat; try ( apply Numerics.le_refl). 
   {
     apply H'.
     rewrite in_cons.
@@ -235,14 +237,14 @@ Proof.
 Qed.
 
 Lemma big_product_le (T : eqType) (cs : seq T) (f : T -> Nt) g :
-  (forall c, c \in cs -> le plus_id (f c)) ->
-  (forall c, c \in cs -> le plus_id (g c)) ->
-  (forall c, c \in cs -> le (f c) (g c)) -> 
-  (le (big_product cs f)  (big_product cs g)).
+  (forall c, c \in cs -> Numerics.plus_id <= (f c)) ->
+  (forall c, c \in cs -> Numerics.plus_id <= (g c)) ->
+  (forall c, c \in cs -> (f c) <= (g c)) -> 
+  ((big_product cs f) <= (big_product cs g)).
 Proof.
   elim: cs=> //=.
   { move=> _ _ _; apply: Numerics.le_refl. }
-  move=> a l IH H1 H2 H3; apply mult_le_compat.
+  move=> a l IH H1 H2 H3; apply Numerics.mult_le_compat.
   { by apply: H1; rewrite in_cons; apply/orP; left. }
   { apply: big_product_ge0.
       by move=> c H4; apply: H1; rewrite in_cons; apply/orP; right. }
@@ -254,14 +256,14 @@ Proof.
 Qed.   
 
 Lemma big_sum_lt_aux (T : eqType) (cs : seq T) (f : T -> Nt) g :
-  (forall c, c \in cs -> lt (f c)  (g c)) -> 
-  cs=[::] \/ (lt (big_sum cs f)  (big_sum cs g)).
+  (forall c, c \in cs -> (f c)  < (g c)) -> 
+  cs=[::] \/ ((big_sum cs f)  < (big_sum cs g)).
 Proof.
   elim: cs=> //=.
   { by move=> _; left. }
   move=> a l IH H1.
   right.
-  apply plus_lt_le_compat.
+  apply Numerics.plus_lt_le_compat.
   {
     apply H1.
     rewrite in_cons.
@@ -283,16 +285,16 @@ Proof.
     simpl.
     apply Numerics.le_refl.
   }
-  apply le_lt_or_eq.
+  apply Numerics.le_lt_or_eq.
   left.
   apply H0.
 Qed.
 
 
 Lemma big_sum_lt (T : eqType) (cs : seq T) (f : T -> Nt) g :
-  (forall c, c \in cs -> lt (f c) (g c)) -> 
+  (forall c, c \in cs -> (f c) < (g c)) -> 
   cs<>[::] ->
-  (lt (big_sum cs f)  (big_sum cs g)).
+  ((big_sum cs f) < (big_sum cs g)).
 Proof.
   move => H' H1; case: (big_sum_lt_aux H') => //.
 Qed.
@@ -304,7 +306,7 @@ Lemma big_product_perm T (cs1 cs2 : seq T) (H' : Permutation cs1 cs2) f :
 Proof.
   elim: H' => //=.
   { move => x l l' H' -> //. }
-  { by move => x y l; rewrite mult_assoc [mult (f y)  (f x)]mult_comm mult_assoc. }
+  { by move => x y l; rewrite Numerics.mult_assoc [(f y) * (f x)]Numerics.mult_comm Numerics.mult_assoc. }
   move => l l' l'' H' /= -> H2 -> //.
 Qed.
 
@@ -312,20 +314,20 @@ Qed.
 
 Lemma big_product_cat T (cs1 cs2 : seq T) f :
   (big_product (cs1++cs2) (fun c => f c) =
-   mult (big_product cs1 (fun c => f c))  (big_product cs2 (fun c => f c))).
+   (big_product cs1 (fun c => f c)) * (big_product cs2 (fun c => f c))).
 Proof.  
   induction cs1.
-  { simpl. rewrite mult_id_l. auto. }
+  { simpl. rewrite Numerics.mult_id_l. auto. }
   simpl.
   rewrite IHcs1.
-  rewrite mult_assoc.
+  rewrite Numerics.mult_assoc.
   auto.
 Qed.
 
 
 
 Lemma big_product_split T (cs : seq T) f (p : pred T) :
-  (big_product cs f = mult ( big_product (filter p cs) f ) ( big_product (filter (predC p) cs) f)).
+  (big_product cs f = ( big_product (filter p cs) f ) * ( big_product (filter (predC p) cs) f)).
 Proof.
   rewrite ->big_product_perm with (cs2 := filter p cs ++ filter (predC p) cs); last first.
   { elim: cs => // a l /= H'; case: (p a) => /=.
@@ -337,19 +339,19 @@ Qed.
 
 Lemma big_product0 (T : eqType) (cs : seq T) c :
   c \in cs -> 
-  big_product cs (fun _ => plus_id) = plus_id.
-Proof. by elim: cs c => // a l IH c /= _; rewrite mult_plus_id_l. Qed.
+  big_product cs (fun _ => Numerics.plus_id) = Numerics.plus_id.
+Proof. by elim: cs c => // a l IH c /= _; rewrite Numerics.mult_plus_id_l. Qed.
 
 
 Lemma big_sum_lift (T : Type) (ts : seq T) f g 
-      (g_zero : g plus_id = plus_id)
-      (g_plus : forall x y, g (plus x  y) = plus  (g x)  (g y)) :
+      (g_zero : g Numerics.plus_id = Numerics.plus_id)
+      (g_plus : forall x y, g (x + y) = (g x) + (g y)) :
   big_sum ts (fun x => g (f x)) = g (big_sum ts (fun x => f x)).
 Proof. by elim: ts => //= a l ->. Qed.
 
 Lemma big_product_lift (T : Type) (ts : seq T) f g 
-      (g_zero : g mult_id = mult_id)
-      (g_mult : forall x y, g (mult x y) = mult (g x)  (g y)) :
+      (g_zero : g Numerics.mult_id = Numerics.mult_id)
+      (g_mult : forall x y, g (x * y) = (g x) * (g y)) :
   big_product ts (fun x => g (f x)) = g (big_product ts (fun x => f x)).
 Proof. by elim: ts => //= a l ->. Qed.
 
@@ -357,12 +359,12 @@ Proof. by elim: ts => //= a l ->. Qed.
 
 
 Lemma big_product_constant T (cs : seq T) n :
-  (big_product cs (fun _ => n) = pow_nat n (size cs))%R.
+  (big_product cs (fun _ => n) = Numerics.pow_nat n (size cs)).
 Proof.
   induction cs.
-  { simpl. rewrite pow_natO. auto. }
+  { simpl. rewrite Numerics.pow_natO. auto. }
   simpl.
-  rewrite pow_nat_rec.
+  rewrite Numerics.pow_nat_rec.
   rewrite IHcs.
   auto.
 Qed.
@@ -399,8 +401,8 @@ Proof.
   assert (IZR 0 = R0). auto.
   rewrite H0.
   assert (forall (T : eqType) (cs : seq T) (f : T -> R),
-  (forall c, c \in cs -> lt plus_id (f c)) ->
-  (lt plus_id (big_product cs f))).
+  (forall c, c \in cs -> Numerics.plus_id < (f c)) ->
+  (Numerics.plus_id < (big_product cs f))).
   { apply big_product_gt0. }
   apply H1.
   intros.
@@ -451,30 +453,30 @@ Next Obligation. by move => x y z; rewrite Rmult_plus_distr_l. Qed.
 (*END MOVE*)
 
 Section SSR_RBigops.
-  Context (Nt:Type) `{Numeric Nt}.
+  Context (Nt:Type) `{Numerics.Numeric Nt}.
   Variable I : finType.
   Variable F : I -> Nt.
   Variable P : pred I.
 
-  Lemma big_sum_sum : big_sum (enum I) F = \big[plus/plus_id]_i F i.
+  Lemma big_sum_sum : big_sum (enum I) F = \big[Numerics.plus/Numerics.plus_id]_i F i.
   Proof.
     rewrite BigOp.bigopE /index_enum enumT.
     by elim: (Finite.enum I) => //= a l ->.
   Qed.
 
-  Lemma big_sum_sumP : big_sum [seq x <- enum I | P x] F = \big[plus/plus_id]_(i | P i) F i.
+  Lemma big_sum_sumP : big_sum [seq x <- enum I | P x] F = \big[Numerics.plus/Numerics.plus_id]_(i | P i) F i.
   Proof.
     rewrite BigOp.bigopE /index_enum enumT.
     by elim: (Finite.enum I) => //= a l; case Heq: (P a) => //= ->.
   Qed.
   
-  Lemma big_product_prod : big_product (enum I) F = \big[mult/mult_id]_i F i.
+  Lemma big_product_prod : big_product (enum I) F = \big[Numerics.mult/Numerics.mult_id]_i F i.
   Proof.
     rewrite BigOp.bigopE /index_enum enumT.
     by elim: (Finite.enum I) => //= a l ->.
   Qed.
 
-  Lemma big_product_prodP : big_product [seq x <- enum I | P x] F = \big[mult/mult_id]_(i | P i) F i.
+  Lemma big_product_prodP : big_product [seq x <- enum I | P x] F = \big[Numerics.mult/Numerics.mult_id]_(i | P i) F i.
   Proof.
     rewrite BigOp.bigopE /index_enum enumT.
     by elim: (Finite.enum I) => //= a l; case Heq: (P a) => //= ->.
@@ -555,15 +557,15 @@ Qed.
 
 
 Section use_Numeric2.
-  Context (Nt:Type) `{Numeric Nt}.
+  Context (Nt:Type) `{Numerics.Numeric Nt}.
 
 Lemma big_sum_le (T : eqType) (cs : seq T) (f : T -> Nt) g :
-  (forall c, c \in cs -> le (f c)  (g c)) -> 
-  (le (big_sum cs f) (big_sum cs g)).
+  (forall c, c \in cs -> (f c)  <= (g c)) -> 
+  ((big_sum cs f) <= (big_sum cs g)).
 Proof.
   elim: cs=> //=.
   { move=> _; apply: Numerics.le_refl. }
-  move=> a l IH H1; apply plus_le_compat.
+  move=> a l IH H1; apply Numerics.plus_le_compat.
   { by apply: H1; rewrite in_cons; apply/orP; left. }
     by apply: IH=> c H'; apply: H1; rewrite in_cons; apply/orP; right.
 Qed.
@@ -626,14 +628,14 @@ Qed.
 Lemma big_sum_le3 (T : eqType) (cs1 cs2 : seq T) (f g : T -> Nt) :
   uniq cs1 ->
   uniq cs2 -> 
-  (forall c, c \in cs2 -> le plus_id (g c))%Num -> 
+  (forall c, c \in cs2 -> Numerics.plus_id <= (g c))%Num -> 
   (forall c, c \in cs1 -> c \in cs2)%Num ->
-  (forall c, c \in cs1 -> le (f c) (g c))%Num -> 
-  (le (big_sum cs1 f) (big_sum cs2 g))%Num.
+  (forall c, c \in cs1 -> (f c) <= (g c))%Num -> 
+  ((big_sum cs1 f) <= (big_sum cs2 g))%Num.
 Proof.
   move => U1 U2 H1 H2 H'.
   rewrite [big_sum cs2 _](big_sum_split _ _ [pred x | x \in cs1]).
-  rewrite -[big_sum cs1 _]Numerics.plus_id_r; apply: plus_le_compat.
+  rewrite -[big_sum cs1 _]Numerics.plus_id_r; apply: Numerics.plus_le_compat.
   { have Hperm: Permutation cs1 [seq x <- cs2 | [pred x in cs1] x].
     { by apply: perm_sub. }
     rewrite (big_sum_perm Hperm). 
@@ -643,21 +645,21 @@ Proof.
 Qed.  
 
 Lemma big_sum_pred (T:eqType) (cs:seq T) (f:T -> Nt) (p:pred T) :
-  big_sum cs (fun t => if p t then f t else plus_id) =
+  big_sum cs (fun t => if p t then f t else Numerics.plus_id) =
   big_sum [seq t <- cs | p t] f.
 Proof.
   elim: cs => // a l IH /=; case H': (p a) => /=.
   { by rewrite IH. }
-  by rewrite IH plus_id_l.
+  by rewrite IH Numerics.plus_id_l.
 Qed.
 
 Lemma big_sum_pred2 (T:eqType) (cs:seq T) (f g:T -> Nt) (p:pred T) :
-  big_sum cs (fun t => mult (f t) (if p t then g t else plus_id)) =
-  big_sum [seq t <- cs | p t] (fun t => mult (f t)  (g t)).
+  big_sum cs (fun t => (f t) * (if p t then g t else Numerics.plus_id)) =
+  big_sum [seq t <- cs | p t] (fun t => (f t) * (g t)).
 Proof.
   elim: cs => // a l IH /=; case H': (p a) => /=.
   { by rewrite IH. }
-  by rewrite IH Numerics.mult_plus_id_r plus_id_l.
+  by rewrite IH Numerics.mult_plus_id_r Numerics.plus_id_l.
 Qed.
 
 End use_Numeric2.

@@ -30,67 +30,276 @@ Delimit Scope Numeric_scope with Num.
 Local Open Scope Numeric_scope.
 
 
+Module Numerics.
 
 
-Class Numeric (T:Type) :=
-  mkNumeric {
-      plus: T -> T -> T where "n + m" := (plus n m) : Numeric_scope;
-      neg : T->T where "- n" := (neg n) : Num;
-      mult: T -> T -> T where "n * m" := (mult n m) : Num;
-      pow_nat: T -> nat -> T;
-  
-      of_nat: nat -> T;
-      plus_id: T;
-      mult_id: T;
+  Class Numeric (T:Type) :=
+    mkNumeric {
+        plus: T -> T -> T where "n + m" := (plus n m) : Numeric_scope;
+        neg : T->T where "- n" := (neg n) : Num;
+        mult: T -> T -> T where "n * m" := (mult n m) : Num;
+        pow_nat: T -> nat -> T;
+    
+        of_nat: nat -> T;
+        plus_id: T;
+        mult_id: T;
+        
+
+
+        le: T->T->Prop where "n <= m" := (le n m) : Num;
+        lt: T->T->Prop where "n < m" := (lt n m) : Num;
+
+        plus_id_l: forall t, plus_id + t = t;
+        plus_comm: forall t1 t2, (t1 + t2) = t2 + t1;
+        plus_assoc: forall t1 t2 t3, t1 + (t2 + t3) = (t1 + t2) + t3;
+        plus_neg_l: forall t1, (-t1) + t1 = plus_id;
+        plus_neg_distr: forall t1 t2, -(t1 + t2) = (-t1) + (-t2);
+
+        mult_id_l: forall t, mult_id * t = t;
+        mult_comm: forall t1 t2, t1 * t2 = t2 * t1;
+        mult_assoc: forall t1 t2 t3,  t1 * (t2 * t3) = (t1 * t2) * t3;
+        mult_distr_l: forall t1 t2 t3, t1 * (t2 + t3) = (t1 * t2) + (t1 * t3);
+        mult_plus_id_l: forall t, plus_id * t = plus_id;
+
+        le_lt_or_eq: forall t1 t2, t1 < t2 \/ t1 = t2 -> t1 <= t2;
+        plus_le_compat: forall t1 t2 t3 t4,  t1 <= t2 ->  t3 <= t4 -> (t1 + t3) <= (t2 + t4);
+        plus_lt_le_compat: forall t1 t2 t3 t4, t1 < t2 -> t3  <= t4 -> (t1 + t3 ) < (t2 + t4);
+        (*plus_lt_compat: forall t1 t2 t3 t4, t1 < t2 -> t3 < t4 -> (t1 + t3) < (t2 + t4);*)
+        lt_plus_id_mult_id: plus_id < mult_id;
+        mult_le_compat: 
+          forall r1 r2 r3 r4,plus_id <= r1 -> plus_id <= r3 -> r1  <= r2 -> r3 <= r4 ->
+             (r1 *  r3) <= (r2 *  r4);
+        mult_lt_compat:
+          forall r1 r2 r3 r4, plus_id <= r1 -> plus_id <= r3 -> r1  < r2 -> r3 < r4 ->
+             (r1 * r3) < (r2 *  r4);
+        lt_le_dec: forall t1 t2, {t1 < t2} + {t2 <= t1};
+
+        of_nat_plus_id: of_nat O = plus_id;
+        of_nat_succ_l: forall n : nat, of_nat (S n) = mult_id + (of_nat (n));
+        
+        pow_natO: forall t, pow_nat t O = mult_id;
+        pow_nat_rec: forall t n, pow_nat t (S n) = t * pow_nat t n;
+
+      }.
+      
+
+  Infix "+" := plus : Numeric_scope.
+  Notation "- n" := (neg n) : Numeric_scope.
+  Infix "*" := mult : Numeric_scope.
+  Infix "<" := lt : Numeric_scope.
+  Infix "<=" := le : Numeric_scope.
+
+  Section use_Numeric.
+
+
+  Context (Nt:Type) `{Numeric Nt}.
+
+    Lemma le_lt_dec: forall x y : Nt, ({le x y} + {lt y x})%Num.
+    Proof.
+      intros.
+      destruct lt_le_dec with y x; auto.
+    Qed.
+
+    Definition Nt_ltb (x y : Nt) : bool :=
+    lt_le_dec x y.
+
+    Definition Nt_leb (x y : Nt) : bool :=
+    le_lt_dec x y.
+
+    Fixpoint list_max (l : list Nt) : option Nt :=
+      match l with
+      | nil => None
+      | x :: l' => 
+        match list_max l' with
+        | None => Some x
+        | Some x' =>
+          Some (if Nt_leb x x' then x' else x)
+        end
+    end.
+
+    Definition list_max_default (l : list Nt) (def : Nt) : Nt :=
+    match list_max l with
+    | None => def
+    | Some x => x
+    end.
+    
+
+    Fixpoint argmax {T : Type} (l : list T) (f : T -> Nt) : option T :=
+    match l with
+    | nil => None
+    | x :: l' =>
+      (match argmax l' f with
+      | None => Some x
+      | Some x' =>
+        Some (if Nt_leb (f x) (f x') then x' else x)
+      end)
+    end.
+
+    Definition argmax_default {T : Type} (l : list T) (f : T -> Nt) (def : T) : T :=
+    match argmax l f with
+    | None => def
+    | Some x => x
+    end.
+
+    Definition nonempty_argmax {T : Type} (l : list T) (f : T-> Nt) (h: O <> (length l)) : T.
+      destruct l.
+      { simpl in h. exfalso. auto. }
+      destruct (argmax (t :: l) f) eqn:e.
+      { exact t0. }
+      simpl in e.
+      destruct (argmax l f); inversion e.
+    Defined.
+
+    Lemma nonempty_argmax_ok: forall {T : Type} (l : list T) (f : T-> Nt) (h : O <> (length l)),
+          (argmax l f) = Some (nonempty_argmax f h).
+  Proof.
+      intros.
+      destruct l.
+      { exfalso. apply h. auto.  }
+      destruct l; auto.
+      simpl in *.
+      destruct (argmax l f); auto.
+    Qed.
+
+    Definition nonempty_max (l : list Nt) (h : O <> (length l)) : Nt.
+      destruct l.
+      { exfalso;  auto. }
+      destruct (list_max (n ::l)) eqn:e.
+      { exact n0. }
+      simpl in e.
+      destruct (list_max l); inversion e.
+    Defined.
+
+    Lemma nonempty_max_ok: forall (l : list Nt) (h : O <> (length l)), list_max l = Some (nonempty_max h).
+    Proof.
+      intros.
+      destruct l.
+      { exfalso. apply h. auto. }
+      destruct l; auto.
+      simpl.
+      destruct (list_max l); auto.
+    Qed.
+
+
+    Lemma le_lt_weak: forall (n m : Nt), n < m -> n <= m.
+    Proof.
+      intros.
+      apply le_lt_or_eq.
+      left.
+      apply H0.
+    Qed.
+
+    Lemma plus_lt_compat: forall (t1 t2 t3 t4 : Nt), t1 < t2 -> t3 < t4 -> t1 + t3 < t2 + t4.
+    Proof.
+      intros.
+      apply le_lt_weak in H1.
+      apply plus_lt_le_compat; auto.
+    Qed.
       
 
 
-      le: T->T->Prop where "n <= m" := (le n m) : Num;
-      lt: T->T->Prop where "n < m" := (lt n m) : Num;
+    Lemma le_plus_id_mult_id: plus_id <= mult_id.
+    Proof.
+      apply le_lt_weak.
+      apply lt_plus_id_mult_id.
+    Qed.        
 
-      plus_id_l: forall t, plus_id + t = t;
-      plus_comm: forall t1 t2, (t1 + t2) = t2 + t1;
-      plus_assoc: forall t1 t2 t3, t1 + (t2 + t3) = (t1 + t2) + t3;
-      plus_neg_l: forall t1, (-t1) + t1 = plus_id;
-      plus_neg_distr: forall t1 t2, -(t1 + t2) = (-t1) + (-t2);
+    Lemma le_refl: forall t, t <= t.
+    Proof.
+      intros.
+      apply le_lt_or_eq.
+      auto.
+    Qed.
+        
 
-      mult_id_l: forall t, mult_id * t = t;
-      mult_comm: forall t1 t2, t1 * t2 = t2 * t1;
-      mult_assoc: forall t1 t2 t3,  t1 * (t2 * t3) = (t1 * t2) * t3;
-      mult_distr_l: forall t1 t2 t3, t1 * (t2 + t3) = (t1 * t2) + (t1 * t3);
-      mult_plus_id_l: forall t, plus_id * t = plus_id;
+    Lemma plus_id_r: forall t, t + plus_id = t.
+    Proof.
+      intros.
+      rewrite plus_comm.
+      apply plus_id_l.
+    Qed.
 
-      le_lt_or_eq: forall t1 t2, t1 < t2 \/ t1 = t2 -> t1 <= t2;
-      plus_le_compat: forall t1 t2 t3 t4,  t1 <= t2 ->  t3 <= t4 -> (t1 + t3) <= (t2 + t4);
-      plus_lt_le_compat: forall t1 t2 t3 t4, t1 < t2 -> t3  <= t4 -> (t1 + t3 ) < (t2 + t4);
-      (*plus_lt_compat: forall t1 t2 t3 t4, t1 < t2 -> t3 < t4 -> (t1 + t3) < (t2 + t4);*)
-      lt_plus_id_mult_id: plus_id < mult_id;
-      mult_le_compat: 
-        forall r1 r2 r3 r4,plus_id <= r1 -> plus_id <= r3 -> r1  <= r2 -> r3 <= r4 ->
-           (r1 *  r3) <= (r2 *  r4);
-      mult_lt_compat:
-        forall r1 r2 r3 r4, plus_id <= r1 -> plus_id <= r3 -> r1  < r2 -> r3 < r4 ->
-           (r1 * r3) < (r2 *  r4);
-      lt_le_dec: forall t1 t2, {t1 < t2} + {t2 <= t1};
+    Lemma plus_neg_r: forall t, t + -t = plus_id.
+    Proof.
+      intros.
+      rewrite plus_comm.
+      apply plus_neg_l.
+    Qed.
+   
+    Lemma mult_plus_id_r: forall t, t * plus_id = plus_id.
+    Proof.
+      intros.
+      rewrite mult_comm.
+      apply mult_plus_id_l.
+    Qed.
 
-      of_nat_plus_id: of_nat O = plus_id;
-      of_nat_succ_l: forall n : nat, of_nat (S n) = mult_id + (of_nat (n));
+    Lemma mult_id_r: forall t, t * mult_id = t.
+    Proof.
+      intros.
+      rewrite mult_comm.
+      apply mult_id_l.
+    Qed.
+
+    Lemma mult_distr_r: forall t1 t2 t3, (t2 + t3) * t1 = (t2 * t1) + (t3 * t1).
+    Proof.
+      intros.
+      rewrite mult_comm.
+      rewrite -> mult_comm with t2 t1.
+      rewrite -> mult_comm with t3 t1.
+      apply mult_distr_l.
+    Qed.
+    
+    Lemma neg_plus_id: -plus_id = plus_id.
+    Proof.
+      rewrite <- plus_id_l with (neg plus_id).
+      apply plus_neg_r.
+    Qed.
+
+    Lemma plus_elim_r: forall t1 t2 t3: Nt, t2 + t1 = t3 + t1 -> t2 = t3.
+    Proof.
+      intros.
+      rewrite <- plus_id_r with t2.
+      rewrite <- plus_neg_r with t1.
+      rewrite plus_assoc.
+      rewrite H0.
+      rewrite <- plus_assoc.
+      rewrite plus_neg_r.
+      apply plus_id_r.
+    Qed.
+
+    Lemma plus_elim_l: forall t1 t2 t3 : Nt, t1 + t2 = t1 + t3 -> t2 = t3.
+    Proof.
+      intros.
+      apply plus_elim_r with t1.
+      rewrite plus_comm.
+      rewrite H0.
+      apply plus_comm.
+    Qed.
       
-      pow_natO: forall t, pow_nat t O = mult_id;
-      pow_nat_rec: forall t n, pow_nat t (S n) = t * pow_nat t n;
+        
+    Lemma plus_assoc_r: forall t1 t2 t3, (t1 + t2) + t3 = t1 +  (t2 + t3).
+    Proof.
+      intros.
+      rewrite plus_assoc.
+      auto.
+    Qed.
 
-    }.
-      
+    
 
-Infix "+" := plus : Numeric_scope.
-Notation "- n" := (neg n) : Numeric_scope.
-Infix "*" := mult : Numeric_scope.
-Infix "<" := lt : Numeric_scope.
-Infix "<=" := le : Numeric_scope.
+    
+          
+  End use_Numeric. 
+End Numerics.
+
+Infix "+" := Numerics.plus : Numeric_scope.
+Notation "- n" := (Numerics.neg n) : Numeric_scope.
+Infix "*" := Numerics.mult : Numeric_scope.
+Infix "<" := Numerics.lt : Numeric_scope.
+Infix "<=" := Numerics.le : Numeric_scope.
 
 
-Instance Numeric_D: Numeric (DRed.t) :=
-  @mkNumeric
+Instance Numeric_D: Numerics.Numeric (DRed.t) :=
+  @Numerics.mkNumeric
     DRed.t
     DRed.add
     DRed.opp
@@ -241,8 +450,8 @@ Proof. auto. Qed.
 Lemma RNatPowRec: forall (r : R) (n : nat), pow r (S n) = Rmult r (pow r n).
 Proof. auto. Qed.
 
-Instance Numeric_R: Numeric R :=
-  @mkNumeric
+Instance Numeric_R: Numerics.Numeric R :=
+  @Numerics.mkNumeric
     R
     Rplus
     Ropp
@@ -349,8 +558,8 @@ Proof. auto. Qed.
 
 
 
-Instance Numeric_z : Numeric Z :=
-  @mkNumeric
+Instance Numeric_z : Numerics.Numeric Z :=
+  @Numerics.mkNumeric
     Z
     Z.add
     Z.opp
@@ -392,171 +601,6 @@ Instance Numeric_z : Numeric Z :=
     ZNatPowRec
     
 .
-
-Open Scope Numeric_scope.
-Delimit Scope Numeric_scope with Num.
-
-
-
-Module Numerics.
-  Section use_Numeric.
-
-
-    Context (Nt:Type) `{Numeric Nt}.
-
-      Lemma le_lt_dec: forall x y : Nt, ({le x y} + {lt y x})%Num.
-      Proof.
-        intros.
-        destruct lt_le_dec with y x; auto.
-      Qed.
-
-      Definition Nt_ltb (x y : Nt) : bool :=
-      lt_le_dec x y.
-
-      Definition Nt_leb (x y : Nt) : bool :=
-      le_lt_dec x y.
-
-      Fixpoint list_max (l : list Nt) : option Nt :=
-        match l with
-        | nil => None
-        | x :: l' => 
-          match list_max l' with
-          | None => Some x
-          | Some x' =>
-            Some (if Nt_leb x x' then x' else x)
-          end
-      end.
-
-      Definition list_max_default (l : list Nt) (def : Nt) : Nt :=
-      match list_max l with
-      | None => def
-      | Some x => x
-      end.
-      
-
-      Fixpoint argmax {T : Type} (l : list T) (f : T -> Nt) : option T :=
-      match l with
-      | nil => None
-      | x :: l' =>
-        (match argmax l' f with
-        | None => Some x
-        | Some x' =>
-          Some (if Nt_leb (f x) (f x') then x' else x)
-        end)
-      end.
-
-      Definition argmax_default {T : Type} (l : list T) (f : T -> Nt) (def : T) : T :=
-      match argmax l f with
-      | None => def
-      | Some x => x
-      end.
-
-      Lemma le_lt_weak: forall (n m : Nt), (n < m -> n <= m).
-      Proof.
-        intros.
-        apply le_lt_or_eq.
-        left.
-        apply H0.
-      Qed.
-
-      Lemma plus_lt_compat: forall (t1 t2 t3 t4 : Nt), lt t1 t2 -> lt t3 t4 -> (lt (plus t1 t3) (plus t2 t4))%Num.
-      Proof.
-        intros.
-        apply le_lt_weak in H1.
-        apply plus_lt_le_compat; auto.
-      Qed.
-        
-
-      Lemma le_plus_id_mult_id: le plus_id mult_id.
-      Proof.
-        apply le_lt_or_eq.
-        left.
-        apply lt_plus_id_mult_id.
-      Qed.
-          
-
-      Lemma le_refl: forall t, le t t.
-      Proof.
-        intros.
-        apply le_lt_or_eq.
-        auto.
-      Qed.
-          
-
-      Lemma plus_id_r: forall t, plus t plus_id = t.
-      Proof.
-        intros.
-        rewrite plus_comm.
-        apply plus_id_l.
-      Qed.
-
-      Lemma plus_neg_r: forall t, plus t (neg t) = plus_id.
-      Proof.
-        intros.
-        rewrite plus_comm.
-        apply plus_neg_l.
-      Qed.
-     
-      Lemma mult_plus_id_r: forall t, mult t plus_id = plus_id.
-      Proof.
-        intros.
-        rewrite mult_comm.
-        apply mult_plus_id_l.
-      Qed.
-
-      Lemma mult_id_r: forall t, mult t mult_id = t.
-      Proof.
-        intros.
-        rewrite mult_comm.
-        apply mult_id_l.
-      Qed.
-
-      Lemma mult_distr_r: forall t1 t2 t3, mult (plus t2 t3) t1 = plus (mult t2 t1) (mult t3 t1).
-      Proof.
-        intros.
-        rewrite mult_comm.
-        rewrite -> mult_comm with t2 t1.
-        rewrite -> mult_comm with t3 t1.
-        apply mult_distr_l.
-      Qed.
-      
-      Lemma neg_plus_id: neg plus_id = plus_id.
-      Proof.
-        rewrite <- plus_id_l with (neg plus_id).
-        apply plus_neg_r.
-      Qed.
-
-      Lemma plus_elim_r: forall t1 t2 t3: Nt, plus t2 t1 = plus t3 t1 -> t2 = t3.
-      Proof.
-        intros.
-        rewrite <- plus_id_r with t2.
-        rewrite <- plus_neg_r with t1.
-        rewrite plus_assoc.
-        rewrite H0.
-        rewrite <- plus_assoc.
-        rewrite plus_neg_r.
-        apply plus_id_r.
-      Qed.
-
-      Lemma plus_elim_l: forall t1 t2 t3 : Nt, plus t1 t2 = plus t1 t3 -> t2 = t3.
-      Proof.
-        intros.
-        apply plus_elim_r with t1.
-        rewrite plus_comm.
-        rewrite H0.
-        apply plus_comm.
-      Qed.
-        
-          
-      Lemma rplus_assoc: forall t1 t2 t3, plus (plus t1 t2) t3 = plus t1  (plus t2 t3).
-      Proof.
-        intros.
-        rewrite plus_assoc.
-        auto.
-      Qed.
-          
-  End use_Numeric. 
-End Numerics.
 
 Close Scope Numeric_scope.
 Undelimit Scope Numeric_scope.
@@ -2193,4 +2237,3 @@ Proof.
 Qed.    
 
 (** END random lemmas *)
-
