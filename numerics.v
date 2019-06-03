@@ -91,8 +91,7 @@ Module Numerics.
 
   Section use_Numeric.
 
-
-  Context (Nt:Type) `{Numeric Nt}.
+    Context (Nt:Type) `{Numeric Nt}.
 
     Lemma le_lt_dec: forall x y : Nt, ({le x y} + {lt y x})%Num.
     Proof.
@@ -100,11 +99,14 @@ Module Numerics.
       destruct lt_le_dec with y x; auto.
     Qed.
 
-    Definition Nt_ltb (x y : Nt) : bool :=
+    Definition ltb (x y : Nt) : bool :=
     lt_le_dec x y.
 
-    Definition Nt_leb (x y : Nt) : bool :=
+    Definition leb (x y : Nt) : bool :=
     le_lt_dec x y.
+
+    Definition abs (x : Nt) : Nt :=
+    if leb plus_id x then x else -x.
 
     Fixpoint list_max (l : list Nt) : option Nt :=
       match l with
@@ -113,7 +115,7 @@ Module Numerics.
         match list_max l' with
         | None => Some x
         | Some x' =>
-          Some (if Nt_leb x x' then x' else x)
+          Some (if leb x x' then x' else x)
         end
     end.
 
@@ -131,7 +133,7 @@ Module Numerics.
       (match argmax l' f with
       | None => Some x
       | Some x' =>
-        Some (if Nt_leb (f x) (f x') then x' else x)
+        Some (if leb (f x) (f x') then x' else x)
       end)
     end.
 

@@ -481,8 +481,8 @@ Section SSR_RBigops.
     rewrite BigOp.bigopE /index_enum enumT.
     by elim: (Finite.enum I) => //= a l; case Heq: (P a) => //= ->.
   Qed.
-End SSR_RBigops.    
-  
+End SSR_RBigops.
+
 
 
 (*ssreflect: bigA_distr_bigA*)
