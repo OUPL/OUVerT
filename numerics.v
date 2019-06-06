@@ -49,6 +49,9 @@ Module Numerics.
         le: T->T->Prop where "n <= m" := (le n m) : Num;
         lt: T->T->Prop where "n < m" := (lt n m) : Num;
 
+        eq_decidable: forall t1 t2 : T, {t1 = t2} + {t1 <> t2};
+
+
         plus_id_l: forall t, plus_id + t = t;
         plus_comm: forall t1 t2, (t1 + t2) = t2 + t1;
         plus_assoc: forall t1 t2 t3, t1 + (t2 + t3) = (t1 + t2) + t3;
@@ -61,7 +64,7 @@ Module Numerics.
         mult_distr_l: forall t1 t2 t3, t1 * (t2 + t3) = (t1 * t2) + (t1 * t3);
         mult_plus_id_l: forall t, plus_id * t = plus_id;
 
-        le_lt_or_eq: forall t1 t2, t1 < t2 \/ t1 = t2 -> t1 <= t2;
+        le_lt_or_eq: forall t1 t2, t1 < t2 \/ t1 = t2 <-> t1 <= t2;
         plus_le_compat: forall t1 t2 t3 t4,  t1 <= t2 ->  t3 <= t4 -> (t1 + t3) <= (t2 + t4);
         plus_lt_le_compat: forall t1 t2 t3 t4, t1 < t2 -> t3  <= t4 -> (t1 + t3 ) < (t2 + t4);
         (*plus_lt_compat: forall t1 t2 t3 t4, t1 < t2 -> t3 < t4 -> (t1 + t3) < (t2 + t4);*)
@@ -92,6 +95,9 @@ Module Numerics.
   Section use_Numeric.
 
     Context (Nt:Type) `{Numeric Nt}.
+
+      
+      
 
     Lemma le_lt_dec: forall x y : Nt, ({le x y} + {lt y x})%Num.
     Proof.
@@ -286,6 +292,36 @@ Module Numerics.
       auto.
     Qed.
 
+    Lemma lt_le_trans: forall x y z : Nt, x < y -> y <= z -> x < z.
+    Proof.
+      intros.
+      rewrite <- plus_id_r.
+      rewrite <- plus_id_r with x.
+      rewrite <- plus_neg_r with y.
+      repeat rewrite plus_assoc.
+      rewrite -> plus_comm with z y.
+      apply plus_lt_le_compat.
+      2 : { apply le_refl. }
+      apply plus_lt_le_compat; auto.
+    Qed.
+    
+
+    Lemma le_not_eq_lt: forall x y : Nt, x <= y -> x <> y -> x < y.
+    Proof.
+      intros.
+      rewrite <- le_lt_or_eq in H0.
+      destruct H0; intuition.
+    Qed.
+
+    Lemma le_trans: forall x y z : Nt, x <= y -> y <= z -> x <= z.
+    Proof.
+      intros.
+      destruct eq_decidable with x y.
+      { rewrite e. apply H1. }
+      apply le_lt_weak.
+      apply lt_le_trans with y; auto.
+      apply le_not_eq_lt; auto.
+    Qed.
     
 
     
@@ -298,8 +334,10 @@ Notation "- n" := (Numerics.neg n) : Numeric_scope.
 Infix "*" := Numerics.mult : Numeric_scope.
 Infix "<" := Numerics.lt : Numeric_scope.
 Infix "<=" := Numerics.le : Numeric_scope.
+Notation "1" := Numerics.mult_id : Numeric_scope.
+Notation "0" := Numerics.plus_id : Numeric_scope.
 
-
+(**Req_EM_T**)
 Instance Numeric_D: Numerics.Numeric (DRed.t) :=
   @Numerics.mkNumeric
     DRed.t
@@ -314,7 +352,9 @@ Instance Numeric_D: Numerics.Numeric (DRed.t) :=
 
     Dle
     Dlt
-  
+    
+    DRed.eq_dec  
+
     DRed.add0l
     DRed.addC
     DRed.addA
@@ -357,11 +397,12 @@ Proof.
 Qed. 
 
 
-Lemma Rle_lt_or_eq: forall t1 t2, Rlt t1 t2 \/ t1 = t2 -> Rle t1 t2.
+Lemma Rle_lt_or_eq: forall t1 t2, Rlt t1 t2 \/ t1 = t2 <-> Rle t1 t2.
 Proof.
   intros.
-  unfold Rle.
-  destruct H; auto.
+  split; intros.
+  {  unfold Rle. destruct H; auto. }
+  destruct Req_EM_T with t1 t2; auto.
 Qed.
 
 Lemma Rlt_not_eq_0_r: forall x : R, (Rlt R0 x -> x  <> R0)%R.
@@ -452,6 +493,7 @@ Proof. auto. Qed.
 Lemma RNatPowRec: forall (r : R) (n : nat), pow r (S n) = Rmult r (pow r n).
 Proof. auto. Qed.
 
+
 Instance Numeric_R: Numerics.Numeric R :=
   @Numerics.mkNumeric
     R
@@ -466,6 +508,8 @@ Instance Numeric_R: Numerics.Numeric R :=
 
     Rle
     Rlt
+
+    Req_EM_T
 
     Rplus_0_l
     Rplus_comm
@@ -501,8 +545,8 @@ Instance Numeric_R: Numerics.Numeric R :=
 Local Open Scope Z_scope.**)
 Delimit Scope Z_scope with Z.
 
-Lemma Zle_lt_or_eq2: forall x y : Z, Z.lt x y \/ x = y -> Z.le x y.
-Proof. intros. rewrite Z.lt_eq_cases. apply H. Qed.
+Lemma Zle_lt_or_eq2: forall x y : Z, Z.lt x y \/ x = y <-> Z.le x y.
+Proof. intros. rewrite Z.lt_eq_cases. split; auto. Qed.
 
 Lemma Z0_lt_1: Z.lt 0 1.
 Proof. unfold Z.lt.  auto. Qed.
@@ -574,6 +618,8 @@ Instance Numeric_z : Numerics.Numeric Z :=
 
     Z.le
     Z.lt
+
+    Z.eq_dec
 
     Z.add_0_l
     Z.add_comm

@@ -1418,16 +1418,27 @@ Module DRed.
   Qed.
 
 
-  Lemma le_lt_or_eq: forall (t1 t2 : t), Dlt t1 t2 \/ t1 = t2 -> Dle t1 t2.
+  Lemma le_lt_or_eq: forall (t1 t2 : t), Dlt t1 t2 \/ t1 = t2 <-> Dle t1 t2.
   Proof.
     intros.
-    unfold Dle,Dlt in *.
-    apply Qle_lteq.
+    split.
+    {
+      unfold Dle,Dlt in *.
+      intros.
+      apply Qle_lteq.
+      destruct H; auto.
+      rewrite H.
+      right.  
+      apply Qeq_refl.
+    }
+    intros.
+    unfold Dle in H.
+    rewrite Qle_lteq in H.
     destruct H; auto.
-    rewrite H.
-    right.  
-    apply Qeq_refl.
+    right.
+    apply Dred_eq; auto.
   Qed.
+
 
   Lemma plus_le_compat: forall (t1 t2 t3 t4 : t) , Dle t1 t2 -> Dle t3  t4 -> Dle (add t1 t3) (add t2 t4).
   Proof.
@@ -1582,6 +1593,30 @@ Module DRed.
     destruct Qlt_le_dec with (D_to_Q d2) (D_to_Q d1); auto.
   Qed.
 
+
+  Lemma eq_dec: forall d1 d2 : t, {d1 = d2} + {d1 <> d2}.
+  Proof.
+    intros.
+    destruct Deq_dec with (d d1) (d d2).
+    { 
+      left. 
+      destruct d1,d2.
+      simpl in e.
+      generalize pf0 pf1.
+      rewrite e.
+      intros.
+      f_equal.
+      apply proof_irrelevance.
+    }
+    right.
+    destruct d1,d2.
+    simpl in n.
+    unfold not in *.
+    intros.
+    apply n.
+    inversion H.
+    auto.
+  Qed.
 
   (* TODO: More lemmas here! *)
 End DRed.      
