@@ -7,6 +7,8 @@ From mathcomp Require Import all_algebra.
 
 Import GRing.Theory Num.Def Num.Theory.
 
+Require Import OUVerT.numerics.
+
 Local Open Scope ring_scope.
 
 (** This file defines generic notions of extrema. *)
@@ -267,3 +269,86 @@ Section min_lems.
     rewrite arg_min_const //.
   Qed.    
 End min_lems.    
+
+Local Open Scope Numeric_scope.
+Delimit Scope Numerics_scope with Num.
+
+Section use_Numerics.
+  Context (Nt:Type) `{Numerics.Numeric Nt}.
+  
+    Fixpoint num_list_max (l : list Nt) : option Nt :=
+      match l with
+      | nil => None
+      | x :: l' => 
+        match num_list_max l' with
+        | None => Some x
+        | Some x' =>
+          Some (if Numerics.leb x x' then x' else x)
+        end
+    end.
+
+    Definition num_list_max_default (l : list Nt) (def : Nt) : Nt :=
+    match num_list_max l with
+    | None => def
+    | Some x => x
+    end.
+    
+
+    Fixpoint num_argmax {T : Type} (l : list T) (f : T -> Nt) : option T :=
+    match l with
+    | nil => None
+    | x :: l' =>
+      (match num_argmax l' f with
+      | None => Some x
+      | Some x' =>
+        Some (if Numerics.leb (f x) (f x') then x' else x)
+      end)
+    end.
+
+    Definition num_argmax_default {T : Type} (l : list T) (f : T -> Nt) (def : T) : T :=
+    match num_argmax l f with
+    | None => def
+    | Some x => x
+    end.
+
+    Definition num_nonempty_argmax {T : Type} (l : list T) (f : T-> Nt) (h: O <> (length l)) : T.
+      destruct l.
+      { simpl in h. exfalso. auto. }
+      destruct (num_argmax (t :: l) f) eqn:e.
+      { exact t0. }
+      simpl in e.
+      destruct (num_argmax l f); inversion e.
+    Defined.
+
+    Lemma num_nonempty_argmax_ok: forall {T : Type} (l : list T) (f : T-> Nt) (h : O <> (length l)),
+          (num_argmax l f) = Some (num_nonempty_argmax f h).
+  Proof.
+      intros.
+      destruct l.
+      { exfalso. apply h. auto.  }
+      destruct l; auto.
+      simpl in *.
+      destruct (num_argmax l f); auto.
+    Qed.
+
+    Definition num_nonempty_max (l : list Nt) (h : O <> (length l)) : Nt.
+      destruct l.
+      { exfalso;  auto. }
+      destruct (num_list_max (n ::l)) eqn:e.
+      { exact n0. }
+      simpl in e.
+      destruct (num_list_max l); inversion e.
+    Defined.
+
+    Lemma num_nonempty_max_ok: forall (l : list Nt) (h : O <> (length l)), num_list_max l = Some (num_nonempty_max h).
+    Proof.
+      intros.
+      destruct l.
+      { exfalso. apply h. auto. }
+      destruct l; auto.
+      simpl.
+      destruct (num_list_max l); auto.
+    Qed.
+
+End use_Numerics.
+
