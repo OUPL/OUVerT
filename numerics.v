@@ -49,7 +49,7 @@ Module Numerics.
         le: T->T->Prop where "n <= m" := (le n m) : Num;
         lt: T->T->Prop where "n < m" := (lt n m) : Num;
 
-        eq_decidable: forall t1 t2 : T, {t1 = t2} + {t1 <> t2};
+        eq_dec: forall t1 t2 : T, {t1 = t2} + {t1 <> t2};
 
 
         plus_id_l: forall t, plus_id + t = t;
@@ -316,7 +316,7 @@ Module Numerics.
     Lemma le_trans: forall x y z : Nt, x <= y -> y <= z -> x <= z.
     Proof.
       intros.
-      destruct eq_decidable with x y.
+      destruct eq_dec with x y.
       { rewrite e. apply H1. }
       apply le_lt_weak.
       apply lt_le_trans with y; auto.
