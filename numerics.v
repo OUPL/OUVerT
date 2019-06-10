@@ -50,7 +50,7 @@ Module Numerics.
         lt: T->T->Prop where "n < m" := (lt n m) : Num;
 
         eq_dec: forall t1 t2 : T, {t1 = t2} + {t1 <> t2};
-
+        le_not_lt: forall n m : T, (n <= m)-> ~ (m < n);
 
         plus_id_l: forall t, plus_id + t = t;
         plus_comm: forall t1 t2, (t1 + t2) = t2 + t1;
@@ -114,7 +114,6 @@ Module Numerics.
     Definition abs (x : Nt) : Nt :=
     if leb plus_id x then x else -x.
 
-
     Lemma le_lt_weak: forall (n m : Nt), n < m -> n <= m.
     Proof.
       intros.
@@ -122,6 +121,100 @@ Module Numerics.
       left.
       apply H0.
     Qed.
+
+    Lemma lt_not_le: forall n m : Nt, (n < m) -> ~ (m <= n).
+    Proof.
+      unfold not.
+      intros.
+      apply le_not_lt in H0; auto.
+    Qed.
+
+    Lemma le_refl: forall t, t <= t.
+    Proof.
+      intros.
+      apply le_lt_or_eq.
+      auto.
+    Qed.
+
+    Lemma lt_irrefl: forall n : Nt, ~ n < n.
+    Proof.
+      intros.
+      unfold not.
+      intros.
+      apply lt_not_le in H0.
+      apply H0.
+      apply le_refl.
+    Qed.
+
+  
+    
+    Lemma ltb_true_iff: forall x y : Nt, ltb x y = true <-> x < y.
+    Proof.
+      intros.
+      unfold ltb.
+      split; intros; destruct (lt_le_dec x y); auto.
+        inversion H0.
+      apply lt_not_le in H0; auto.
+    Qed.
+
+
+    Lemma ltb_false_iff: forall x y : Nt, ltb x y = false <-> ~ x < y.
+    Proof.
+      intros.
+      unfold not.
+      unfold ltb.
+      split; intros; destruct (lt_le_dec x y); auto.
+      { apply lt_not_le in H1. auto. }
+      exfalso; apply H0; auto.
+    Qed.
+
+    Lemma leb_true_iff: forall x y : Nt, leb x y = true <-> x <= y.
+    Proof.
+      intros.
+      unfold leb.
+      split; intros; destruct (le_lt_dec x y); auto.
+        inversion H0.
+      apply lt_not_le in H0; auto.
+    Qed.
+
+
+    Lemma leb_false_iff: forall x y : Nt, leb x y = false <-> ~ x <= y.
+    Proof.
+      intros.
+      unfold not.
+      unfold leb.
+      split; intros; destruct (le_lt_dec x y); auto.
+      { apply lt_not_le in H1; auto. }
+      exfalso; apply H0; auto.
+    Qed.
+
+    Lemma not_lt_le: forall n m : Nt, ~ (n < m) -> m <= n.
+    Proof.
+      intros.
+      destruct le_lt_dec with n m.
+      {
+        apply le_lt_or_eq in l.
+        destruct l; auto.
+        { exfalso; auto. }
+        rewrite H1; apply le_refl.
+      }
+      apply le_lt_weak.
+      auto.
+    Qed.
+      
+    Lemma not_le_lt: forall n m : Nt, ~ (n <= m) -> m < n.
+    Proof.
+      intros.
+      destruct lt_le_dec with n m.
+      { apply le_lt_weak in l. exfalso; auto. }
+      apply le_lt_or_eq in l.
+      destruct l; auto.
+      rewrite H1 in H0.
+      exfalso.
+      apply H0.
+      apply le_refl.
+    Qed.
+
 
     Lemma plus_lt_compat: forall (t1 t2 t3 t4 : Nt), t1 < t2 -> t3 < t4 -> t1 + t3 < t2 + t4.
     Proof.
@@ -138,12 +231,7 @@ Module Numerics.
       apply lt_plus_id_mult_id.
     Qed.        
 
-    Lemma le_refl: forall t, t <= t.
-    Proof.
-      intros.
-      apply le_lt_or_eq.
-      auto.
-    Qed.
+    
         
 
     Lemma plus_id_r: forall t, t + plus_id = t.
@@ -249,7 +337,6 @@ Module Numerics.
       apply le_not_eq_lt; auto.
     Qed.
     
-
     
           
   End use_Numeric. 
@@ -280,7 +367,7 @@ Instance Numeric_D: Numerics.Numeric (DRed.t) :=
     Dlt
     
     DRed.eq_dec  
-
+    DRed.le_not_lt
     DRed.add0l
     DRed.addC
     DRed.addA
@@ -437,6 +524,7 @@ Instance Numeric_R: Numerics.Numeric R :=
 
     Req_EM_T
 
+    Rle_not_gt
     Rplus_0_l
     Rplus_comm
     Rplus_assoc_reverse
@@ -547,6 +635,7 @@ Instance Numeric_z : Numerics.Numeric Z :=
 
     Z.eq_dec
 
+    Zle_not_lt
     Z.add_0_l
     Z.add_comm
     Z.add_assoc

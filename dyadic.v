@@ -1618,6 +1618,15 @@ Module DRed.
     auto.
   Qed.
 
+  Lemma le_not_lt: forall d1 d2 : t, (d1 <= d2)-> ~ (d2 < d1).
+  Proof.
+    intros.
+    unfold Dle in H.
+    unfold Dlt.
+    apply Qle_not_lt.
+    auto.
+  Qed.
+
   (* TODO: More lemmas here! *)
 End DRed.      
 
