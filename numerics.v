@@ -215,6 +215,19 @@ Module Numerics.
       apply le_refl.
     Qed.
 
+    Lemma leb_refl: forall n : Nt, leb n n = true.
+    Proof.
+      intros.
+      apply leb_true_iff.
+      apply le_refl.
+    Qed.
+
+    Lemma ltb_irrefl: forall n : Nt, ltb n n = false.
+    Proof.
+      intros.
+      apply ltb_false_iff.
+      apply lt_irrefl.
+    Qed.
 
     Lemma plus_lt_compat: forall (t1 t2 t3 t4 : Nt), t1 < t2 -> t3 < t4 -> t1 + t3 < t2 + t4.
     Proof.
