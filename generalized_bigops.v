@@ -1,7 +1,7 @@
 Set Implicit Arguments.
 Unset Strict Implicit.
 
-Require Import NArith QArith Reals Rpower Ranalysis Fourier Permutation.
+Require Import NArith QArith Reals Rpower Ranalysis Fourier Lra Permutation.
 
 Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import all_ssreflect.
@@ -9,6 +9,7 @@ From mathcomp Require Import all_algebra.
 
 
 Require Import OUVerT.numerics.
+Require Import OUVerT.extrema.
 
 Delimit Scope R_scope with R.
 
@@ -65,7 +66,7 @@ Section use_Numeric.
     (big_sum cs (fun c => r * (f c)) = r * (big_sum cs (fun c => f c))).
   Proof.
       elim: cs=> /=; first by rewrite Numerics.mult_plus_id_r.
-       by move=> a l IH; rewrite IH /=; rewrite Numerics.mult_distr_l.
+       by move=> a l IH; rewrite IH /=; rewrite Numerics.mult_plus_distr_l.
   Qed.
 
   Lemma big_sum_plus T (cs : seq T) f g :
@@ -97,7 +98,7 @@ Section use_Numeric.
   Proof.
     elim: H' => //=.
     { move => x l l' H' -> //. }
-    { by move => x y l; rewrite - Numerics.plus_assoc_r [(f y) + (f x)]Numerics.plus_comm Numerics.plus_assoc_r. }
+    { by move => x y l; rewrite - Numerics.plus_assoc_reverse [(f y) + (f x)]Numerics.plus_comm Numerics.plus_assoc_reverse. }
     move => l l' l'' H' /= -> H2 -> //.
   Qed.
 
@@ -159,7 +160,7 @@ Proof.
   }
   intro x.
   repeat(rewrite Numerics.of_nat_succ_l).
-  repeat(rewrite Numerics.mult_distr_r).
+  repeat(rewrite Numerics.plus_mult_distr_r).
   repeat(rewrite Numerics.mult_id_l).
   auto.
 Qed.
@@ -170,7 +171,7 @@ Lemma big_sum_mult_right T (cs : seq T) c f :
 Proof.
   elim: cs => //=.
   { by rewrite Numerics.mult_plus_id_l. }
-  move => a l /=; rewrite Numerics.mult_distr_r => -> //.
+  move => a l /=; rewrite Numerics.plus_mult_distr_r => -> //.
 Qed.  
 
 Fixpoint big_product (T : Type) (cs : seq T) (f : T -> Nt) : Nt :=
@@ -190,7 +191,7 @@ Lemma big_product_ge0 (T : eqType) (cs : seq T) (f : T -> Nt) :
   (Numerics.plus_id <=  (big_product cs f)).
 Proof.
   elim: cs=> /=.
-  { intros. apply Numerics.le_plus_id_mult_id. }
+  { intros. apply Numerics.le_lt_weak. apply Numerics.plus_id_lt_mult_id. }
   move=> a l IH H'.
   rewrite <- Numerics.mult_plus_id_l with Numerics.plus_id.
   apply Numerics.mult_le_compat; try ( apply Numerics.le_refl). 
@@ -217,10 +218,9 @@ Lemma big_product_gt0 (T : eqType) (cs : seq T) (f : T -> Nt) :
   (Numerics.plus_id < (big_product cs f)).
 Proof.
   elim: cs=> /=.
-  { intros. apply Numerics.lt_plus_id_mult_id. }
+  { intros. apply Numerics.plus_id_lt_mult_id. }
   move=> a l IH H'.
-  rewrite <- Numerics.mult_plus_id_l with Numerics.plus_id.
-  apply Numerics.mult_lt_compat; try ( apply Numerics.le_refl). 
+  apply Numerics.mult_lt_0_compat; try ( apply Numerics.le_refl). 
   {
     apply H'.
     rewrite in_cons.
@@ -661,6 +661,8 @@ Proof.
   { by rewrite IH. }
   by rewrite IH Numerics.mult_plus_id_r Numerics.plus_id_l.
 Qed.
+
+  
 
 End use_Numeric2.
 

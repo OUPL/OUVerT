@@ -1448,6 +1448,7 @@ Module DRed.
     apply Qplus_le_compat; auto.
   Qed.
 
+
   Lemma plus_lt_le_compat: forall (t1 t2 t3 t4 : t), Dlt t1 t2 ->  Dle t3 t4 -> Dlt (add t1 t3 ) (add t2 t4).
   Proof.
     intros.
@@ -1455,6 +1456,18 @@ Module DRed.
     repeat (rewrite addP).
     apply Qplus_lt_le_compat; auto.
   Qed.
+    
+  Lemma plus_lt_compat_l : forall t t1 t2 : t, Dlt t1 t2 -> Dlt (add t t1) (add t t2).
+  Proof.
+    intros.
+    rewrite addC.
+    rewrite addC with t2 t4.
+    apply plus_lt_le_compat; auto.
+    unfold Dle.
+    apply Qle_refl.
+  Qed.
+
+
   
   
   Lemma lt_t0_t1: t0 < t1.
@@ -1542,6 +1555,26 @@ Module DRed.
     auto.
   Qed.
     
+  Lemma mult_lt_compat_l : forall r r1 r2 : t, Dlt t0 r -> Dlt r1 r2 -> Dlt (mult r r1) (mult r r2).
+  Proof.
+    unfold Dlt.
+    intros.
+    repeat rewrite multP.
+    unfold Qlt in *.
+    simpl in *.
+    apply Z.mul_pos_cancel_r in H.
+    2 :{  unfold Z.lt. auto. } simpl.
+    repeat rewrite <- Z.mul_assoc.
+    apply Zmult_lt_compat_l; auto.
+    repeat rewrite Pos2Z.inj_mul.
+    repeat rewrite Z.mul_assoc.
+    rewrite Z.mul_comm with (num r1) (Z.pos (shift_pos (den r) 1)).
+    rewrite Z.mul_comm with (num r2) (Z.pos (shift_pos (den r) 1)).
+    repeat rewrite <- Z.mul_assoc.
+    apply Zmult_lt_compat_l; auto.
+    apply Pos2Z.pos_is_pos.
+  Qed.
+
   Lemma of_natO: of_nat O = t0.
   Proof. auto. Qed.
 
@@ -1624,6 +1657,35 @@ Module DRed.
     unfold Dle in H.
     unfold Dlt.
     apply Qle_not_lt.
+    auto.
+  Qed.
+
+  Lemma lt_asym: forall d1 d2 : t, d1 < d2 -> ~ d2 < d1.
+  Proof.
+    intros.
+    unfold Dlt in *.
+    apply Qle_not_lt.
+    apply Qlt_le_weak.
+    auto.
+  Qed.
+
+  Lemma lt_trans: forall d1 d2 d3 : t, d1 < d2 -> d2 < d3 -> d1 < d3.
+  Proof.
+    unfold Dlt.
+    intros.
+    apply Qlt_trans with (D_to_Q d2); auto.
+  Qed.
+    
+
+  Lemma total_order_T : forall d1 d2 : t, {Dlt d1 d2} + {d1 = d2} + {Dlt d2 d1}.
+  Proof.
+    intros.
+    unfold Dlt.
+    destruct Q_dec with (D_to_Q d1) (D_to_Q d2).
+      destruct s; auto.
+    left.
+    right.
+    apply Dred_eq.
     auto.
   Qed.
 
