@@ -311,6 +311,7 @@ Section use_Numerics.
     | Some x => x
     end.
 
+
     Definition num_nonempty_argmax {T : Type} (l : list T) (f : T-> Nt) (h: O <> (length l)) : T.
       destruct l.
       { simpl in h. exfalso. auto. }
@@ -319,6 +320,16 @@ Section use_Numerics.
       simpl in e.
       destruct (num_argmax l f); inversion e.
     Defined.
+
+
+    Fixpoint num_mapmax {T : Type} (l : list T) (f : T->Nt) : option Nt :=
+    match l with
+    | nil => None
+    | x :: l' => match num_mapmax l' f with
+        | None => Some (f x)
+        | Some x' => Some (if Numerics.leb x' (f x) then (f x) else x')
+        end
+    end.
 
     Lemma num_nonempty_argmax_ok: forall {T : Type} (l : list T) (f : T-> Nt) (h : O <> (length l)),
           (num_argmax l f) = Some (num_nonempty_argmax f h).
@@ -340,6 +351,25 @@ Section use_Numerics.
       destruct (num_list_max l); inversion e.
     Defined.
 
+     Definition num_nonempty_mapmax (T : Type) (l : list T) (f : T->Nt)  (h : O <> (length l)) : Nt.
+      destruct l.
+      { exfalso;  auto. }
+      destruct (num_mapmax (t ::l) f) eqn:e.
+      { exact n. }
+      simpl in e.
+      destruct (num_mapmax l f); inversion e.
+    Defined.
+
+    Lemma num_nonempty_mapmax_ok: forall (T : Type) (l : list T) (f : T->Nt) (h : O <> (length l)), num_mapmax l f = Some (num_nonempty_mapmax f h).
+    Proof.
+      intros.
+      destruct l.
+      { exfalso. apply h; auto. }
+      destruct l; auto.
+      simpl.
+      destruct (num_mapmax l f); auto.
+    Qed.
+
     Lemma num_nonempty_max_ok: forall (l : list Nt) (h : O <> (length l)), num_list_max l = Some (num_nonempty_max h).
     Proof.
       intros.
@@ -349,6 +379,246 @@ Section use_Numerics.
       simpl.
       destruct (num_list_max l); auto.
     Qed.
+    
+    Lemma argmax_mapmax: forall (T : Type) (l : list T) (f : T -> Nt), O <> length l ->
+       (exists x, num_argmax l f = Some x /\  Some (f x) = num_mapmax l f).
+    Proof.
+      intros.
+      induction l.
+      { exfalso. apply H0. auto. }
+      simpl in *.
+      destruct l.
+      { simpl. exists a. split; auto. } 
+      destruct IHl; simpl; auto.
+      destruct H1.
+      simpl in *.
+      destruct (num_argmax l f) eqn:e.
+      {
+        inversion H1.
+        rewrite H4.
+        exists (if Numerics.leb (f a) (f x) then x else a).
+        split; auto.
+        inversion H2.   
+        destruct (Numerics.leb (f a) (f x)) eqn:e2.
+        {
+          apply Numerics.leb_true_iff in e2.
+          rewrite <- Numerics.le_lt_or_eq in e2.
+          destruct e2.
+          {
+            apply Numerics.lt_not_le in H3.
+            apply Numerics.leb_false_iff in H3.
+            rewrite H3.
+            auto.
+          }
+          rewrite H3.
+          destruct (Numerics.leb (f x) (f x)); auto.
+      }
+      apply Numerics.leb_false_iff in e2.
+      apply Numerics.not_le_lt in e2.
+      apply Numerics.le_lt_weak in e2.
+      apply Numerics.leb_true_iff in e2.
+      rewrite e2.
+      auto.
+    }
+    exists (if Numerics.leb (f a) (f t) then t else a).
+    split; auto.
+    inversion H1.
+    destruct (num_mapmax l f) eqn:e2.
+    {
+      inversion H2.
+      destruct Numerics.lt_le_dec with (f t) n.
+      {
+        apply Numerics.lt_not_le in l0.
+        apply Numerics.leb_false_iff in l0.
+        rewrite l0 in H5.
+        rewrite <- H5.
+        assert ((if Numerics.leb (f x) (f x) then f x else f x) = f x).
+        { destruct (Numerics.leb (f x) (f x) ); auto. }
+        rewrite H3.
+        destruct Numerics.lt_le_dec with (f a) (f x).
+        {
+          apply Numerics.lt_not_le in l1.
+          apply Numerics.leb_false_iff in l1.
+          rewrite l1.
+          apply Numerics.leb_false_iff in l1.
+          apply Numerics.not_le_lt in l1.
+          apply Numerics.le_lt_weak in l1.
+          apply Numerics.leb_true_iff in l1.
+          rewrite l1.
+          auto.
+        }
+        apply Numerics.leb_true_iff in l1.
+        rewrite l1.
+        apply Numerics.leb_true_iff in l1.
+        apply Numerics.le_lt_or_eq in l1.
+        destruct l1.
+        {
+          apply Numerics.lt_not_le in H6.
+          apply Numerics.leb_false_iff in H6.
+          rewrite H6.
+          auto.
+        }
+        destruct (Numerics.leb (f a) (f x) ); auto.
+        rewrite H6; auto.
+      }
+      rewrite H4 in l0.
+      apply Numerics.leb_true_iff in l0.
+      rewrite l0.
+      destruct Numerics.lt_le_dec with (f a) (f x).
+      {
+        apply Numerics.lt_not_le in l1.
+        apply Numerics.leb_false_iff in l1.
+        rewrite l1.
+        apply Numerics.leb_false_iff in l1.
+        apply Numerics.not_le_lt in l1.
+        apply Numerics.le_lt_weak in l1.
+        apply Numerics.leb_true_iff in l1.
+        rewrite l1.
+        auto.
+      }
+      apply Numerics.le_lt_or_eq in l1.
+      destruct l1.
+      {
+        apply Numerics.lt_not_le in H3.
+        apply Numerics.leb_false_iff in H3.
+        rewrite H3.
+        apply Numerics.leb_false_iff in H3.
+        apply Numerics.not_le_lt in H3.
+        apply Numerics.le_lt_weak in H3.
+        apply Numerics.leb_true_iff in H3.
+        rewrite H3.
+        auto.
+      }
+      rewrite H3.
+      destruct (Numerics.leb (f a) (f a)); auto.
+      rewrite H3; auto.
+    }
+    destruct Numerics.lt_le_dec with (f a) (f x).
+    {
+      apply Numerics.lt_not_le in l0.
+      apply Numerics.leb_false_iff in l0.
+      rewrite l0.
+      apply Numerics.leb_false_iff in l0.
+      apply Numerics.not_le_lt in l0.
+      apply Numerics.le_lt_weak in l0.
+      apply Numerics.leb_true_iff in l0.
+      rewrite l0.
+      auto.
+    }
+    apply Numerics.le_lt_or_eq in l0.
+    destruct l0.
+    {
+      apply Numerics.lt_not_le in H3.
+      apply Numerics.leb_false_iff in H3.
+      rewrite H3.
+      apply Numerics.leb_false_iff in H3.
+      apply Numerics.not_le_lt in H3.
+      apply Numerics.le_lt_weak in H3.
+      apply Numerics.leb_true_iff in H3.
+      rewrite H3.
+      auto.
+    }
+    rewrite H3.
+    destruct (Numerics.leb (f a) (f a)); auto.
+    rewrite H3; auto.
+  Qed.
+
+
+    Lemma nonempty_argmax_mapmax: forall (T : Type) (l : list T) (f : T -> Nt) (h : O <> length l),
+       num_nonempty_mapmax f h = f (num_nonempty_argmax f h).
+    Proof.
+      intros.
+      destruct argmax_mapmax with T l f; auto.
+      destruct H0.
+      rewrite num_nonempty_argmax_ok in H0.
+      inversion H0.
+      rewrite H3.
+      rewrite num_nonempty_mapmax_ok in H1.
+      inversion H1.
+      auto. 
+    Qed.
+
+    Lemma num_argmax_plus_const: forall (T : Type) (l : list T) (f : T -> Nt) (x : Nt), num_argmax l f = num_argmax l (fun n => f n + x).
+    Proof.
+      intros.
+      induction l; auto.
+      simpl.
+      rewrite <- IHl.
+      destruct (num_argmax l f); auto.
+      destruct Numerics.lt_le_dec with (f a) (f t).
+      {
+        apply Numerics.le_lt_weak in l0.        
+        assert (Numerics.leb (f a) (f t)).
+        { apply Numerics.leb_true_iff. auto. }
+        rewrite H0.
+        assert ( (f a + x) <= (f t + x)).
+        { 
+          apply Numerics.plus_le_compat; auto.
+          apply Numerics.le_refl.
+        }
+        apply Numerics.leb_true_iff in H1.
+        rewrite H1.
+        auto.
+      }
+      apply Numerics.le_lt_or_eq in l0.
+      destruct l0.
+      {
+        assert (Numerics.leb (f a + x) (f t + x) = false).
+        {
+          apply Numerics.leb_false_iff. 
+          apply Numerics.lt_not_le.
+          apply Numerics.plus_lt_le_compat; auto.
+          apply Numerics.le_refl.
+        }
+        rewrite H1.
+        apply Numerics.lt_not_le in H0.
+        apply Numerics.leb_false_iff in H0.
+        rewrite H0.
+        auto.
+      }
+      rewrite H0.
+      repeat rewrite Numerics.leb_refl.
+      auto.
+    Qed.
+    
+    Lemma num_argmax_mult_pos: forall (T : Type) (l : list T) (f : T -> Nt) (x : Nt), 0 < x -> num_argmax l f = num_argmax l (fun n => f n * x).
+    Proof.
+      intros.
+      induction l; auto.
+      simpl.
+      rewrite <- IHl.
+      destruct (num_argmax l f); auto.
+      destruct Numerics.lt_le_dec with (f a) (f t).
+        {
+          assert(Numerics.leb (f a) (f t)).
+          { apply Numerics.leb_true_iff. apply Numerics.le_lt_weak. auto. }
+          rewrite H1.
+          symmetry.
+          apply Numerics.leb_true_iff in H1.
+          rewrite Numerics.mult_comm.
+          rewrite -> Numerics.mult_comm with (f t) x.
+          apply Numerics.mult_le_compat_l with x (f a) (f t) in H1.
+            apply Numerics.leb_true_iff in H1.
+            rewrite H1. auto.
+          apply Numerics.le_lt_weak; auto.
+        }
+        unfold Numerics.le in l0.
+        destruct l0.
+        2: { rewrite H1. repeat rewrite Numerics.leb_refl. auto. } 
+        assert (f t * x < f a * x).
+          apply Numerics.mult_lt_compat_r; auto.
+        apply Numerics.lt_not_le in H1.
+        apply Numerics.lt_not_le in H2.
+        apply Numerics.leb_false_iff in H1.
+        apply Numerics.leb_false_iff in H2.
+        rewrite H2.
+        rewrite H1.
+        auto.
+    Qed.
+      
+      
+   
+    
 
 End use_Numerics.
 
