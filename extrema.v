@@ -615,10 +615,128 @@ Section use_Numerics.
         rewrite H1.
         auto.
     Qed.
-      
-      
-   
-    
 
+    Lemma num_nonempty_argmax_mult_pos: forall (T : Type) (l : list T) (f : T -> Nt) (x : Nt) (H : O <> length l), 0 < x -> num_nonempty_argmax f H = num_nonempty_argmax (fun n => f n * x) H.
+    Proof.
+      intros.
+      assert(num_argmax l f = Some (num_nonempty_argmax f H0) ).
+        apply num_nonempty_argmax_ok.
+      assert(num_argmax l (fun n : T => f n * x) = Some (num_nonempty_argmax (fun n : T => f n * x) H0) ).
+        apply num_nonempty_argmax_ok.
+     rewrite <- num_argmax_mult_pos in H3; auto.
+     rewrite H2 in H3.
+     inversion H3.
+     auto.
+  Qed.    
+
+
+    Lemma num_nonempty_mapmax_mult_pos: forall (T : Type) (l : list T) (f : T -> Nt) (x : Nt) (H : O <> length l), 0 < x -> num_nonempty_mapmax f H * x= num_nonempty_mapmax (fun n => f n * x) H.
+    Proof.
+      intros.
+      rewrite nonempty_argmax_mapmax.
+      rewrite nonempty_argmax_mapmax.
+      rewrite <- num_nonempty_argmax_mult_pos; auto.
+    Qed.
+
+    Lemma num_mapmax_list_max_map: forall (T : Type) (l : list T) (f : T->Nt), num_mapmax l f = num_list_max (map f l).
+    Proof.
+      intros.
+      induction l; auto.
+      simpl.
+      rewrite IHl.
+      destruct (num_list_max [seq f i | i <- l]); auto.
+      destruct Numerics.total_order_T with  (f a) n.
+      {
+        destruct s.
+        2: { rewrite e; auto. }
+        assert (Numerics.leb (f a) n). 
+        { apply Numerics.leb_true_iff. apply Numerics.le_lt_weak; auto. }
+        rewrite H0.
+        assert (Numerics.leb n (f a) = false).
+        { apply Numerics.leb_false_iff. apply Numerics.lt_not_le. auto. }
+        rewrite H1; auto.
+      }
+      assert (Numerics.leb n (f a)). 
+      { apply Numerics.leb_true_iff. apply Numerics.le_lt_weak; auto. }
+      assert (Numerics.leb (f a) n = false).
+      { apply Numerics.leb_false_iff. apply Numerics.lt_not_le. auto. }
+      rewrite H0. rewrite H1.
+      auto.
+    Qed.
+
+    Lemma num_list_max_correct: forall (l : list Nt) (n : Nt), List.In n l -> (exists m, Some m = num_list_max l /\ n <= m).
+    Proof.
+      intros.
+      induction l.
+      { inversion H0. }
+      simpl in *.
+      destruct H0.
+      {
+        destruct l.
+        {
+          simpl.
+          exists a.
+          split; auto.
+          rewrite H0.
+          apply Numerics.le_refl.
+        }
+        rewrite H0.
+        destruct (num_list_max (n0 :: l)) eqn:H1.
+        {
+          exists (if Numerics.leb n n1 then n1 else n).
+          split; auto.
+          destruct (Numerics.leb n n1) eqn:e2.
+          { apply Numerics.leb_true_iff. auto. }
+          apply Numerics.le_refl.
+        }
+        exists n.
+        split; auto.
+        apply Numerics.le_refl.
+      }
+      destruct IHl; auto.
+      destruct H1.
+      rewrite <- H1.
+      exists (if Numerics.leb a x then x else a).
+      split; auto.
+      destruct (Numerics.leb a x) eqn:H3; auto.
+      apply Numerics.leb_false_iff in H3.
+      apply Numerics.not_le_lt in H3.
+      apply Numerics.le_lt_weak.
+      apply Numerics.le_lt_trans with x; auto.
+    Qed.
+
+
+    Lemma num_nonempty_max_correct: forall (l : list Nt) (n : Nt) (H : O <> length l), List.In n l ->   n <= num_nonempty_max H.
+    Proof.
+      intros.
+      assert (num_list_max l = Some ( num_nonempty_max H0)).
+      { apply num_nonempty_max_ok. }
+      assert (exists m, Some m = num_list_max l /\ n <= m).
+      { apply num_list_max_correct.  auto. } 
+      destruct H3.
+      destruct H3.
+      rewrite H2 in H3.
+      inversion H3.
+      rewrite <- H6; auto.
+    Qed.
+
+    Lemma num_nonempty_mapmax_correct: forall (T : Type) (l : list T) (f : T->Nt) (H : O <> length l) (x : T), List.In x l -> (f x) <= num_nonempty_mapmax f H.
+    Proof.
+      intros.
+      assert(num_mapmax l f = Some (num_nonempty_mapmax f H0)).
+      { apply num_nonempty_mapmax_ok. }
+      rewrite num_mapmax_list_max_map in H2.
+      assert(O <> length  [seq f i | i <- l]).
+      { rewrite List.map_length. auto. }
+      assert(num_list_max [seq f i | i <- l] = Some (num_nonempty_max  H3)).
+      { apply num_nonempty_max_ok. }
+      rewrite H2 in H4.
+      inversion H4.
+      rewrite H6.
+      apply num_nonempty_max_correct.
+      apply List.in_map.
+      auto.
+    Qed.
+   
 End use_Numerics.
 
