@@ -549,6 +549,14 @@ Module Numerics.
       auto.
     Qed.
 
+    Lemma mult_le_compat_r: forall x y z : Nt, plus_id <= x -> y <= z -> y * x <= z * x.
+    Proof.
+      intros.
+      rewrite mult_comm.
+      rewrite -> mult_comm with z x.
+      apply mult_le_compat_l; auto.
+    Qed.
+
 
     Lemma neg_neg_pos: forall t1 : Nt, t1 < 0 <-> 0 < - t1.
     Proof.
@@ -654,7 +662,15 @@ Module Numerics.
       auto.
     Qed.
 
-   
+    Lemma plus_le_compat_l : forall r r1 r2, r1 <= r2 -> r + r1 <= r + r2.
+    Proof.
+      unfold le.
+      intros.
+      destruct H0.
+      { left. apply plus_lt_compat_l. auto. }
+      rewrite H0.
+      auto.
+    Qed.
 
   End use_Numeric.
  
