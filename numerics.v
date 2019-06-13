@@ -672,9 +672,52 @@ Module Numerics.
       auto.
     Qed.
 
+    Lemma plus_le_compat_r : forall r r1 r2, r1 <= r2 -> r1 + r <= r2 + r.
+    Proof.
+      intros.
+      rewrite plus_comm.
+      rewrite -> plus_comm with r2 r.
+      apply plus_le_compat_l.
+      auto.
+    Qed.
+
+    Lemma plus_le_compat_l_reverse : forall r r1 r2, r + r1 <= r + r2 -> r1 <= r2 .
+    Proof.
+      intros.
+      apply plus_le_compat_l with (-r) (r + r1) (r + r2) in H0.
+      repeat rewrite plus_assoc in H0.
+      rewrite plus_neg_l in H0.
+      repeat rewrite plus_id_l in H0.
+      auto.
+    Qed.
+
+    Lemma plus_le_compat_r_reverse : forall r r1 r2, r1 + r <= r2 + r -> r1 <= r2 .
+    Proof.
+      intros.
+      rewrite plus_comm in H0.
+      rewrite -> plus_comm with r2 r in H0.
+      apply plus_le_compat_l_reverse in H0.
+      auto.
+    Qed.
+
+    Lemma mult_simpl_l: forall n m p : Nt, n = m -> p * n = p * m.
+    Proof. intros. rewrite H0. auto. Qed.
+
+    Lemma mult_simpl_r: forall n m p : Nt, n = m -> n * p = m * p.
+    Proof. intros. rewrite H0. auto. Qed.
+
+    Lemma plus_simpl_l: forall n m p : Nt, n = m -> p + n = p + m.
+    Proof. intros. rewrite H0. auto. Qed.
+
+    Lemma plus_simpl_r: forall n m p : Nt, n = m -> n + p = m + p.
+    Proof. intros. rewrite H0. auto. Qed.
+
+
+
   End use_Numeric.
  
 End Numerics.
+
 
 
 
