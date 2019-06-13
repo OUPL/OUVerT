@@ -63,7 +63,7 @@ Module Numerics.
         lt_asym : forall r1 r2, r1 < r2 -> ~ r2 < r1;
         lt_trans : forall r1 r2 r3, r1 < r2 -> r2 < r3 -> r1 < r3;
         plus_lt_compat_l : forall r r1 r2, r1 < r2 -> r + r1 < r + r2;
-        mult_lt_compat_l : forall r r1 r2, plus_id < r -> r1 < r2 -> r * r1 < r * r2;
+        mult_lt_compat_l : forall r r1 r2, plus_id < r -> (r1 < r2 <-> r * r1 < r * r2);
 
         pow_natO: forall t, pow_nat t O = mult_id;
         pow_nat_rec: forall t n, pow_nat t (S n) = t * pow_nat t n;
@@ -194,7 +194,7 @@ Module Numerics.
       auto.
     Qed.  
  
-    Lemma mult_lt_compat_r : forall r r1 r2, plus_id < r -> r1 < r2 -> r1 * r < r2 * r.
+    Lemma mult_lt_compat_r : forall r r1 r2, plus_id < r -> (r1 < r2 <-> r1 * r < r2 * r).
     Proof.
       intros.
       rewrite mult_comm.
@@ -549,6 +549,32 @@ Module Numerics.
       auto.
     Qed.
 
+    Lemma lt_not_eq: forall r1 r2 : Nt, r1 < r2 -> r1 <> r2.
+    Proof.
+      unfold not.
+      intros.
+      rewrite H1 in H0.
+      apply lt_irrefl in H0.
+      auto.
+    Qed.
+      
+
+    Lemma mult_le_compat_l_reverse: forall x y z : Nt, plus_id < x -> x * y <= x* z -> y <= z.
+    Proof.
+      intros.
+      unfold le in *.
+      destruct H1.
+      {
+        left.
+        rewrite mult_lt_compat_l; auto.
+          apply H1.
+        auto.
+      }
+      right.
+      assert (0 <> x). apply lt_not_eq. auto.
+      apply mult_elim_l with x; auto.
+    Qed.
+
     Lemma mult_le_compat_r: forall x y z : Nt, plus_id <= x -> y <= z -> y * x <= z * x.
     Proof.
       intros.
@@ -557,6 +583,13 @@ Module Numerics.
       apply mult_le_compat_l; auto.
     Qed.
 
+    Lemma mult_le_compat_r_reverse: forall x y z : Nt, plus_id < x -> y * x <= z * x -> y <= z.
+    Proof.
+      intros.
+      rewrite mult_comm in H1.
+      rewrite -> mult_comm with z x in H1.
+      apply mult_le_compat_l_reverse with x; auto.
+    Qed.
 
     Lemma neg_neg_pos: forall t1 : Nt, t1 < 0 <-> 0 < - t1.
     Proof.
@@ -653,7 +686,7 @@ Module Numerics.
       apply lt_irrefl with 0.
       apply le_lt_trans with r2; auto.
     Qed.
-    
+
     Lemma mult_lt_0_compat: forall r1 r2 : Nt, 0 < r1 -> 0 < r2 -> 0 < r1 * r2.
     Proof.
       intros.
@@ -699,6 +732,7 @@ Module Numerics.
       apply plus_le_compat_l_reverse in H0.
       auto.
     Qed.
+
 
     Lemma mult_simpl_l: forall n m p : Nt, n = m -> p * n = p * m.
     Proof. intros. rewrite H0. auto. Qed.
@@ -801,7 +835,7 @@ Instance Numeric_R: Numerics.Numeric R :=
     Rlt_asym
     Rlt_trans
     Rplus_lt_compat_l
-    Rmult_lt_compat_l
+    _
     _
     _
 . 
@@ -826,6 +860,20 @@ Instance Numeric_R: Numerics.Numeric R :=
 }
   intros. rewrite Rplus_assoc. auto.
   intros. rewrite Rmult_assoc. auto.
+{
+  intros.
+  split; intros.
+  { apply Rmult_lt_compat_l; auto. }
+  assert( R0 <> r).
+  { apply Rlt_not_eq.  auto. }  
+  assert( R0 < / r).
+  { apply Rinv_0_lt_compat. auto. }  
+  apply Rmult_lt_compat_l with (/ r) (r * r1) (r * r2) in H0; auto.
+  repeat rewrite <- Rmult_assoc in H0.
+  repeat rewrite Rinv_l in H0; auto.
+  repeat rewrite Rmult_1_l in H0.
+  auto.
+}
   auto. 
   auto.
 Defined.
@@ -887,7 +935,16 @@ Instance Numeric_z : Numerics.Numeric Z :=
   apply Zplus_le_lt_compat; auto.
   apply Z.le_refl.
 }
-  intros. apply Zmult_lt_compat_l; auto.
+{
+  intros.
+  split; intros.
+  { apply Zmult_lt_compat_l; auto. }
+  apply Zmult_gt_0_lt_reg_r with r.
+  { apply Z.lt_gt. auto. }
+  rewrite Z.mul_comm.
+  rewrite -> Z.mul_comm with r2 r.
+  auto.
+}
   auto.
   auto.
 Defined.

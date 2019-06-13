@@ -1555,25 +1555,48 @@ Module DRed.
     auto.
   Qed.
     
-  Lemma mult_lt_compat_l : forall r r1 r2 : t, Dlt t0 r -> Dlt r1 r2 -> Dlt (mult r r1) (mult r r2).
+  Lemma mult_lt_compat_l : forall r r1 r2 : t, Dlt t0 r -> (Dlt r1 r2 <-> Dlt (mult r r1) (mult r r2)).
   Proof.
     unfold Dlt.
     intros.
-    repeat rewrite multP.
+    split; intros.
+    {
+      repeat rewrite multP.
+      unfold Qlt in *.
+      simpl in *.
+      apply Z.mul_pos_cancel_r in H.
+      2 :{  unfold Z.lt. auto. } simpl.
+      repeat rewrite <- Z.mul_assoc.
+      apply Zmult_lt_compat_l; auto.
+      repeat rewrite Pos2Z.inj_mul.
+      repeat rewrite Z.mul_assoc.
+      rewrite Z.mul_comm with (num r1) (Z.pos (shift_pos (den r) 1)).
+      rewrite Z.mul_comm with (num r2) (Z.pos (shift_pos (den r) 1)).
+      repeat rewrite <- Z.mul_assoc.
+      apply Zmult_lt_compat_l; auto.
+      apply Pos2Z.pos_is_pos.
+    }
+    repeat rewrite multP in H0.
     unfold Qlt in *.
     simpl in *.
     apply Z.mul_pos_cancel_r in H.
-    2 :{  unfold Z.lt. auto. } simpl.
-    repeat rewrite <- Z.mul_assoc.
-    apply Zmult_lt_compat_l; auto.
-    repeat rewrite Pos2Z.inj_mul.
-    repeat rewrite Z.mul_assoc.
-    rewrite Z.mul_comm with (num r1) (Z.pos (shift_pos (den r) 1)).
-    rewrite Z.mul_comm with (num r2) (Z.pos (shift_pos (den r) 1)).
-    repeat rewrite <- Z.mul_assoc.
-    apply Zmult_lt_compat_l; auto.
-    apply Pos2Z.pos_is_pos.
+    2 :{  unfold Z.lt. auto. }
+    repeat rewrite <- Z.mul_assoc in H0.
+    rewrite Z.mul_comm in H0.
+    rewrite Z.mul_comm with (num r) (num r2 * Z.pos (shift_pos (den r) 1 * shift_pos (den r1) 1))%Z in H0.
+    apply Zmult_gt_0_lt_reg_r in H0.
+    2: { apply Z.lt_gt. auto. }
+    rewrite Z.mul_comm in H0.
+    rewrite Z.mul_comm with (num r2) ( Z.pos (shift_pos (den r) 1 * shift_pos (den r1) 1 )) in H0.
+    repeat rewrite Pos2Z.inj_mul in H0.
+    repeat rewrite <- Z.mul_assoc in H0.
+    rewrite Z.mul_comm in H0.
+    rewrite Z.mul_comm with (Z.pos (shift_pos (den r) 1)) ((Z.pos (shift_pos (den r1) 1) * num r2))%Z in H0.
+    apply Zmult_gt_0_lt_reg_r in H0.
+    { rewrite Z.mul_comm. rewrite -> Z.mul_comm with (num r2) (Z.pos (shift_pos (den r1) 1)). auto. }
+    apply Zgt_pos_0.
   Qed.
+
 
   Lemma of_natO: of_nat O = t0.
   Proof. auto. Qed.
