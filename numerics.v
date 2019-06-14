@@ -782,6 +782,66 @@ Module Numerics.
   Lemma abs_mult_pos_r: forall n m : Nt, 0 <= n -> abs (m * n) = abs m * n.
   Proof. intros. rewrite mult_comm. rewrite abs_mult_pos_l; auto. apply mult_comm. Qed. 
     
+  Lemma le_abs: forall n : Nt, n <= abs n.
+  Proof. 
+    intros.
+    unfold abs.
+    destruct (leb 0 n) eqn:e.
+      apply le_refl.
+    apply plus_le_compat_l_reverse with n.
+    rewrite plus_neg_r.
+    rewrite <- plus_id_l.
+    apply leb_false_iff in e.
+    apply not_le_lt in e.
+    apply le_lt_weak in e.
+    apply plus_le_compat; auto.
+  Qed.
+
+
+  Lemma le_neg: forall n m : Nt, - n <= -m <-> m <= n.
+  Proof.
+    unfold le.
+    intros.
+    split; intros;
+      destruct H0;
+      try (apply lt_neg in H0; auto; fail);
+      try (apply neg_eq in H0);
+      try (rewrite H0);
+      auto.
+    Qed.
+
+  Lemma abs_neg: forall n : Nt, abs (-n) = abs n.
+  Proof.
+    intros.
+    unfold abs.
+    destruct (leb 0 (- n) ) eqn:e.
+    {
+      apply leb_true_iff in e.
+      rewrite <- neg_plus_id in e.
+      rewrite -> le_neg in e.
+      unfold le in e.
+      destruct e.
+      {
+        apply lt_not_le in H0.
+        apply leb_false_iff in H0.
+        rewrite H0.
+        auto.
+      }
+      rewrite H0.
+      destruct (leb 0 0); auto.
+      apply neg_plus_id.
+    }
+    apply leb_false_iff in e.
+    apply not_le_lt in e.
+    rewrite <- neg_plus_id in e.
+    apply lt_neg in e.
+    apply le_lt_weak in e.
+    apply leb_true_iff in e.
+    rewrite e.
+    apply double_neg.
+  Qed.
+      
+      
 
   End use_Numeric.
  
