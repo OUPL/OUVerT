@@ -747,6 +747,41 @@ Module Numerics.
     Proof. intros. rewrite H0. auto. Qed.
 
 
+    Lemma abs_mult_pos_l: forall n m : Nt, 0 <= n -> abs (n * m) = n * abs m.
+    Proof.
+      intros.
+      unfold abs.
+      destruct (leb 0 m) eqn:e.
+      {
+        apply leb_true_iff in e.
+        apply mult_le_compat_l with n 0 m in e; auto.
+        rewrite mult_plus_id_r in e.
+        apply leb_true_iff in e.
+        rewrite e.
+        auto.
+      }
+      apply leb_false_iff in e.
+      apply not_le_lt in e.
+      destruct H0.
+      2: { 
+        rewrite <- H0. 
+        repeat rewrite mult_plus_id_l.
+        rewrite leb_refl.
+        auto.
+      }
+      apply mult_lt_compat_l with n m 0 in e; auto.
+      rewrite <- mult_plus_id_l with 0 in e.
+      repeat rewrite mult_plus_id_r in e.
+      apply lt_not_le in e.
+      apply leb_false_iff in e.
+      rewrite e.
+      rewrite neg_mult_distr_r.
+      auto.
+    Qed.
+
+  Lemma abs_mult_pos_r: forall n m : Nt, 0 <= n -> abs (m * n) = abs m * n.
+  Proof. intros. rewrite mult_comm. rewrite abs_mult_pos_l; auto. apply mult_comm. Qed. 
+    
 
   End use_Numeric.
  
