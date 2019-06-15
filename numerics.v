@@ -840,8 +840,25 @@ Module Numerics.
     rewrite e.
     apply double_neg.
   Qed.
-      
-      
+
+  Lemma abs_posb: forall n : Nt, leb 0 n -> abs n = n.
+  Proof. intros. unfold abs. rewrite H0. auto. Qed.
+
+  Lemma abs_negb: forall n : Nt, leb 0 n = false -> abs n = - n.
+  Proof. intros. unfold abs. rewrite H0. auto. Qed.
+
+  Lemma abs_plus_le: forall n m : Nt, abs (n + m) <= abs n + abs m.
+  Proof.
+    intros.
+    destruct (leb 0 (n + m)) eqn:e_nm.
+    {
+      rewrite abs_posb; auto.
+      apply plus_le_compat; apply le_abs.
+    }
+    rewrite abs_negb; auto.
+    rewrite plus_neg_distr.
+    apply plus_le_compat; rewrite <- abs_neg; apply le_abs.
+  Qed.
 
   End use_Numeric.
  

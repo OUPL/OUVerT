@@ -662,6 +662,7 @@ Proof.
   by rewrite IH Numerics.mult_plus_id_r Numerics.plus_id_l.
 Qed.
 
+
 Lemma big_sum_func_leq_max_l: forall (T : eqType) (f1 f2 : T->Nt) (cs : seq T) (H : O <> length cs),
       (forall t : T,  t \in cs -> 0<= f1 t) ->  big_sum cs (fun x : T => f1 x * f2 x) <= big_sum cs f1 * num_nonempty_mapmax f2 H.
 Proof.
@@ -707,7 +708,18 @@ Proof.
   apply num_nonempty_mapmax_cons_le.
 Qed.
 
-  
+Lemma big_sum_le_abs: forall (T : eqType) (f : T -> Nt) (cs : seq T) ,
+      Numerics.abs (big_sum cs f) <= big_sum cs (fun x => Numerics.abs (f x)).
+Proof.
+  intros.
+  induction cs.
+    simpl. unfold Numerics.abs. rewrite Numerics.leb_refl. apply Numerics.le_refl.
+  simpl.
+  apply Numerics.le_trans with (Numerics.abs (f a) + Numerics.abs (big_sum cs f)).
+    apply Numerics.abs_plus_le.
+  apply Numerics.plus_le_compat_l.
+  auto.
+Qed.
 
 End use_Numeric2.
 

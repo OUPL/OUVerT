@@ -1261,6 +1261,18 @@ Section use_Numerics.
       apply num_nonempty_argmax_in.
     Qed.
 
+    Lemma num_nonempty_mapmax_le_ext': forall (T : Type) (l : list T) (f g: T->Nt) (H0 : O <> length l),
+      (forall t : T, List.In t l -> f t <= num_nonempty_mapmax g H0) -> num_nonempty_mapmax f H0 <= num_nonempty_mapmax g H0.
+    Proof.
+      intros.
+      rewrite nonempty_argmax_mapmax in H1.
+      rewrite nonempty_argmax_mapmax.
+      rewrite nonempty_argmax_mapmax.
+      apply H1.
+      apply num_nonempty_argmax_in.
+    Qed.
+      
+
     Lemma num_nonempty_mapmax_abs_dist_le: forall (T : Type) (l : list T) (f g : T->Nt) (H0 : O <> length l),
         Numerics.abs ( num_nonempty_mapmax f H0 + - num_nonempty_mapmax g H0) <=
         num_nonempty_mapmax (fun x => Numerics.abs (f x + - g x)) H0.
