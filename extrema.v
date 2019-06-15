@@ -976,17 +976,63 @@ Section use_Numerics.
     Qed.      
 
     Lemma num_nonempty_mapmax_cons: forall (T : Type) (l : list T) (f : T -> Nt) (x : T) (H0 : O <> length l) (H1 : O <> length (x :: l)),
-              num_nonempty_mapmax f H0 = num_nonempty_mapmax f H1 \/ (f x = num_nonempty_mapmax f H1).
+              (num_nonempty_mapmax f H0 = num_nonempty_mapmax f H1 /\ f x <= num_nonempty_mapmax f H0) \/ (f x = num_nonempty_mapmax f H1 /\ num_nonempty_mapmax f H0 <= f x ).
     Proof.
       intros.
       induction l; auto.
+      { exfalso. apply H0. auto. }
+      destruct l.
+      { 
+        simpl. 
+        destruct ( Numerics.leb (f a) (f x) ) eqn:e; auto.
+           apply Numerics.leb_true_iff in e. auto.
+        left.
+        apply Numerics.leb_false_iff in e.
+        apply Numerics.not_le_lt in e.
+        apply Numerics.le_lt_weak in e.
+        auto.
+      }
+      assert(forall x y : Nt, Numerics.leb x y = false -> y <= x).
+      { intros. apply Numerics.leb_false_iff in H2. apply Numerics.not_le_lt in H2. apply Numerics.le_lt_weak. auto. }
+      assert(O <> length (t :: l)).
+      { unfold not. intros. inversion H3. }
       simpl.
-      destruct (num_mapmax l f); auto.
-      2: { destruct (Numerics.leb (f a) (f x)); auto. }
-      destruct (Numerics.leb n (f a)).
-        destruct (Numerics.leb (f a) (f x)); auto.
-      destruct (Numerics.leb n (f x)); auto.
+      destruct (num_mapmax l f) eqn:e.
+      {
+        destruct ( Numerics.leb n (f t)) eqn:e2.
+        {
+          destruct (Numerics.leb (f t) (f a)) eqn:e3.
+          {
+            destruct (Numerics.leb (f a) (f x)) eqn:e4.
+              apply Numerics.leb_true_iff in e4. auto.
+            apply H2 in e4.
+            auto.
+          }
+          destruct (Numerics.leb (f t) (f x)) eqn:e4; auto.
+          right.
+          apply Numerics.leb_true_iff in e4.
+          auto.
+        }
+        destruct (Numerics.leb n (f a)) eqn:e3.
+        {
+          destruct (Numerics.leb (f a) (f x)) eqn:e4; auto.
+          apply Numerics.leb_true_iff in e4. auto.
+        }
+        destruct (Numerics.leb n (f x)) eqn:e4; auto.
+        apply Numerics.leb_true_iff in e4. 
+        auto.
+      }
+      destruct (Numerics.leb (f t) (f a)) eqn:e2.
+      {
+        destruct (Numerics.leb (f a) (f x)) eqn:e3; auto.
+        apply Numerics.leb_true_iff in e3.
+        auto.
+      }
+      destruct (Numerics.leb (f t) (f x)) eqn:e3; auto.
+      apply Numerics.leb_true_iff in e3.
+      auto.
     Qed.
+
 
     Lemma num_nonempty_max_le_all: forall (l : list Nt) (H : O <> length l) (n : Nt), (forall n' : Nt, List.In n' l -> n <= n') -> n <= num_nonempty_max H.
     Proof.
@@ -1038,11 +1084,13 @@ Section use_Numerics.
       assert (O <> length (t :: l)). unfold not. intros. inversion H2.      
       destruct num_nonempty_mapmax_cons with T (t :: l) f a H2 H0.
       {
+        destruct H3.
         rewrite <- H3.
         apply Numerics.le_trans with (num_nonempty_mapmax (l:=t :: l) g H2); auto.
         { apply IHl. intros. apply H1. simpl. auto. }
         apply num_nonempty_mapmax_cons_le.
       }
+      destruct H3.
       rewrite <- H3.
       apply Numerics.le_trans with (g a).
       { apply H1. simpl. auto. }
@@ -1051,7 +1099,7 @@ Section use_Numerics.
       auto.
     Qed.
 
-    Lemma num_abs_nomempty_mapmax_le: forall (T : Type) (l : list T) (f: T -> Nt) (H : O <> length l), 
+    Lemma num_abs_nonempty_mapmax_le: forall (T : Type) (l : list T) (f: T -> Nt) (H : O <> length l), 
           Numerics.abs ( num_nonempty_mapmax f H) <= num_nonempty_mapmax (fun x => Numerics.abs (f x)) H.
     Proof.
       intros.
@@ -1082,6 +1130,7 @@ Section use_Numerics.
         unfold not. intros. inversion H2.
       destruct  num_nonempty_mapmax_cons with T (t :: l) f a H2 H0.
       {
+        destruct H3.
         rewrite <- H3.
         apply Numerics.le_trans with (num_nonempty_mapmax (l:=t :: l) (fun x : T => Numerics.abs (f x)) H2).
         { 
@@ -1094,17 +1143,317 @@ Section use_Numerics.
             apply num_nonempty_mapmax_cons_le.
           }
           unfold Numerics.abs.
-          rewrite H4.
+          rewrite H5.
           auto.
         }
         apply num_nonempty_mapmax_cons_le.
       }
+      destruct H3.
       rewrite <- H3.
       apply Numerics.le_trans with (Numerics.abs (f a)).
       { rewrite <- Numerics.abs_neg. apply Numerics.le_abs. }
       remember ((fun x : T => Numerics.abs (f x))) as f'.      
       assert (Numerics.abs (f a) = f' a). rewrite Heqf'. auto.
-      rewrite H4.
+      rewrite H5.
+      apply num_nonempty_mapmax_correct.
+      simpl. auto.
+    Qed.
+
+    Lemma num_nonempty_mapmax_plus_le: forall (T : Type) (l : list T) (f g : T->Nt) (H0 : O <> length l),
+        num_nonempty_mapmax (fun x => f x + g x) H0 <= num_nonempty_mapmax f H0 + num_nonempty_mapmax g H0.
+    Proof.
+      intros.
+      induction l.
+      { exfalso.  apply H0. auto. }
+      destruct l.
+      { simpl. apply Numerics.le_refl. }
+      assert(O <> length (t :: l)).
+        unfold not. intros. inversion H1.
+      destruct  num_nonempty_mapmax_cons with T (t :: l) (fun x : T => f x + g x) a H1 H0.
+      { 
+        destruct H2.
+        rewrite <- H2.
+        apply Numerics.le_trans with (num_nonempty_mapmax (l:=t :: l) f H1 + num_nonempty_mapmax (l:=t :: l) g H1); auto.
+        apply Numerics.plus_le_compat; apply num_nonempty_mapmax_cons_le.
+      }
+      destruct H2.
+      rewrite <- H2.
+      apply Numerics.plus_le_compat;
+        apply num_nonempty_mapmax_correct; simpl; auto.
+    Qed.
+  
+    Lemma num_nonempty_mapmax_sub_le: forall (T : Type) (l : list T) (f g : T->Nt) (H0 : O <> length l),
+         num_nonempty_mapmax f H0 + - num_nonempty_mapmax g H0 <= num_nonempty_mapmax (fun x => f x + - g x) H0.
+    Proof.
+      intros.
+      apply Numerics.plus_le_compat_r_reverse with (num_nonempty_mapmax (l:=l) g H0).
+      rewrite <- Numerics.plus_assoc.
+      rewrite Numerics.plus_neg_l.
+      rewrite Numerics.plus_id_r.
+      apply Numerics.le_trans with (num_nonempty_mapmax (l:=l) (fun x => (f x + - g x) + g x) H0).
+      {
+        unfold Numerics.le.
+        right.
+        apply num_nonempty_mapmax_ext.
+        intros.
+        rewrite <- Numerics.plus_assoc.
+        rewrite Numerics.plus_neg_l.
+        rewrite Numerics.plus_id_r.
+        auto.
+      }
+      apply num_nonempty_mapmax_plus_le.
+    Qed.
+
+     
+
+    Lemma num_argmax_some_nonempty: forall (T : Type) (l : list T) (f : T->Nt), 
+          (exists x, num_argmax l f = Some x) <-> O <> length l.
+    Proof.
+      intros.
+      induction l.
+      { 
+        split; intros.
+        {
+          destruct H0.
+          simpl in H0.
+          inversion H0.
+        }
+        exfalso.
+        apply H0.
+        auto.
+      }
+      split; intros.
+       unfold not. intros. inversion H1.
+      simpl.
+      destruct IHl.
+      destruct l.
+      { simpl. exists a. auto. }
+      destruct H2.
+      { unfold not. intros. inversion H2. }
+      destruct (num_argmax (t :: l) f); eexists; auto.
+    Qed.
+        
+    Lemma num_nonempty_argmax_in: forall (T : Type) (l : list T) (f : T->Nt) (H0 : O <> length l),
+        List.In (num_nonempty_argmax f H0) l.
+    Proof.
+      intros.
+      induction l.
+      { exfalso. apply H0. auto. }
+      simpl.
+      destruct (num_argmax l f) eqn:e; auto.
+      destruct (Numerics.leb (f a) (f t)); auto.
+      assert (O <> length l). rewrite <- num_argmax_some_nonempty. exists t. apply e.
+      assert ( (num_argmax l f = Some (num_nonempty_argmax f H1))).
+        apply num_nonempty_argmax_ok.
+      rewrite e in H2.
+      inversion H2.
+      right.
+      apply IHl.
+    Qed.
+
+    Lemma num_nonempty_mapmax_le_neg: forall (T : Type) (l : list T) (f : T->Nt) (H0 : O <> length l),
+        - num_nonempty_mapmax (fun x=> - f x) H0 <= num_nonempty_mapmax f H0.
+    Proof.
+      intros.
+      rewrite nonempty_argmax_mapmax.
+      rewrite Numerics.double_neg.
+      apply num_nonempty_mapmax_correct.
+      apply num_nonempty_argmax_in.
+    Qed.
+
+    Lemma num_nonempty_mapmax_abs_dist_le: forall (T : Type) (l : list T) (f g : T->Nt) (H0 : O <> length l),
+        Numerics.abs ( num_nonempty_mapmax f H0 + - num_nonempty_mapmax g H0) <=
+        num_nonempty_mapmax (fun x => Numerics.abs (f x + - g x)) H0.
+    Proof.
+      intros.
+      generalize dependent f.
+      generalize dependent g.
+      induction l.
+      { exfalso. apply H0. auto. }
+      destruct l.
+      { intros. simpl. apply Numerics.le_refl. }
+      intros.
+      remember (t :: l) as l'.
+      assert (O <> length l').
+          rewrite Heql'. unfold not. intros. inversion H1.
+      destruct  num_nonempty_mapmax_cons with T l' f a H1 H0.
+      {
+        destruct H2.
+        rewrite <- H2.
+        destruct  num_nonempty_mapmax_cons with T l' g a H1 H0.
+        {
+          destruct H4.
+          rewrite <- H4.
+          destruct  num_nonempty_mapmax_cons with T  l' (fun x : T => Numerics.abs (f x + - g x)) a H1 H0.
+          { destruct H6. rewrite <- H6. apply IHl. }
+          destruct H6.          
+          rewrite <- H6.
+          apply Numerics.le_trans with ( num_nonempty_mapmax  (fun x : T => Numerics.abs (f x + - g x)) H1); auto.
+        }
+        destruct H4.
+        rewrite <- H4.
+        destruct  num_nonempty_mapmax_cons with T l' (fun x : T => Numerics.abs (f x + - g x)) a H1 H0.
+        {
+          destruct H6. 
+          rewrite <- H6.
+          destruct (Numerics.leb 0 (num_nonempty_mapmax (l:=l') f H1 + - g a)) eqn:e.
+          {
+            assert (Numerics.abs (num_nonempty_mapmax (l:=l') f H1 + - g a)  = num_nonempty_mapmax (l:=l') f H1 + - g a).
+              unfold Numerics.abs. rewrite e. auto.
+            rewrite H8.
+            clear H8.
+            apply Numerics.le_trans with (num_nonempty_mapmax (l:=l') f H1 + - num_nonempty_mapmax (l:=l') g H1).
+            { apply Numerics.plus_le_compat_l. apply Numerics.le_neg. auto. }
+            apply Numerics.le_trans with (Numerics.abs (num_nonempty_mapmax (l:=l') f H1 + - num_nonempty_mapmax (l:=l') g H1)); auto.
+            apply Numerics.le_abs.
+          }
+          assert (Numerics.abs (num_nonempty_mapmax (l:=l') f H1 + - g a)  = - (num_nonempty_mapmax (l:=l') f H1 + - g a)).
+            unfold Numerics.abs. rewrite e. auto.
+          rewrite H8.
+          rewrite Numerics.plus_neg_distr.
+          rewrite Numerics.double_neg.
+          apply Numerics.le_trans with ( - f a + g a).
+          {
+            apply Numerics.plus_le_compat_r.
+            apply Numerics.le_neg.
+            auto.
+          }
+          apply Numerics.le_trans with (Numerics.abs (- f a + g a)).
+            apply Numerics.le_abs.
+          rewrite <- Numerics.abs_neg.
+          rewrite Numerics.plus_neg_distr.
+          rewrite Numerics.double_neg.
+          rewrite H6.
+          remember (fun x: T =>Numerics.abs (f x + - g x)) as f'.
+          assert (Numerics.abs (f a + - g a) = f' a). rewrite Heqf'. auto.
+          rewrite H9.
+          apply num_nonempty_mapmax_correct.
+          simpl.
+          auto.
+        }
+        destruct H6.
+        rewrite <- H6.
+        destruct (Numerics.leb 0 (num_nonempty_mapmax (l:=l') f H1 + - g a)) eqn:e.
+        {
+          assert (Numerics.abs (num_nonempty_mapmax (l:=l') f H1 + - g a) = num_nonempty_mapmax (l:=l') f H1 + - g a).
+            unfold Numerics.abs. rewrite e. auto.
+          rewrite H8.
+          clear H8.
+          apply Numerics.le_trans with (num_nonempty_mapmax (l:=l') f H1 + - num_nonempty_mapmax (l:=l') g H1).
+          {
+            apply Numerics.plus_le_compat_l.
+            apply Numerics.le_neg.
+            auto.
+          }
+          apply Numerics.le_trans with (num_nonempty_mapmax (l:=l') (fun x : T => Numerics.abs (f x + - g x)) H1); auto.
+          apply Numerics.le_trans with (Numerics.abs (num_nonempty_mapmax (l:=l') f H1 + - num_nonempty_mapmax (l:=l') g H1)); auto.
+          apply Numerics.le_abs.
+        }
+        assert (Numerics.abs (num_nonempty_mapmax (l:=l') f H1 + - g a) = -(num_nonempty_mapmax (l:=l') f H1 + - g a)).
+          unfold Numerics.abs. rewrite e. auto.
+        rewrite H8.
+        clear H8.
+        rewrite Numerics.plus_neg_distr.
+        rewrite Numerics.double_neg.
+        apply Numerics.le_trans with (- f a + g a).
+        {
+          apply Numerics.plus_le_compat_r.
+          apply Numerics.le_neg.
+          auto.
+        }
+        rewrite <- Numerics.abs_neg.
+        rewrite Numerics.plus_neg_distr.
+        rewrite Numerics.double_neg.
+        apply Numerics.le_abs.
+      }
+      destruct H2.
+      rewrite <- H2.
+      destruct  num_nonempty_mapmax_cons with T l' g a H1 H0.
+      {
+        destruct H4.
+        rewrite <- H4.
+        destruct (Numerics.leb 0 (f a + - num_nonempty_mapmax (l:=l') g H1)) eqn:e.
+        {
+          assert (Numerics.abs (f a + - num_nonempty_mapmax (l:=l') g H1) = (f a + - num_nonempty_mapmax (l:=l') g H1)).
+            unfold Numerics.abs. rewrite e. auto.
+          rewrite H6.
+          clear H6.
+          apply Numerics.le_trans with (f a + - g a).
+          {
+            apply Numerics.plus_le_compat_l.
+            apply Numerics.le_neg.
+            auto.
+          }
+          apply Numerics.le_trans with (Numerics.abs (f a + - g a)).
+            apply Numerics.le_abs.
+          remember (fun x => Numerics.abs (f x + - g x)) as f'.
+          assert (Numerics.abs (f a + - g a) = f' a).
+            rewrite Heqf'. auto.
+          rewrite H6.
+          apply num_nonempty_mapmax_correct.
+          simpl. auto.
+        }
+        assert(Numerics.abs (f a + - num_nonempty_mapmax (l:=l') g H1) = - (f a + - num_nonempty_mapmax (l:=l') g H1)).
+          unfold Numerics.abs. rewrite e. auto.
+        rewrite H6.
+        clear H6.
+        rewrite Numerics.plus_neg_distr.
+        rewrite Numerics.double_neg.
+        destruct  num_nonempty_mapmax_cons with T l' (fun x : T => Numerics.abs (f x + - g x)) a H1 H0.
+        {
+          destruct H6.
+          rewrite <- H6.
+          apply Numerics.le_trans with (-num_nonempty_mapmax (l:=l') f H1 + num_nonempty_mapmax (l:=l') g H1).
+          {
+            apply Numerics.plus_le_compat_r.
+            rewrite Numerics.le_neg.
+            auto.
+          }
+          rewrite Numerics.plus_comm.
+          apply Numerics.le_trans with (num_nonempty_mapmax (l:=l') (fun x : T => Numerics.abs (g x + - f x)) H1).
+          {
+            apply Numerics.le_trans with (Numerics.abs (num_nonempty_mapmax (l:=l') g H1 + - num_nonempty_mapmax (l:=l') f H1 )); auto.
+            apply Numerics.le_abs.
+          }
+          unfold Numerics.le.
+          right.
+          apply num_nonempty_mapmax_ext.
+          intros.
+          rewrite <- Numerics.abs_neg.
+          rewrite Numerics.plus_neg_distr.
+          rewrite Numerics.double_neg.
+          rewrite Numerics.plus_comm.
+          auto.
+        }
+        destruct H6.
+        rewrite <- H6.
+        apply Numerics.leb_false_iff in e.
+        apply Numerics.not_le_lt in e.
+        apply Numerics.le_lt_weak in e.
+        apply Numerics.le_trans with (-num_nonempty_mapmax (l:=l') f H1 + num_nonempty_mapmax (l:=l') g H1 ).
+        { apply Numerics.plus_le_compat_r. apply Numerics.le_neg. auto. }
+        rewrite Numerics.plus_comm.
+        rewrite <- Numerics.abs_neg.
+        rewrite Numerics.plus_neg_distr.
+        rewrite Numerics.double_neg.
+        rewrite -> Numerics.plus_comm with (-f a) (g a).
+        apply Numerics.le_trans with (Numerics.abs (num_nonempty_mapmax (l:=l') g H1 + - num_nonempty_mapmax (l:=l') f H1)).
+          apply Numerics.le_abs.
+        apply Numerics.le_trans with (num_nonempty_mapmax (l:=l') (fun x : T => Numerics.abs (g x + - f x)) H1); auto.
+        assert (num_nonempty_mapmax (l:=l') (fun x : T => Numerics.abs (g x + - f x)) H1 = num_nonempty_mapmax (l:=l') (fun x : T => Numerics.abs (f x + - g x)) H1).
+          apply num_nonempty_mapmax_ext. intros. rewrite <- Numerics.abs_neg. rewrite Numerics.plus_neg_distr. rewrite Numerics.double_neg. rewrite Numerics.plus_comm. auto.
+        rewrite H8.
+        assert (Numerics.abs (g a + - f a) = Numerics.abs (f a + - g a)).
+          rewrite <- Numerics.abs_neg. rewrite Numerics.plus_neg_distr. rewrite Numerics.double_neg. rewrite Numerics.plus_comm. auto.
+        rewrite H9.
+        auto.
+      }
+      destruct H4.
+      rewrite <- H4.
+      remember (fun x : T => Numerics.abs (f x + - g x) ) as f'.
+      assert (Numerics.abs (f a + - g a) = f' a).
+        rewrite Heqf'. auto.
+      rewrite H6.
       apply num_nonempty_mapmax_correct.
       simpl. auto.
     Qed.
