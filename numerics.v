@@ -860,6 +860,28 @@ Module Numerics.
     apply plus_le_compat; rewrite <- abs_neg; apply le_abs.
   Qed.
 
+  Lemma pow_nat_add: forall (n m : nat) (x : Nt), pow_nat x (n + m) = pow_nat x n * pow_nat x m.
+  Proof.
+    intros.
+    induction m.
+      rewrite pow_natO. rewrite mult_id_r. rewrite addn0. auto.
+    rewrite addnS.
+    repeat rewrite pow_nat_rec.
+    rewrite IHm.
+    rewrite mult_assoc.
+    rewrite -> mult_comm with x (pow_nat x n).
+    rewrite mult_assoc.
+    auto.
+  Qed.
+
+  Lemma neg_mult_comm: forall (n m : Nt), -n * m = n * - m.
+  Proof.
+    intros.
+    rewrite <- neg_mult_distr_l.
+    rewrite neg_mult_distr_r.
+    auto.
+  Qed.
+
   End use_Numeric.
  
 End Numerics.

@@ -709,6 +709,38 @@ Proof.
   auto.
 Qed.
 
+Lemma big_sum_geometric_1: forall (r : Nt) (n l : nat), Numerics.mult_id <> r -> 
+      (Numerics.mult_id + - r) * big_sum (List.seq n l) (fun n' => Numerics.pow_nat r n') = Numerics.pow_nat r n + - Numerics.pow_nat r  (n + l).
+Proof.
+  intros.
+  generalize n.
+  induction l.
+    intros. simpl. rewrite addn0. rewrite Numerics.plus_neg_r. apply Numerics.mult_plus_id_r.
+  intros.
+  simpl.
+  rewrite addnS.
+  rewrite Numerics.pow_nat_rec.
+  rewrite Numerics.mult_plus_distr_l.
+  rewrite  IHl.
+  rewrite Numerics.plus_mult_distr_r.
+  rewrite Numerics.mult_id_l.
+  rewrite addSn.
+  repeat rewrite Numerics.pow_nat_rec.
+  repeat rewrite Numerics.neg_mult_distr_r.
+  rewrite Numerics.pow_nat_add.
+  rewrite <- Numerics.neg_mult_comm.
+  rewrite <- Numerics.neg_mult_distr_l with r (Numerics.pow_nat r n0).
+  rewrite -> Numerics.plus_comm with _ (- (r * Numerics.pow_nat r n0)).
+  rewrite Numerics.plus_assoc.
+  rewrite -> Numerics.plus_comm with _ ((r * Numerics.pow_nat r n0)).
+  rewrite Numerics.plus_assoc.
+  rewrite Numerics.plus_neg_r.
+  rewrite Numerics.plus_id_l.
+  auto.
+Qed.
+
+
+
 End use_Numeric2.
 
 (*TODO: All these bigops should really be consolidated at some point...sigh*)
