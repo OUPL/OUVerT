@@ -662,50 +662,38 @@ Proof.
   by rewrite IH Numerics.mult_plus_id_r Numerics.plus_id_l.
 Qed.
 
+Lemma big_sum_func_leq_ub_l: forall (T : eqType) (f1 f2 : T->Nt) (cs : seq T) (n : Nt),
+      (forall t : T,  t \in cs -> 0<= f1 t /\ f2 t <= n) ->   big_sum cs (fun x : T => f1 x * f2 x) <= big_sum cs f1 * n.
+Proof.
+  induction cs.
+  { intros. simpl. rewrite Numerics.mult_plus_id_l. apply Numerics.le_refl. }
+  intros.
+  simpl.
+  rewrite Numerics.plus_mult_distr_r.
+  destruct H0 with a.
+    apply mem_head.
+  apply Numerics.plus_le_compat.
+  {
+    apply Numerics.mult_le_compat_l; auto.
+  }
+  apply IHcs.
+  intros.
+  destruct H0 with t.
+    rewrite in_cons. rewrite H3. apply orb_true_r. 
+  split; auto.
+Qed.  
+
 
 Lemma big_sum_func_leq_max_l: forall (T : eqType) (f1 f2 : T->Nt) (cs : seq T) (H : O <> length cs),
       (forall t : T,  t \in cs -> 0<= f1 t) ->  big_sum cs (fun x : T => f1 x * f2 x) <= big_sum cs f1 * num_nonempty_mapmax f2 H.
 Proof.
   intros.
-  induction cs.
-  { exfalso. apply H0. auto. }
-  destruct cs.
-  { simpl. repeat rewrite Numerics.plus_id_r. apply Numerics.le_refl. }
-  assert (big_sum [:: a, s & cs] (fun x : T => f1 x * f2 x) = 
-      f1 a * f2 a + big_sum (s :: cs) (fun x : T => f1 x * f2 x)). auto.
-  rewrite H2.
-  assert (O <> length (s :: cs)). simpl. auto.
-  apply Numerics.le_trans with (f1 a * f2 a +  big_sum (s :: cs) f1 * num_nonempty_mapmax (l:=s :: cs) f2 H3).
-  {
-    apply Numerics.plus_le_compat_l.
-    apply IHcs.
-    intros.
-    apply H1. 
-    unfold in_mem in *.
-    simpl in *.
-    rewrite H4.
-    apply orbT.
-  }
-  assert (big_sum [:: a, s & cs] f1 = f1 a + big_sum (s :: cs) f1). auto.
-  rewrite H4.
-  rewrite Numerics.plus_mult_distr_r.
-  apply Numerics.plus_le_compat.
-  { 
-    apply Numerics.mult_le_compat_l.
-      apply H1. apply mem_head.
-    apply num_nonempty_mapmax_correct.
-    simpl.
-    auto.
-  }
-  apply Numerics.mult_le_compat_l.
-  { 
-    apply big_sum_ge0. intros. apply H1.
-    unfold in_mem in *.
-    simpl in *.
-    rewrite H5.
-    apply orbT.
-  }
-  apply num_nonempty_mapmax_cons_le.
+  apply big_sum_func_leq_ub_l.
+  intros.
+  split; auto.
+  apply num_nonempty_mapmax_correct.
+  apply In_mem.
+  auto.
 Qed.
 
 Lemma big_sum_le_abs: forall (T : eqType) (f : T -> Nt) (cs : seq T) ,
