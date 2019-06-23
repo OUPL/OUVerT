@@ -739,8 +739,27 @@ Proof.
   auto.
 Qed.
 
-
-
+Lemma big_sum_seq_cons: forall (n l : nat) (f : nat -> Nt), big_sum (List.seq n (S l)) f = f (n+l)%nat + big_sum (List.seq n l) f.
+Proof.
+  intros.
+  assert(List.seq n l.+1 = List.seq n l ++ ([:: n+l])%nat).
+  {
+    simpl.
+    generalize n.    
+    induction l; intros.
+      simpl. rewrite addn0. auto.
+    simpl.
+    rewrite IHl.
+    rewrite addSn.
+    rewrite addnS.    
+    auto.
+  }
+  rewrite H0.
+  rewrite big_sum_cat.
+  simpl.
+  rewrite Numerics.plus_id_r.
+  apply Numerics.plus_comm.
+Qed.
 End use_Numeric2.
 
 (*TODO: All these bigops should really be consolidated at some point...sigh*)

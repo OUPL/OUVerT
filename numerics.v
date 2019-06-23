@@ -882,10 +882,110 @@ Module Numerics.
     auto.
   Qed.
 
+  Lemma abs_ge_0: forall n : Nt, 0 <= abs n.
+  Proof.
+    intros.
+    unfold abs. 
+    destruct (leb 0 n) eqn:e.
+      apply leb_true_iff. auto.
+    apply leb_false_iff in e.
+    apply not_le_lt in e.
+    apply le_neg.
+    rewrite double_neg.
+    rewrite neg_plus_id.
+    apply le_lt_weak.
+    auto.
+  Qed.
+
+  Lemma pow_ge_0: forall (n : Nt) (m : nat), 0 <= n -> 0 <= pow_nat n m .
+  Proof.
+    intros.
+    induction m.
+    { rewrite pow_natO. apply le_lt_weak. apply plus_id_lt_mult_id. }
+    rewrite pow_nat_rec.
+    rewrite <- mult_plus_id_l with 0.
+    apply mult_le_compat; auto; apply le_refl.
+  Qed.
+
+  Lemma pow_0_nat: forall n : nat, pow_nat 0 (S n) = 0.
+  Proof.
+    intros.
+    rewrite pow_nat_rec.
+    apply mult_plus_id_l.
+  Qed.
+
+  Lemma pow_gt_0: forall (n : Nt) (m : nat), 0 < n -> 0 < pow_nat n m .
+  Proof.
+    intros.
+    induction m.
+    { rewrite pow_natO. apply plus_id_lt_mult_id. }
+    rewrite pow_nat_rec.
+    apply mult_lt_0_compat; auto.
+  Qed.
+
+  Lemma pow_le_1: forall (n : Nt) (m : nat), 0 <= n /\ n <= 1 -> pow_nat n m <= 1. 
+  Proof.
+    intros.
+    induction m.
+      rewrite pow_natO. apply le_refl.
+    rewrite pow_nat_rec.
+    destruct H0.
+    rewrite <- mult_id_l.
+    apply mult_le_compat; auto.
+    apply pow_ge_0.
+    auto.
+  Qed.
+
+  Lemma plus_le_l_to_r: forall x y z : Nt, x + y <= z <-> x <= z + - y.
+  Proof.
+    intros.
+    split; intros.
+    {
+      apply plus_le_compat_r with (-y) _ _ in H0.
+      rewrite <- plus_assoc in H0.
+      rewrite plus_neg_r in H0.
+      rewrite plus_id_r in H0.
+      auto.
+    }
+    apply plus_le_compat_r with y _ _ in H0.
+    rewrite <- plus_assoc in H0.
+    rewrite plus_neg_l in H0.
+    rewrite plus_id_r in H0.
+    auto.
+  Qed.
+
+  Lemma plus_le_r_to_l: forall x y z : Nt, x <= z + y <-> x + - y <= z.
+  Proof.
+    intros.
+    split; intros.
+    { rewrite plus_le_l_to_r. rewrite double_neg. auto. }
+    apply plus_le_l_to_r in H0.
+    rewrite double_neg in H0.
+    auto.
+  Qed.
+  
+
+  Lemma abs_triangle: forall (x y z : Nt), abs ( x + - z ) <= abs (x + - y) + abs (y + - z).
+  Proof.
+    intros.
+    rewrite <- plus_id_r with (x + -z).
+    rewrite <- plus_neg_l with y.
+    repeat rewrite <- plus_assoc.
+    rewrite -> plus_assoc with (-z) (-y) y.
+    rewrite -> plus_comm with (-z) _.
+    rewrite <- plus_assoc.
+    rewrite -> plus_comm with (-z) _.
+    rewrite plus_assoc.
+    apply abs_plus_le.
+  Qed.
+
+  
+    
+   
+
   End use_Numeric.
  
 End Numerics.
-
 
 
 
@@ -978,7 +1078,8 @@ Instance Numeric_R: Numerics.Numeric R :=
   rewrite H.
   assert (R1 = IZR 1)%Z; auto.
   rewrite H0.
-  apply Rlt_zero_1.
+  SearchAbout 0.
+  apply Rlt_0_1.
 }
   auto.
 {
