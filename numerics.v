@@ -68,6 +68,12 @@ Module Numerics.
         pow_natO: forall t, pow_nat t O = mult_id;
         pow_nat_rec: forall t n, pow_nat t (S n) = t * pow_nat t n;
 
+        to_R : T -> R;
+        to_R_plus: forall t1 t2 : T, Rplus (to_R t1) (to_R t2) = to_R (t1 + t2);
+        to_R_mult: forall t1 t2 : T, Rmult (to_R t1) (to_R t2) = to_R (t1 * t2);
+        to_R_lt: forall t1 t2 : T, t1 < t2 <-> Rlt (to_R t1) (to_R t2);
+        to_R_neg: forall t : T, Ropp (to_R t) = to_R (- t);
+        to_R_inj: forall n m : T, to_R n = to_R m -> n = m;
       }.
       
 
@@ -92,6 +98,7 @@ Module Numerics.
       split; auto.
     Qed.
 
+
     Lemma lt_irrefl: forall n : Nt, ~ n < n.
     Proof.
       unfold not.
@@ -100,6 +107,7 @@ Module Numerics.
       { apply lt_asym in H0. auto. }
       apply H1. auto.
     Qed.
+
 
     Lemma plus_assoc_reverse : forall r1 r2 r3, r1 + r2 + r3 = r1 + (r2 + r3).
     Proof. intros. rewrite plus_assoc. auto. Qed.
@@ -363,10 +371,12 @@ Module Numerics.
       apply H0.
     Qed.
 
+    Hint Resolve le_lt_weak.
+
     Lemma lt_not_le: forall n m : Nt, (n < m) -> ~ (m <= n).
     Proof.
       unfold not.
-      intros.
+      intros. 
       apply le_not_lt in H0; auto.
     Qed.
 
@@ -376,6 +386,8 @@ Module Numerics.
       unfold le.
       auto.
     Qed.
+
+    Hint Immediate le_refl.
     
     Lemma ltb_true_iff: forall x y : Nt, ltb x y = true <-> x < y.
     Proof.
@@ -386,6 +398,7 @@ Module Numerics.
       apply lt_not_le in H0; auto.
     Qed.
 
+    Hint Resolve ltb_true_iff.
 
     Lemma ltb_false_iff: forall x y : Nt, ltb x y = false <-> ~ x < y.
     Proof.
@@ -397,6 +410,8 @@ Module Numerics.
       exfalso; apply H0; auto.
     Qed.
 
+    Hint Resolve ltb_false_iff.
+
     Lemma leb_true_iff: forall x y : Nt, leb x y = true <-> x <= y.
     Proof.
       intros.
@@ -406,6 +421,7 @@ Module Numerics.
       apply lt_not_le in H0; auto.
     Qed.
 
+    Hint Resolve leb_true_iff.
 
     Lemma leb_false_iff: forall x y : Nt, leb x y = false <-> ~ x <= y.
     Proof.
@@ -417,18 +433,16 @@ Module Numerics.
       exfalso; apply H0; auto.
     Qed.
 
+    Hint Resolve leb_false_iff.
+
     Lemma not_lt_le: forall n m : Nt, ~ (n < m) -> m <= n.
     Proof.
       intros.
-      destruct le_lt_dec with n m.
-      {
-        unfold le in l.
-        destruct l; auto.
-        { exfalso; auto. }
-        rewrite H1; apply le_refl.
-      }
-      apply le_lt_weak.
-      auto.
+      destruct le_lt_dec with n m; auto.
+      unfold le in l.
+      destruct l; auto.
+      { exfalso; auto. }
+      rewrite H1. auto.
     Qed.
       
     Lemma not_le_lt: forall n m : Nt, ~ (n <= m) -> m < n.
@@ -440,16 +454,17 @@ Module Numerics.
       destruct l; auto.
       rewrite H1 in H0.
       exfalso.
-      apply H0.
-      apply le_refl.
+      auto.
     Qed.
 
     Lemma leb_refl: forall n : Nt, leb n n = true.
     Proof.
-      intros.
+      intros. auto.
       apply leb_true_iff.
       apply le_refl.
     Qed.
+
+    Hint Resolve leb_refl.
 
     Lemma ltb_irrefl: forall n : Nt, ltb n n = false.
     Proof.
@@ -457,6 +472,13 @@ Module Numerics.
       apply ltb_false_iff.
       apply lt_irrefl.
     Qed.
+
+    Hint Resolve ltb_irrefl.
+    Hint Resolve plus_le_compat_l.
+    Hint Resolve plus_le_compat_r.
+    Hint Resolve plus_lt_compat_l.
+    Hint Resolve plus_le_compat_r.
+
 
     Lemma plus_lt_compat: forall t1 t2 t3 t4, t1 < t2 -> t3 < t4 -> (t1 + t3) < (t2 + t4).
     Proof.
@@ -477,7 +499,6 @@ Module Numerics.
       rewrite H1.
       rewrite plus_comm.
       rewrite -> plus_comm with t2 t4.
-      apply plus_lt_compat_l.
       auto.
     Qed.
 
@@ -515,8 +536,7 @@ Module Numerics.
       apply plus_lt_le_compat.
       2 : { apply le_refl. }
       apply plus_lt_le_compat; auto.
-    Qed.
-    
+    Qed.    
 
     Lemma le_not_eq_lt: forall x y : Nt, x <= y -> x <> y -> x < y.
     Proof.
@@ -535,13 +555,20 @@ Module Numerics.
       apply le_not_eq_lt; auto.
     Qed.
 
+    Hint Resolve mult_plus_id_l.
+    Hint Resolve mult_plus_id_r.
+    Hint Resolve mult_id_l.
+    Hint Resolve mult_id_r.
+    Hint Resolve plus_id_l.
+    Hint Resolve plus_id_r.
+
     
     Lemma mult_le_compat_l: forall x y z : Nt, plus_id <= x -> y <= z -> x * y <= x * z.
     Proof.
       intros.
       unfold le in *.
       destruct H0.
-      2: { right. rewrite <- H0. repeat rewrite mult_plus_id_l. auto. }
+      2: {right. rewrite <- H0. repeat rewrite mult_plus_id_l. auto. }
       destruct H1.
       { left. apply mult_lt_compat_l; auto. }
       right.
@@ -599,9 +626,12 @@ Module Numerics.
       apply neg_pos_neg in H0. rewrite double_neg in H0. auto.
     Qed.
 
+    Hint Resolve plus_mult_distr_r.
+
+
     Lemma n_plus_n_eq_2n: forall n : Nt, n + n = (1 + 1) * n.
     Proof.
-      intros.
+      intros. auto 20.
       rewrite plus_mult_distr_r.
       rewrite mult_id_l.
       auto.
@@ -679,7 +709,6 @@ Module Numerics.
         apply lt_irrefl with 0.
         apply lt_le_trans with r1; auto.
         apply le_trans with r2; auto.
-        unfold le; auto.
       }
       rewrite <- H0 in H2.
       exfalso.
@@ -979,9 +1008,186 @@ Module Numerics.
     apply abs_plus_le.
   Qed.
 
-  
-    
-   
+  Lemma plus_id_unique: forall n m : Nt, n + m = n -> m = 0.
+  Proof.
+    intros.
+    apply plus_elim_l with n.
+    rewrite plus_id_r.
+    auto.
+  Qed.
+
+  Lemma to_R_plus_id: to_R 0 = IZR Z0.
+  Proof.
+    rewrite <- Rplus_opp_r with (to_R 0).
+    rewrite to_R_neg.
+    rewrite to_R_plus.
+    rewrite plus_id_l.
+    rewrite neg_plus_id.
+    auto.
+  Qed.
+
+  Lemma to_R_neq: forall n m : Nt, n <> m <-> to_R n <> to_R m.
+  Proof.
+    intros.
+    split; unfold not; intros.
+      apply H0. apply to_R_inj. auto.
+    apply H0.
+    rewrite H1.
+    auto.
+  Qed.    
+      
+
+  Lemma plus_id_neq_mult_id: 0 <> 1.
+  Proof.
+    unfold not.
+    intros.
+    apply lt_irrefl with 1.
+    assert (0 < 1).
+      apply plus_id_lt_mult_id.
+    rewrite H0 in H1.
+    auto.
+  Qed.
+
+
+  Lemma mult_id_neq_plus_id: 1 <> 0.
+  Proof.
+    unfold not.
+    intros.
+    apply plus_id_neq_mult_id.
+    rewrite H0.
+    auto.
+  Qed.
+
+  Lemma to_R_mult_id: to_R 1 = IZR (Zpos xH).
+  Proof.
+    assert( forall x y : R, Rmult x y = x -> x = IZR Z0 \/ y = IZR (Zpos xH)).
+    {
+      intros.
+      destruct (Req_dec x 0).
+        rewrite H1. auto.
+      right.
+      assert ( Rmult (Rinv x) (Rmult x y) = Rmult (Rinv x)  x).
+      { rewrite H0. auto. }
+      rewrite Rinv_l in H2; auto.
+      rewrite <- Rmult_assoc in H2.
+      rewrite Rinv_l in H2; auto.
+      rewrite Rmult_1_l in H2.
+      auto.
+    }
+    destruct H0 with (to_R 1) (to_R 1); auto.
+    { rewrite to_R_mult. rewrite mult_id_l. auto. }
+    rewrite <- to_R_plus_id in H1.
+    apply to_R_inj in H1.
+    exfalso.
+    apply mult_id_neq_plus_id.
+    auto.
+  Qed.
+
+  Lemma to_R_of_nat: forall n : nat, to_R (of_nat n) = INR n.
+  Proof.
+    intros.
+    induction n.
+      rewrite of_nat_plus_id. simpl. apply to_R_plus_id.
+    rewrite of_nat_succ_l.
+    rewrite <- to_R_plus.
+    rewrite IHn.
+    rewrite S_INR.
+    rewrite to_R_mult_id.
+    apply Rplus_comm.
+  Qed.
+
+  Lemma to_R_inv_r: forall (n m : Nt), m <> 0 -> Rmult (to_R (n * m)) (Rinv (to_R m)) = to_R n.
+  Proof.
+    intros.
+    rewrite <- to_R_mult.
+    rewrite Rmult_assoc.
+    rewrite Rinv_r.
+    2: { rewrite <- to_R_plus_id. rewrite <- to_R_neq. auto. }
+    rewrite <- Rmult_1_r.
+    auto.
+  Qed.
+
+  Lemma to_R_div_eq_iff_r: forall (n m p : Nt), m <> 0 -> 
+    n * m = p <-> to_R n = Rdiv (to_R p) (to_R m).
+  Proof.
+    intros.
+    split; intros.
+    {
+      rewrite <- H1.
+      unfold Rdiv.
+      rewrite to_R_inv_r; auto.
+    }
+    apply to_R_inj.
+    rewrite <- to_R_mult.
+    rewrite <- Rmult_1_r with (to_R p).
+    rewrite <- Rinv_l with (to_R m); auto.
+    2: { rewrite <- to_R_plus_id. apply to_R_neq. auto. }
+    rewrite <- Rmult_assoc.
+    unfold Rdiv in H1.
+    rewrite <- H1.
+    auto.
+  Qed.
+
+  Lemma to_R_div_lt_iff_r: forall (n m p : Nt), 0 < m -> 
+    n * m < p <-> Rlt (to_R n) (Rdiv (to_R p) (to_R m)).
+  Proof.
+    intros.
+    assert (to_R m <> IZR 0).
+    { 
+      rewrite <- to_R_plus_id. 
+      rewrite <- to_R_neq.
+      apply lt_not_eq in H0.     
+      auto.
+    } 
+    split; intros.
+    {
+      unfold Rdiv.
+      rewrite <- Rmult_1_r with (to_R n).
+      rewrite <- Rinv_r with (to_R m); auto.
+      rewrite <- Rmult_assoc.
+      apply Rmult_lt_compat_r.
+      {
+        apply Rinv_0_lt_compat.
+        rewrite <- to_R_plus_id.
+        apply to_R_lt.
+        auto.
+      } 
+      rewrite to_R_mult.
+      apply to_R_lt.
+      auto.
+    }
+    unfold Rdiv in H2.
+    rewrite to_R_lt.
+    rewrite <- to_R_mult.
+    rewrite <- Rmult_1_r with (to_R p).
+    rewrite <- Rinv_l with (to_R m); auto.
+    rewrite <- Rmult_assoc.
+    apply Rmult_lt_compat_r; auto.
+    rewrite <- to_R_plus_id.
+    apply to_R_lt.
+    auto.
+  Qed.
+
+  Lemma to_R_div_le_iff_r: forall (n m p : Nt), 0 < m ->
+    n * m <= p <-> Rle (to_R n) (Rdiv (to_R p) (to_R m)).
+  Proof.
+    intros.
+    unfold Rle.
+    unfold le.
+    split; intros.
+    {
+      destruct H1.
+        apply to_R_div_lt_iff_r in H1; auto.
+      apply to_R_div_eq_iff_r in H1; auto.
+      apply lt_not_eq in H0.
+      auto.
+    }
+    destruct H1.
+      apply to_R_div_lt_iff_r in H1; auto.
+    apply to_R_div_eq_iff_r in H1; auto.
+    apply lt_not_eq in H0.
+    auto.
+  Qed.
 
   End use_Numeric.
  
@@ -996,6 +1202,8 @@ Infix "<" := Numerics.lt : Numeric_scope.
 Infix "<=" := Numerics.le : Numeric_scope.
 Notation "1" := Numerics.mult_id : Numeric_scope.
 Notation "0" := Numerics.plus_id : Numeric_scope.
+
+
 
 (**Req_EM_T**)
 Instance Numeric_D: Numerics.Numeric (DRed.t) :=
@@ -1032,8 +1240,20 @@ Instance Numeric_D: Numerics.Numeric (DRed.t) :=
     DRed.mult_lt_compat_l
     DRed.natPowO
     DRed.natPowRec
+  
+    (fun x => Q2R (D_to_Q x))
+    _
+    _
+    _
+    _
+    _
 .
   intros. rewrite DRed.addC. apply DRed.addOppL.
+  intros;rewrite <- Q2R_plus;apply Qeq_eqR; rewrite DRed.addP; apply Qeq_refl.
+  intros; rewrite <- Q2R_mult; apply Qeq_eqR; rewrite DRed.multP; apply Qeq_refl.
+  intros. split;intros. apply Qlt_Rlt. auto. apply Rlt_Qlt. auto.
+  intros. rewrite <- Q2R_opp. apply Qeq_eqR. rewrite DRed.oppP. apply Qeq_refl.
+  intros; apply eqR_Qeq in H; apply DRed.Dred_eq; auto.
 Defined.
 
 
@@ -1072,13 +1292,19 @@ Instance Numeric_R: Numerics.Numeric R :=
     _
     _
     _
-. 
+
+    (fun x => x)
+    _
+    _
+    _
+    _
+    _
+.
 {
   assert (R0 = IZR 0)%Z; auto.
   rewrite H.
   assert (R1 = IZR 1)%Z; auto.
   rewrite H0.
-  SearchAbout 0.
   apply Rlt_0_1.
 }
   auto.
@@ -1111,12 +1337,18 @@ Instance Numeric_R: Numerics.Numeric R :=
 }
   auto. 
   auto.
+  auto.
+  auto.
+  split; auto.
+  auto.
+  auto.
 Defined.
 
 
 (**Undelimit Scope R_scope.
 Local Open Scope Z_scope.**)
 Delimit Scope Z_scope with Z.
+
 
 Instance Numeric_z : Numerics.Numeric Z :=
   @Numerics.mkNumeric
@@ -1147,6 +1379,13 @@ Instance Numeric_z : Numerics.Numeric Z :=
     _   
     Zlt_asym
     Z.lt_trans
+    _
+    _
+    _
+    _
+
+    IZR
+    _
     _
     _
     _
@@ -1182,6 +1421,11 @@ Instance Numeric_z : Numerics.Numeric Z :=
 }
   auto.
   auto.
+  intros. rewrite <- plus_IZR. auto.
+  intros. rewrite <- mult_IZR. auto.
+  intros. split. apply IZR_lt. apply lt_IZR.
+  intros. rewrite <- opp_IZR. auto.
+  intros. apply eq_IZR; auto.
 Defined.
 
 

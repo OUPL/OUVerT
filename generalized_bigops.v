@@ -685,13 +685,13 @@ Qed.
 
 
 Lemma big_sum_func_leq_max_l: forall (T : eqType) (f1 f2 : T->Nt) (cs : seq T) (H : O <> length cs),
-      (forall t : T,  t \in cs -> 0<= f1 t) ->  big_sum cs (fun x : T => f1 x * f2 x) <= big_sum cs f1 * num_nonempty_mapmax f2 H.
+      (forall t : T,  t \in cs -> 0<= f1 t) ->  big_sum cs (fun x : T => f1 x * f2 x) <= big_sum cs f1 * num_Extrema.mapmax_ne f2 H.
 Proof.
   intros.
   apply big_sum_func_leq_ub_l.
   intros.
   split; auto.
-  apply num_nonempty_mapmax_correct.
+  apply num_Extrema.mapmax_ne_correct.
   apply In_mem.
   auto.
 Qed.
@@ -709,8 +709,8 @@ Proof.
   auto.
 Qed.
 
-Lemma big_sum_geometric_1: forall (r : Nt) (n l : nat), Numerics.mult_id <> r -> 
-      (Numerics.mult_id + - r) * big_sum (List.seq n l) (fun n' => Numerics.pow_nat r n') = Numerics.pow_nat r n + - Numerics.pow_nat r  (n + l).
+Lemma big_sum_geometric_1: forall (r : Nt) (n l : nat), 0 <= r -> r < 1  -> 
+      (1 + - r) * big_sum (List.seq n l) (fun n' => Numerics.pow_nat r n') = Numerics.pow_nat r n + - Numerics.pow_nat r  (n + l).
 Proof.
   intros.
   generalize n.
@@ -739,6 +739,10 @@ Proof.
   auto.
 Qed.
 
+(**Lemma big_sum_geometric_1_ub: forall (r : Nt) (n l : nat), Numerics.mult_id <> r -> 
+      (Numerics.mult_id + - r) * big_sum (List.seq n l) (fun n' => Numerics.pow_nat r n') = Numerics.pow_nat r n + - Numerics.pow_nat r  (n + l).**)
+
+
 Lemma big_sum_seq_cons: forall (n l : nat) (f : nat -> Nt), big_sum (List.seq n (S l)) f = f (n+l)%nat + big_sum (List.seq n l) f.
 Proof.
   intros.
@@ -760,6 +764,7 @@ Proof.
   rewrite Numerics.plus_id_r.
   apply Numerics.plus_comm.
 Qed.
+
 End use_Numeric2.
 
 (*TODO: All these bigops should really be consolidated at some point...sigh*)
