@@ -1,6 +1,8 @@
 Set Implicit Arguments.
 Unset Strict Implicit.
 
+Require Import Reals.
+
 Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
@@ -275,12 +277,16 @@ Local Open Scope Numeric_scope.
 Delimit Scope Numerics_scope with Num.
 
 Module num_Extrema.
+
   Section use_Numerics.
+
   Context (Nt:Type) `{Numeric Nt}.
-  
+
+    
+
     Fixpoint max (l : list Nt) : option Nt :=
       match l with
-      | nil => None
+      | List.nil => None
       | x :: l' => 
         match max l' with
         | None => Some x
@@ -298,7 +304,7 @@ Module num_Extrema.
 
     Fixpoint argmax {T : Type} (l : list T) (f : T -> Nt) : option T :=
     match l with
-    | nil => None
+    | List.nil => None
     | x :: l' =>
       (match argmax l' f with
       | None => Some x
@@ -326,7 +332,7 @@ Module num_Extrema.
 
     Fixpoint mapmax {T : Type} (l : list T) (f : T->Nt) : option Nt :=
     match l with
-    | nil => None
+    | List.nil => None
     | x :: l' => match mapmax l' f with
         | None => Some (f x)
         | Some x' => Some (if leb (f x) x' then x' else (f x))
@@ -1124,7 +1130,7 @@ Module num_Extrema.
     Qed.
 
         
-    Lemma num_nonempty_argmax_in: forall (T : Type) (l : list T) (f : T->Nt) (H0 : O <> length l),
+    Lemma argmax_ne_in: forall (T : Type) (l : list T) (f : T->Nt) (H0 : O <> length l),
         List.In (argmax_ne f H0) l.
     Proof.
       intros.
@@ -1149,7 +1155,7 @@ Module num_Extrema.
       rewrite argmax_ne_mapmax_ne.
       rewrite Numerics.double_neg.
       apply mapmax_ne_correct.
-      apply num_nonempty_argmax_in.
+      apply argmax_ne_in.
     Qed.
 
     Lemma mapmax_ne_le_ext': forall (T : Type) (l : list T) (f g: T->Nt) (H0 : O <> length l),
@@ -1160,8 +1166,57 @@ Module num_Extrema.
       rewrite argmax_ne_mapmax_ne.
       rewrite argmax_ne_mapmax_ne.
       apply H1.
-      apply num_nonempty_argmax_in.
+      apply argmax_ne_in.
     Qed.
+
+
+    Lemma mapmax_ne_increasing_max_ne: forall (l : list Nt) (f : Nt->Nt) (H0 : O <> length l), 
+      (forall x : Nt, List.In x l -> x <= f x) ->
+      f (max_ne H0) <= mapmax_ne f H0.
+    Proof.
+      intros.
+      induction l.
+      { exfalso. apply H0. auto. }
+      destruct (Nat.eqb O (length l)) eqn:e.
+      { 
+        apply EqNat.beq_nat_true in e. symmetry in e. rewrite -> List.length_zero_iff_nil in e.
+        simpl. rewrite e. simpl. intros. apply le_refl.
+      }
+      intros.
+      apply EqNat.beq_nat_false in e.      
+      destruct max_ne_cons with  l a e H0.
+      { 
+        destruct H2.
+        rewrite <- H2.
+        destruct mapmax_ne_cons with  Nt l f a e H0.
+        {
+          destruct H4.
+          rewrite <- H4.
+          apply IHl; auto.
+          intros.
+          apply H1.
+          apply List.in_cons.
+          auto.
+        }
+        destruct H4.
+        rewrite <- H4.
+        apply le_trans with (mapmax_ne (l:=l) f e); auto.
+        apply IHl. intros. apply H1.  apply List.in_cons. auto.
+      }
+      destruct H2.
+      rewrite <- H2.
+      destruct mapmax_ne_cons with  Nt l f a e H0.
+      {
+        destruct H4.
+        rewrite <- H4.
+        auto.
+      }
+      destruct H4.
+      rewrite <- H4.
+      apply le_refl.
+    Qed.
+
+
 
 
     Lemma mapmax_ne_abs_dist_le: forall (T : Type) (l : list T) (f g : T->Nt) (H0 : O <> length l),
@@ -1361,6 +1416,236 @@ Module num_Extrema.
       simpl. auto.
     Qed.
 
-   
-End use_Numerics.
+    Lemma mapmax_ne_le_const: forall (T : Type) (l : list T) (f : T -> Nt) (H0 : O <> length l) (c : Nt), 
+      (forall n : T, List.In n l -> f n <= c) <-> (mapmax_ne f H0 <= c).
+    Proof.
+      intros.
+      split; intros.
+      {
+        rewrite <- mapmax_ne_const with T l c H0.
+        apply mapmax_ne_le_ext.
+        intros.
+        apply H1.
+        auto.
+      }
+      apply le_trans with (mapmax_ne (l:=l) f H0); auto.
+      apply mapmax_ne_correct.
+      auto.
+    Qed.
+
+    Lemma mapmax_ne_gt_const: forall (T : Type) (l : list T) (f : T -> Nt) (H0 : O <> length l) (c : Nt), 
+      (exists n : T, List.In n l /\ c < f n) <-> (c < mapmax_ne f H0).
+    Proof.
+      intros.
+      split; intros.
+      {
+        destruct H1.
+        destruct H1.
+        apply lt_le_trans with (f x); auto.
+        apply mapmax_ne_correct.
+        auto.
+      }
+      exists (argmax_ne f H0).
+      rewrite <- argmax_ne_mapmax_ne. 
+      split; auto.
+        apply argmax_ne_in.
+    Qed.
+
+    Lemma mapmax_ne_ge_const: forall (T : Type) (l : list T) (f : T -> Nt) (H0 : O <> length l) (c : Nt), 
+      (exists n : T, List.In n l /\ c <= f n) <-> (c <= mapmax_ne f H0).
+    Proof.
+      intros.
+      split; intros.
+      {
+        destruct H1.
+        destruct H1.
+        apply le_trans with (f x); auto.
+        apply mapmax_ne_correct.
+        auto.
+      }
+      exists (argmax_ne f H0).
+      rewrite <- argmax_ne_mapmax_ne. 
+      split; auto.
+        apply argmax_ne_in.
+    Qed.
+
+    Lemma mapmax_ne_lt_ext: forall (T : Type) (l : list T) (f g : T->Nt) (H0 : O <> length l), 
+      (forall t : T, List.In t l -> f t < g t) -> mapmax_ne f H0 < mapmax_ne g H0.
+    Proof.
+      intros.
+      induction l.
+        exfalso. apply H0. auto.
+      destruct l.
+      { simpl. apply H1. apply List.in_eq. }
+      assert(O <> length (t :: l)).
+        simpl. auto.
+      destruct mapmax_ne_cons with T (t :: l) f a H2 H0; destruct H3; rewrite <- H3.
+      {
+        destruct mapmax_ne_cons with T (t :: l) g a H2 H0; destruct H5; rewrite <- H5.
+        {
+          apply IHl.
+          intros.
+          apply H1. apply List.in_cons. auto.
+        }
+        apply lt_le_trans with (mapmax_ne (l:=t :: l) g H2); auto.
+        apply IHl. intros. apply H1. apply List.in_cons. auto.
+      }
+      destruct mapmax_ne_cons with T (t :: l) g a H2 H0; destruct H5; rewrite <- H5.
+      {
+        apply lt_le_trans with (g a); auto.
+        apply H1.
+        apply List.in_eq.
+      }
+      apply H1.
+      apply List.in_eq.
+    Qed.
+
+   Lemma mapmax_ne_lt_const: forall (T : Type) (l : list T) (f : T->Nt)  (c : Nt) (H0 : O <> length l), 
+      (forall t : T, List.In t l -> f t < c) <-> mapmax_ne f H0 < c .
+   Proof.
+    intros.
+    split; intros.
+    {
+      rewrite <- mapmax_ne_const with T l c H0.
+      apply mapmax_ne_lt_ext.
+      intros.
+      apply H1; auto.
+    }
+    apply le_lt_trans with (mapmax_ne (l:=l) f H0).
+      apply mapmax_ne_correct. auto.
+    auto.
+  Qed.
+
+  Lemma mapmax_ne_eq_const: forall (T : Type) (l : list T) (f : T->Nt) (H0 : O <> length l) (c : Nt),
+      ((forall x : T, List.In x l -> f x <= c) /\ (exists x : T, List.In x l /\ f x = c)) <-> mapmax_ne f H0 = c.
+  Proof.
+    intros.
+    split; intros.
+    {
+      destruct H1.
+      destruct H2.
+      destruct H2.
+      apply le_both_eq.
+        apply mapmax_ne_le_const. auto.
+      apply mapmax_ne_ge_const. exists x. split; auto.
+      rewrite H3. apply le_refl. 
+    }
+    split.
+    {
+      intros.
+      rewrite <- H1.
+      apply mapmax_ne_correct.
+      auto.
+    }
+    exists (argmax_ne f H0).
+    split.
+      apply argmax_ne_in.
+    rewrite <- argmax_ne_mapmax_ne.
+    auto.
+  Qed.
+
+  Lemma mapmax_ne_dist_triangle: forall (T : Type) (f1 f2 f3 : T -> Nt) (l : list T) (H0 : O <> length l),
+    mapmax_ne (fun x => abs (f1 x + - f2 x)) H0 <= 
+    mapmax_ne (fun x => abs (f1 x + - f3 x)) H0 + mapmax_ne (fun x => abs (f3 x + - f2 x)) H0.
+  Proof.
+    intros.
+    apply le_trans with (mapmax_ne (fun x : T => abs (f1 x + - f3 x) + abs (f3 x + - f2 x)) H0).
+    {
+      apply mapmax_ne_le_ext.
+      intros.
+      apply abs_triangle.
+    }
+    apply mapmax_ne_le_const.
+    intros.
+    apply plus_le_compat;
+      apply mapmax_ne_ge_const; exists n; split; auto; apply le_refl.
+  Qed.
+
+
+  Lemma mapmax_ne_eq_all: forall (T : Type) (f : T->Nt) (l : list T) (H0 : O <> length l) (c : Nt),
+      (forall t : T, List.In t l -> f t = c) -> mapmax_ne f H0 = c.
+  Proof.
+    intros.
+    apply mapmax_ne_eq_const.
+    split; intros.
+      rewrite H1; auto. apply le_refl.
+    exists (argmax_ne f H0).
+    split.
+      apply argmax_ne_in.
+    apply H1.
+    apply argmax_ne_in.
+  Qed.
+    
+
+  End use_Numerics.
+  Section use_Numerics2.
+
+  Context (Nt:Type) `{Numeric Nt}.
+
+  
+    
+  Lemma to_R_argmax: forall (T : Type) (l : list T) (f : T->Nt),
+     argmax l f = argmax l (fun x => to_R (f x)).
+  Proof.
+    intros.
+    induction l; auto.
+    simpl.
+    rewrite <- IHl.
+    destruct (argmax l f); auto.
+    rewrite <- to_R_leb.
+    auto.
+  Qed.
+
+  Lemma to_R_mapmax: forall (T : Type) (l : list T) (f : T->Nt),
+     O <> length l -> exists x : Nt, 
+        Some x = mapmax l f /\ Some (to_R x) = mapmax l (fun x => to_R (f x)).
+  Proof.
+    intros.
+    induction l.
+    SearchAbout mapmax.
+    { exfalso. apply H0. auto. }
+    destruct l.
+      simpl. eauto.
+    destruct IHl.
+    { simpl. auto. }
+    destruct H1.
+    simpl in *.    
+    rewrite <- H1.
+    rewrite <- H2.
+    exists (if leb (f a) x then x else f a).
+    split; auto.
+    rewrite <- to_R_leb.
+    destruct (leb (f a) x); auto.
+  Qed.
+
+ 
+  Lemma to_R_argmax_ne: forall (T : Type) (l : list T) (f : T-> Nt) (H0 : O <> length l),
+    argmax_ne f H0 = argmax_ne (fun x => to_R (f x)) H0.
+  Proof.
+    intros.
+    assert( argmax l f= Some (argmax_ne f H0)).
+      apply argmax_ne_ok.
+    assert( argmax l (fun x => to_R (f x)) = Some (argmax_ne (fun x => to_R (f x)) H0)).
+      apply argmax_ne_ok.
+    destruct to_R_argmax with T l f; auto.
+    rewrite H1 in H2.
+    inversion H2.
+    auto.
+  Qed.
+    
+  Lemma to_R_mapmax_ne: forall (T : Type) (l : list T) (f : T-> Nt) (H0 : O <> length l),
+    to_R (mapmax_ne f H0) = mapmax_ne (fun x => to_R (f x)) H0.
+  Proof.
+    intros.
+    rewrite argmax_ne_mapmax_ne.
+    rewrite to_R_argmax_ne.
+    rewrite argmax_ne_mapmax_ne.
+    auto.
+  Qed.
+
+   End use_Numerics2.
 End num_Extrema.
+
+
+
+

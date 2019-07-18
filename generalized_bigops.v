@@ -20,7 +20,6 @@ Delimit Scope Numeric_scope with Num.
 Section use_Numeric.
   Context (Nt:Type) `{Numerics.Numeric Nt}.
 
-
   Fixpoint big_sum (T : Type) (cs : seq T) (f : T -> Nt) : Nt :=
     if cs is [:: c & cs'] then ((f c) + (big_sum cs' f))%Num
     else Numerics.plus_id.
@@ -368,7 +367,6 @@ Proof.
   rewrite IHcs.
   auto.
 Qed.
-
 
 
 End use_Numeric.
@@ -739,8 +737,8 @@ Proof.
   auto.
 Qed.
 
-(**Lemma big_sum_geometric_1_ub: forall (r : Nt) (n l : nat), Numerics.mult_id <> r -> 
-      (Numerics.mult_id + - r) * big_sum (List.seq n l) (fun n' => Numerics.pow_nat r n') = Numerics.pow_nat r n + - Numerics.pow_nat r  (n + l).**)
+(**Lemma big_sum_geometric_1_ub: forall (r : Nt) (n l: nat), 0 <= r -> r < 1 -> 
+      (1 + - r) * big_sum (List.seq n l) (fun n' => Numerics.pow_nat r n') = Numerics.pow_nat r n + - Numerics.pow_nat r  (n + l).**)
 
 
 Lemma big_sum_seq_cons: forall (n l : nat) (f : nat -> Nt), big_sum (List.seq n (S l)) f = f (n+l)%nat + big_sum (List.seq n l) f.
@@ -764,6 +762,25 @@ Proof.
   rewrite Numerics.plus_id_r.
   apply Numerics.plus_comm.
 Qed.
+
+Lemma to_R_big_sum T (cs : seq T) (f : T -> Nt): (big_sum cs (fun x => Numerics.to_R (f x))) = Numerics.to_R (big_sum cs f).
+Proof.
+  induction cs; simpl.
+    rewrite Numerics.to_R_plus_id. auto.
+  rewrite IHcs.
+  rewrite Numerics.to_R_plus.
+  auto.
+Qed.
+
+Lemma to_R_big_product T (cs : seq T) (f : T -> Nt): (big_product cs (fun x => Numerics.to_R (f x))) = Numerics.to_R (big_product cs f).
+Proof.
+  induction cs; simpl.
+    rewrite Numerics.to_R_mult_id. auto.
+  rewrite IHcs.
+  rewrite Numerics.to_R_mult.
+  auto.
+Qed.
+
 
 End use_Numeric2.
 
