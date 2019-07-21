@@ -104,6 +104,22 @@ Class Enum_ok A `{Enumerable A} : Type :=
     }.
 
 Module Enum_table.
+
+  Definition nonempty_head (T : Type) (l : list T) (H : O <> length l) : T.
+    destruct l eqn:e.
+      exfalso. apply H. auto.
+    exact t.
+  Defined.
+
+  Program Fixpoint zip (T1 T2 : Type) (l1 : list T1) (l2 : list T2) (H : length l1 = length l2) : list (T1 * T2):=
+  match l1,l2 with
+  | x1 :: l1',x2 :: l2' => (x1,x2) :: @zip T1 T2 l1' l2' _
+  | nil,nil => @nil (T1 * T2)
+  | x1 :: l1', nil => _
+  | nil, x2 :: l2' => _
+  end.
+    
+
   Section enum_table.
     Variable T1 T2 : Type.
     Variable T1_enum : Enumerable T1.
@@ -117,11 +133,12 @@ Module Enum_table.
         t_list_length : length T1_enum = length t_list
       }.
 
-    Definition table_head (t : table) : T2.
-      destruct (t_list t)  eqn:e.
-        exfalso. apply T1_enum_ne. rewrite (t_list_length t). rewrite e. auto.
-      exact t0.
-    Defined.
+
+
+    Program Definition table_head (t : table) : T2 := @nonempty_head T2 (t_list t) _.
+    Next Obligation. rewrite <- (t_list_length t). auto. Defined.
+
+    Definition enum_head : T1 := @nonempty_head T1 T1_enum T1_enum_ne.
 
     Definition T1_eqb (t1 t2 : T1) : bool :=
       T1_eq_dec t1 t2.
@@ -134,6 +151,8 @@ Module Enum_table.
     Next Obligation.
       rewrite map_length. auto.
     Defined.
+
+    Definition zip_table (t : table) := @zip T1 T2 T1_enum  (t_list t) (t_list_length t).
 
   End enum_table.
 End Enum_table.
