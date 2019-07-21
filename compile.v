@@ -115,6 +115,104 @@ Instance prodEnumerableInstance (aT bT : Type)
   : Enumerable (aT*bT) :=
   List.list_prod (enumerate aT) (enumerate bT).
 
+Lemma InA_map_inj: forall (T1 T2 : eqType) (l : list T1) (f : T1->T2) (x : T1),
+    (forall (t1 t2 : T1), f t1 = f t2 -> t1 = t2) ->
+    (InA (fun x : T1 => [eta eq x]) x l <-> InA (fun x : T2 => [eta eq x]) (f x) (map f l)).
+Proof.
+  intros.
+  split; intros.
+  {
+    induction l.
+      inversion H0.
+    inversion H0.
+    { apply In_InA; auto. rewrite <- H2. apply in_map. apply in_eq. }
+    simpl. auto.
+  }    
+  induction l.
+    inversion H0.
+  inversion H0; auto.
+Qed. 
+
+Lemma NoDupA_map_inj: forall (T1 T2 : eqType) (l : list T1) (f : T1->T2),
+    NoDupA (fun x : T1 => [eta eq x]) l -> 
+    (forall (t1 t2 : T1), f t1 = f t2 -> t1 = t2) ->
+    NoDupA (fun x : T2 => [eta eq x]) (map f l).
+Proof.
+  intros.
+  induction l.
+    simpl. auto.
+  simpl.
+  inversion H.
+  constructor; auto.
+  rewrite <- InA_map_inj; auto.
+Qed.
+
+Lemma In_pair: forall (T1 T2 : eqType) (x1 x2: T1) (y : T2) (l : list T2),
+    In (x1, y) (map [eta pair x2] l) -> x1 = x2.
+Proof.
+  intros.
+  induction l.
+    exfalso. auto.
+  simpl in H.
+  destruct H; auto.
+  inversion H. auto.
+Qed.
+
+
+Lemma prodEnumerableInstance_nodup: forall (aT bT:  eqType) (la : Enumerable aT) (lb : Enumerable bT),
+     NoDupA (fun x : aT => [eta eq x]) (enumerate _ la) ->
+     NoDupA (fun x : bT => [eta eq x]) (enumerate _ lb) -> 
+     NoDupA (fun x : aT * bT => [eta eq x]) (prodEnumerableInstance la lb).
+Proof.
+  intros.
+    unfold prodEnumerableInstance.
+    unfold Enumerable in *.
+    unfold enumerable_fun in *.
+    generalize dependent lb.
+    induction la.
+      simpl. auto.
+    intros. simpl.
+    inversion H.
+    apply NoDupA_app; auto.
+    { apply NoDupA_map_inj; auto. intros. inversion H5. auto. }
+    intros.
+    rewrite -> InA_alt in H5. destruct H5. destruct H5.
+    rewrite <- H5 in H7. clear H5. clear x1.
+    rewrite -> InA_alt in H6.
+    destruct H6.    
+    destruct H5.
+    rewrite <- H5 in H6.
+    clear H5. clear x1.
+    destruct x0.
+    rewrite -> in_prod_iff in H6.
+    destruct H6.
+    apply In_pair in H7.
+    apply H3.
+    rewrite H7 in H5; auto.
+    apply In_InA; auto.
+Qed.
+
+
+
+Lemma prodEnumerableInstance_ok (aT bT:  eqType)
+     (enumerableA : Enumerable aT)
+     (enumerableB : Enumerable bT)
+     (enum_okA: @Enum_ok aT enumerableA)
+     (enum_okB: @Enum_ok bT enumerableB) 
+  : @Enum_ok _ (prodEnumerableInstance enumerableA enumerableB).
+  destruct enum_okA.
+  destruct enum_okB.
+  constructor.
+    apply prodEnumerableInstance_nodup; auto.
+  intros.
+  destruct a.
+  apply in_prod_iff.
+  split; auto.
+Qed.
+
+
+
+
 Class Eq (A : Type) : Type :=
   decEq : A -> A -> Prop.
 

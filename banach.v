@@ -24,7 +24,7 @@ Delimit Scope Numeric_scope with Num.
 Delimit Scope R_scope with R.
 Local Open Scope Num.
 
-Module binach.
+Module banach.
 
   Lemma converge_list_strong: forall (T : Type) (l : list T) (seq : T->nat->R) (f : T->R), 
   (forall t : T, List.In t l -> Un_cv (seq t) (f t)) -> 
@@ -87,7 +87,7 @@ Module binach.
     Defined.
       
 
-Section binach_Numeric.
+Section banach_Numeric.
     Context {Nt:Type} `{Numerics.Numeric Nt}.
     Variable contraction : contraction_func.
 
@@ -375,8 +375,8 @@ Section binach_Numeric.
     Qed.
 
 
-  End binach_Numeric.
-  Section binach_R.
+  End banach_Numeric.
+  Section banach_R.
 
     Variable contraction : @contraction_func R _.
 
@@ -720,9 +720,9 @@ Section binach_Numeric.
     Qed.
 
 
-  End binach_R.
+  End banach_R.
 
-End binach.
+End banach.
 
 
          

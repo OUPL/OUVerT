@@ -782,6 +782,21 @@ Proof.
 Qed.
 
 
+Lemma big_sum_filter: forall (T : Type) (cs : seq T) (f : T->Nt) (g : T->bool),
+    (forall t : T, g t = false -> f t = 0) -> big_sum cs f = big_sum (filter g cs) f.
+Proof.
+  intros.
+  induction cs.
+    auto.
+  simpl.
+  destruct (g a) eqn:e.
+    rewrite IHcs. auto.
+  rewrite H0; auto.
+  rewrite Numerics.plus_id_l.
+  apply IHcs.
+Qed.
+
+
 End use_Numeric2.
 
 (*TODO: All these bigops should really be consolidated at some point...sigh*)
