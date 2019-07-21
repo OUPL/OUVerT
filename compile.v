@@ -103,6 +103,43 @@ Class Enum_ok A `{Enumerable A} : Type :=
       enum_total : forall a : A, In a (enumerate A)
     }.
 
+Module Enum_table.
+  Section enum_table.
+    Variable T1 T2 : Type.
+    Variable T1_enum : Enumerable T1.
+    Variable T1_enum_ok : @Enum_ok T1 T1_enum.
+    Variable T1_enum_ne : O <> length T1_enum.
+    Hypothesis T1_eq_dec : forall x y : T1, {x = y} + {x <> y}.
+
+    Record table : Type :=
+      table_mk {
+        t_list : list T2;
+        t_list_length : length T1_enum = length t_list
+      }.
+
+    Definition table_head (t : table) : T2.
+      destruct (t_list t)  eqn:e.
+        exfalso. apply T1_enum_ne. rewrite (t_list_length t). rewrite e. auto.
+      exact t0.
+    Defined.
+
+    Definition T1_eqb (t1 t2 : T1) : bool :=
+      T1_eq_dec t1 t2.
+      
+     Definition lookup (t : table) (x : T1) : T2 :=
+       nth  (find (T1_eqb x) T1_enum) (t_list t)  (table_head t).
+
+    Program Definition map_to_table (f : T1->T2) :=
+      @table_mk (map f T1_enum) _.
+    Next Obligation.
+      rewrite map_length. auto.
+    Defined.
+
+  End enum_table.
+End Enum_table.
+
+
+
 Class RefineTypeAxiomClass (T : finType)
       (enumerateClass : Enumerable T) :=
   refineTypeAxiom_fun :
