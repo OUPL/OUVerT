@@ -86,6 +86,24 @@ Module banach.
       exact s.
     Defined.
       
+    Fixpoint rec_f {T Nt: Type} `{Numerics.Numeric Nt} (step_f : (T->Nt) -> (T -> Nt)) (f : T->Nt)
+         (n : nat) : (T->Nt) :=
+    match n with
+    | O => f
+    | S n' => step_f (rec_f step_f f n')
+    end.
+
+    Lemma rec_step_reverse: forall {T Nt : Type} `{Numerics.Numeric Nt} (step_f : (T->Nt) -> (T->Nt)) 
+      (f : T->Nt) (n : nat),  rec_f step_f (step_f f) n = step_f (rec_f step_f f n).
+    Proof.
+      intros.
+      generalize f.
+      induction n; intros.
+        repeat rewrite (recO contraction). auto.
+      simpl.
+      rewrite IHn. auto.
+    Qed.
+
 
 Section banach_Numeric.
     Context {Nt:Type} `{Numerics.Numeric Nt}.
@@ -97,11 +115,6 @@ Section banach_Numeric.
     Local Notation T := (x_t contraction).
     Local Notation l := (x_t_enum contraction).
 
-    Fixpoint rec_f (f : T->Nt) (n : nat) : (T->Nt) :=
-    match n with
-    | O => f
-    | S n' => step_f (rec_f f n')
-    end.
 
     Lemma all_T_in: forall x : T, List.In x l.
     Proof. intros. destruct (x_t_ok contraction). apply enum_total. Qed.
@@ -150,7 +163,7 @@ Section banach_Numeric.
       apply abs_ge_0.
     Qed.
     
-    Lemma rec_ext: forall (f g : T->Nt) (n : nat), (forall x : T, f x =  g x) -> (forall x : T, (rec_f f n) x = (rec_f g n) x).
+    Lemma rec_ext: forall (f g : T->Nt) (n : nat), (forall x : T, f x =  g x) -> (forall x : T, (rec_f step_f f n) x = (rec_f step_f g n) x).
     Proof. intros.
       generalize dependent x.
       induction n; intros.
@@ -159,7 +172,7 @@ Section banach_Numeric.
       apply (step_ext contraction); auto.
     Qed.
 
-    Lemma rec_plus: forall f n m, rec_f f (n + m) = (rec_f (rec_f f n) m).
+    Lemma rec_plus: forall f n m, rec_f step_f f (n + m) = (rec_f step_f (rec_f step_f f n) m).
     Proof.
       intros.
       induction m.
@@ -182,7 +195,7 @@ Section banach_Numeric.
       apply (is_contr contraction).
     Qed.
 
-    Lemma step0_rec_n: forall (f : T->Nt), dist f (step_f f) = 0 -> forall n, dist f (rec_f f n) = 0.
+    Lemma step0_rec_n: forall (f : T->Nt), dist f (step_f f) = 0 -> forall n, dist f (rec_f step_f f n) = 0.
     Proof.
       intros.
       induction n.
@@ -231,12 +244,12 @@ Section banach_Numeric.
       auto.
     Qed.
 
-    Lemma step0_rec_nm: forall (f : T->Nt), dist f (step_f f) = 0 -> forall n m, dist (rec_f f n) (rec_f f m) = 0.
+    Lemma step0_rec_nm: forall (f : T->Nt), dist f (step_f f) = 0 -> forall n m, dist (rec_f step_f f n) (rec_f step_f f m) = 0.
     Proof.
       intros.
       apply le_both_eq.
       2: { apply dist_ge_0. }
-      apply le_trans with (dist (rec_f f n) f + dist f (rec_f f m)).
+      apply le_trans with (dist (rec_f step_f f n) f + dist f (rec_f step_f f m)).
         apply dist_triangle.
       rewrite step0_rec_n; auto.
       rewrite dist_comm.
@@ -245,34 +258,26 @@ Section banach_Numeric.
       apply le_refl.
     Qed. 
 
-    Lemma q0_rec0: forall f g n m, q = 0 -> dist (rec_f f (S n)) (rec_f g (S m)) = 0.
+    Lemma q0_rec0: forall f g n m, q = 0 -> dist (rec_f step_f f (S n)) (rec_f step_f g (S m)) = 0.
     Proof.
       intros.
       apply le_both_eq.
       2: { apply dist_ge_0. }
-      rewrite <- mult_plus_id_l with (dist (rec_f f n) (rec_f g m)).
+      rewrite <- mult_plus_id_l with (dist (rec_f step_f f n) (rec_f step_f g m)).
       rewrite <- H0.
       repeat rewrite (rec_step contraction).
       apply (is_contr contraction).
     Qed.
 
-    Lemma rec_step_reverse: forall (f : T->Nt) (n : nat), rec_f (step_f f) n = step_f (rec_f f n).
-    Proof.
-      intros.
-      generalize f.
-      induction n; intros.
-        repeat rewrite (recO contraction). auto.
-      simpl.
-      rewrite IHn. auto.
-    Qed.
+    
 
-    Lemma rec_dist: forall (f g : T->Nt) (n : nat), dist (rec_f f n) (rec_f g n) <= pow_nat q n * dist f g.
+    Lemma rec_dist: forall (f g : T->Nt) (n : nat), dist (rec_f step_f f n) (rec_f step_f g n) <= pow_nat q n * dist f g.
     Proof. 
       intros.
       induction n.
       { repeat rewrite (recO contraction). rewrite pow_natO. rewrite mult_id_l. apply le_refl. }
       repeat rewrite (rec_step contraction).
-      apply le_trans with (q * (dist (rec_f f n) (rec_f g n))).
+      apply le_trans with (q * (dist (rec_f step_f f n) (rec_f step_f g n))).
         apply (is_contr contraction).
       rewrite pow_nat_rec.
       rewrite <- mult_assoc.
@@ -282,7 +287,7 @@ Section banach_Numeric.
 
 
     Lemma dist_step_rec_n_ub: forall f n,
-      (1 + - q) * dist (rec_f f n) f <= (1 + - pow_nat q n) * dist f (step_f f).
+      (1 + - q) * dist (rec_f step_f f n) f <= (1 + - pow_nat q n) * dist f (step_f f).
     Proof.
       intros.
       apply le_trans with ((1 + - q) * (dist f (step_f f) * big_sum (List.seq 0 n) (fun n' => pow_nat q n'))).
@@ -295,7 +300,7 @@ Section banach_Numeric.
         simpl.
         rewrite ssrnat.add0n.
         simpl.
-        apply le_trans with (dist (step_f (rec_f f n)) (rec_f f n)  + dist (rec_f f n) f).
+        apply le_trans with (dist (step_f (rec_f step_f f n)) (rec_f step_f f n)  + dist (rec_f step_f f n) f).
           apply dist_triangle.
         rewrite mult_plus_distr_l.
         apply plus_le_compat; auto.
@@ -315,19 +320,19 @@ Section banach_Numeric.
     Qed.
 
     Lemma rec_f_nm_ub: forall (f : T->Nt) (n m : nat),
-      (1 + - q) * dist (rec_f f n) (rec_f f (n+m)%coq_nat) <=
+      (1 + - q) * dist (rec_f step_f f n) (rec_f step_f f (n+m)%coq_nat) <=
       dist f (step_f f) *  pow_nat q n.
     Proof.
       intros.
       assert(0 <= 1 + - q).
         apply le_lt_weak. apply one_minus_q_gt0.
-      apply le_trans with ((1 + - q) * ( (pow_nat q n) * dist f (rec_f f m))).
+      apply le_trans with ((1 + - q) * ( (pow_nat q n) * dist f (rec_f step_f f m))).
       {
         apply mult_le_compat_l; auto.
         rewrite Nat.add_comm. rewrite rec_plus.
         apply rec_dist.
       }
-      apply le_trans with ( (1 + - q) * (pow_nat q n * big_sum (List.seq 0 m) (fun i : nat => dist (rec_f f i)  (rec_f f (S i)) ) )).
+      apply le_trans with ( (1 + - q) * (pow_nat q n * big_sum (List.seq 0 m) (fun i : nat => dist (rec_f step_f f i)  (rec_f step_f f (S i)) ) )).
       {
         apply mult_le_compat_l; auto.
         apply mult_le_compat_l; auto.
@@ -337,7 +342,7 @@ Section banach_Numeric.
         rewrite big_sum_seq_cons.
         rewrite ssrnat.add0n.
         repeat rewrite (rec_step contraction).
-        apply le_trans with (dist f (rec_f f m) + dist (rec_f f m) (step_f (rec_f f m))).
+        apply le_trans with (dist f (rec_f step_f f m) + dist (rec_f step_f f m) (step_f (rec_f step_f f m))).
           apply dist_triangle.
         rewrite plus_comm.
         apply plus_le_compat_l.
@@ -391,7 +396,7 @@ Section banach_Numeric.
       0 < eps -> 
       0 < dist f (step_f f) ->
       (pow_nat q n) < eps * to_R (1 + - q) * Rinv ((dist f (step_f f))) ->
-      (dist (rec_f _ f n) (rec_f _ f (n + m)))  < eps.
+      (dist (rec_f step_f f n) (rec_f  step_f f (n + m)))  < eps.
     Proof.
       intros.
       rewrite -> mult_lt_compat_l.
@@ -410,7 +415,7 @@ Section banach_Numeric.
       apply Rle_refl.
     Qed.
 
-    Lemma contraction_cauchy_crit: forall (x : T) (f : T->R), Cauchy_crit (fun n => (rec_f _ f n) x).
+    Lemma contraction_cauchy_crit: forall (x : T) (f : T->R), Cauchy_crit (fun n => (rec_f  step_f f n) x).
     Proof.
       intros.
       unfold Cauchy_crit.
@@ -422,7 +427,7 @@ Section banach_Numeric.
       2: { 
         exists O. intros.
         rewrite <- R_dist_same.
-        apply Rle_lt_trans with (dist (rec_f _ f n) (rec_f _ f m)).
+        apply Rle_lt_trans with (dist (rec_f  step_f f n) (rec_f  step_f f m)).
         { rewrite R_abs_same. rewrite <- R_le_same. rewrite <- R_abs_same. apply dist_ub. }
         rewrite step0_rec_nm; auto.
       }
@@ -438,7 +443,7 @@ Section banach_Numeric.
       exists x0.
       intros.
       rewrite <- R_dist_same.
-      apply Rle_lt_trans with (dist (rec_f _ f n) (rec_f _ f m)).
+      apply Rle_lt_trans with (dist (rec_f  step_f f n) (rec_f  step_f f m)).
         rewrite <- R_le_same. apply dist_ub. 
       unfold ge in *.
       destruct Nat_le_exists_diff with x0 n; auto.
@@ -447,7 +452,7 @@ Section banach_Numeric.
       apply Rlt_le_trans with (Rdiv eps 2 + Rdiv eps 2).
       2:{ simpl. lra. }
       simpl.
-      apply Rle_lt_trans with (dist (rec_f _ f (addn x0 x1)) (rec_f _ f x0) + dist (rec_f _ f x0) (rec_f _ f (addn x0 x2))).
+      apply Rle_lt_trans with (dist (rec_f  step_f f (addn x0 x1)) (rec_f  step_f f x0) + dist (rec_f  step_f f x0) (rec_f  step_f f (addn x0 x2))).
         rewrite <- R_le_same. apply dist_triangle.
       rewrite -> dist_comm with _ _ _ _ (rec_f _ f x0).
       apply Rplus_lt_compat;
@@ -457,7 +462,7 @@ Section banach_Numeric.
     Qed.
 
     Lemma func_converge: forall (f g : T -> R) (eps : R) (x : T),
-      0 < eps -> exists n0 : nat, forall n : nat, (n0 <= n)%coq_nat -> R_dist (rec_f _ f n x) (rec_f _ g n x) < eps.
+      0 < eps -> exists n0 : nat, forall n : nat, (n0 <= n)%coq_nat -> R_dist (rec_f  step_f f n x) (rec_f  step_f g n x) < eps.
     Proof.
       intros.
       destruct (total_order_T 0 (dist f g)).
@@ -467,7 +472,7 @@ Section banach_Numeric.
         exists O.
         intros.
         rewrite <- R_dist_same.
-        apply le_lt_trans with (dist (rec_f _ f n) (rec_f _ g n)).
+        apply le_lt_trans with (dist (rec_f  step_f f n) (rec_f  step_f g n)).
           apply dist_ub.
         rewrite eq_dist_0.
           auto. 
@@ -485,7 +490,7 @@ Section banach_Numeric.
         exists (S O).
         intros.
         rewrite <- R_dist_same.
-        apply le_lt_trans with (dist (rec_f _ f n) (rec_f _ g n)).
+        apply le_lt_trans with (dist (rec_f  step_f f n) (rec_f  step_f g n)).
           apply dist_ub.
         destruct n.
           inversion H0.
@@ -498,7 +503,7 @@ Section banach_Numeric.
       exists x0.
       intros.
       rewrite <- R_dist_same.
-      apply le_lt_trans with (dist (rec_f _ f n) (rec_f _ g n)).
+      apply le_lt_trans with (dist (rec_f  step_f f n) (rec_f  step_f g n)).
         apply dist_ub.
       apply le_lt_trans with (pow_nat q n * dist f g).
         apply rec_dist.
@@ -517,7 +522,7 @@ Section banach_Numeric.
 
 
     Lemma limit_unique: forall (f g : T->R) (a : T) (x : R),
-      Un_cv (fun n => (rec_f _ f n) a) x -> Un_cv (fun n => (rec_f _ g n) a) x.
+      Un_cv (fun n => (rec_f  step_f f n) a) x -> Un_cv (fun n => (rec_f  step_f g n) a) x.
     Proof.
       intros.
       unfold Un_cv in *.
@@ -528,7 +533,7 @@ Section banach_Numeric.
         lra.
       exists (Nat.max x0 x1).
       intros.
-      apply Rle_lt_trans with (R_dist (rec_f _ g n a) (rec_f _ f n a) + R_dist (rec_f _ f n a) x).
+      apply Rle_lt_trans with (R_dist (rec_f  step_f g n a) (rec_f  step_f f n a) + R_dist (rec_f  step_f f n a) x).
         apply R_dist_tri. 
       apply Rlt_le_trans with (Rdiv eps 2 + Rdiv eps 2)%R.
       2:{ lra. }
@@ -539,28 +544,28 @@ Section banach_Numeric.
     Qed.
 
     Definition converge_func (x : T) : R.
-      destruct R_complete with (fun n => (rec_f _ (fun _ => 0) n) x).
+      destruct R_complete with (fun n => (rec_f  step_f (fun _ => 0) n) x).
         apply contraction_cauchy_crit.
       exact x0.
     Defined.
 
 
     Lemma converge_func_correct: forall (f : T->R) (x : T),
-      Un_cv (fun n => (rec_f _ f n) x) (converge_func x).
+      Un_cv (fun n => (rec_f  step_f f n) x) (converge_func x).
     Proof.
       intros.
-      assert (Un_cv (fun n => (rec_f _ (fun _ => 0) n) x) (converge_func x)).
+      assert (Un_cv (fun n => (rec_f  step_f (fun _ => 0) n) x) (converge_func x)).
       { unfold converge_func. destruct R_complete. auto. }
       apply limit_unique with _ f _ _ in H; auto.
     Qed.
 
     Lemma func_converge_strong: forall (f : T->R) (eps : R),
             0 < eps -> exists N : nat, forall (x : T) (n : nat), (n >= N)%coq_nat ->
-              R_dist (rec_f _ f n x)
+              R_dist (rec_f  step_f f n x)
                  (converge_func x) < eps.
   Proof. 
     intros.
-    destruct converge_list_strong with T l (fun s n => to_R ((rec_f _ f n) s)) converge_func eps; auto.
+    destruct converge_list_strong with T l (fun s n => to_R ((rec_f  step_f f n) s)) converge_func eps; auto.
     { intros. apply converge_func_correct. }
     exists x.
     intros.
@@ -572,7 +577,7 @@ Section banach_Numeric.
       (step_f converge_func) x = converge_func x.
     Proof.
       intros.
-      assert(Un_cv (fun n => rec_f _ converge_func (S n) x) ((step_f converge_func) x)).
+      assert(Un_cv (fun n => rec_f  step_f converge_func (S n) x) ((step_f converge_func) x)).
       {
         simpl.
         unfold Un_cv in *.
@@ -583,14 +588,14 @@ Section banach_Numeric.
             inversion H1.
           rewrite <- R_dist_same.
           apply Rle_lt_trans with (dist
-            (rec_f _ (step_f converge_func) (S n))
+            (rec_f  step_f (step_f converge_func) (S n))
             (step_f converge_func)).
             simpl. rewrite <- R_le_same. rewrite rec_step_reverse. apply dist_ub.
           apply Rle_lt_trans with 0; auto.
           right.
           apply  eq_dist_0.
           intros.
-          assert(rec_f _ (step_f converge_func) (S n) x0 = rec_f _ converge_func (S O) x0).
+          assert(rec_f  step_f (step_f converge_func) (S n) x0 = rec_f  step_f converge_func (S O) x0).
             apply dist_0_eq. apply q0_rec0. auto.
           rewrite H2. auto.
         }
@@ -600,10 +605,10 @@ Section banach_Numeric.
         intros.
         rewrite <- R_dist_same.
         rewrite <- R_lt_same.
-        apply le_lt_trans with (dist (rec_f _ converge_func (S n))  (step_f converge_func)).
+        apply le_lt_trans with (dist (rec_f  step_f converge_func (S n))  (step_f converge_func)).
           apply dist_ub.
-        simpl (rec_f contraction converge_func n.+1).
-        apply le_lt_trans with ( q * dist (rec_f _ converge_func n) (converge_func)).
+        simpl (rec_f  step_f converge_func n.+1).
+        apply le_lt_trans with ( q * dist (rec_f  step_f converge_func n) (converge_func)).
           apply (is_contr contraction).
         rewrite mult_lt_compat_l.
         2:{ simpl. apply Rinv_0_lt_compat. apply H0. }
@@ -621,17 +626,17 @@ Section banach_Numeric.
         auto.
       }
       apply UL_sequence with _ _ (converge_func x) in H; auto.
-      apply Ratan.Un_cv_ext with (fun n => rec_f _ (step_f converge_func) n x).
+      apply Ratan.Un_cv_ext with (fun n => rec_f step_f (step_f converge_func) n x).
         intros. simpl. rewrite rec_step_reverse. auto.
       apply converge_func_correct.
     Qed.
 
-    Lemma step_converge0: forall (f : T->R), Un_cv (fun n => dist (rec_f _ f n) (step_f (rec_f _ f n))) 0.
+    Lemma step_converge0: forall (f : T->R), Un_cv (fun n => dist (rec_f step_f f n) (step_f (rec_f step_f f n))) 0.
     Proof.
       intros.
       unfold Un_cv.
       intros. 
-      assert(forall n, step_f (rec_f _ f n) = rec_f _ f (S n)). auto.
+      assert(forall n, step_f (rec_f step_f f n) = rec_f step_f f (S n)). auto.
       destruct (total_order_T 0 (dist f (step_f f))).
       2:{ exfalso. apply lt_not_le in l. apply l. apply dist_ge_0. }
       destruct s.
@@ -692,7 +697,7 @@ Section banach_Numeric.
     Qed.
 
     Lemma fixpoint_limit: forall (f : T->R), (forall x, step_f f x = f x) ->
-        (forall x, Un_cv (fun n => rec_f _ f n x) (f x)).
+        (forall x, Un_cv (fun n => rec_f  step_f f n x) (f x)).
     Proof.
       intros.
       unfold Un_cv.
@@ -701,7 +706,7 @@ Section banach_Numeric.
       apply Rle_lt_trans with 0; auto.
       rewrite <- R_le_same.
       rewrite <- R_dist_same.
-      apply le_trans with (dist (rec_f _ f n) f).
+      apply le_trans with (dist (rec_f  step_f f n) f).
         apply dist_ub.
       right.
       rewrite dist_comm.
@@ -714,13 +719,56 @@ Section banach_Numeric.
         (forall x, f x = converge_func x).
     Proof.
       intros.
-      apply UL_sequence with (fun n => rec_f _ f n x).
+      apply UL_sequence with (fun n => rec_f  step_f f n x).
         apply fixpoint_limit. auto.
       apply converge_func_correct.
     Qed.
 
 
   End banach_R.
+
+
+
+  Record R_Nt_relation {Nt : Type} `{Numerics.Numeric Nt} : Type :=
+    R_Nt_relation_mk {
+      relation_contr : @contraction_func R _;  
+      Nt_step : ((x_t relation_contr) -> Nt) -> ((x_t relation_contr) -> Nt);
+      R_Nt_relates : forall (f : x_t relation_contr->Nt) (x : x_t relation_contr), 
+        ((step relation_contr) (fun x'=> to_R (f x')) ) x = to_R ((Nt_step f) x)
+    }.
+
+  Section banach_Nt_R.
+    Context {Nt:Type} `{Numerics.Numeric Nt}.
+    Variable relation : R_Nt_relation.
+
+
+    Local Notation contr := (relation_contr relation).
+    Local Notation T := (x_t (relation_contr relation)).
+    Local Notation step_f := (step (relation_contr relation)).
+    Local Notation Nt_step_f := (Nt_step relation).
+
+    Lemma R_Nt_rec_relates: forall (f : (T->Nt)) (n : nat) (x : T),
+      (rec_f step_f (fun x' => to_R (f x')) n) x = to_R ((rec_f Nt_step_f f n ) x).
+    Proof.
+      intros.
+      generalize x.
+      induction n; auto. intros.
+      simpl; rewrite <- (R_Nt_relates relation).
+      apply (step_ext contr). auto.
+    Qed.
+
+    Lemma Cauchy_crit_to_R: forall (f : (T->Nt)) (x : T),
+      Cauchy_crit (fun n => to_R ((rec_f Nt_step_f f n) x)).
+    Proof.
+      intros.
+      unfold Cauchy_crit.
+      intros.
+      destruct contraction_cauchy_crit with contr x (fun x => to_R (f x)) eps; auto.
+      exists x0.
+      intros.
+      repeat rewrite <- R_Nt_rec_relates. auto.
+    Qed.
+  End banach_Nt_R.    
 
 End banach.
 
