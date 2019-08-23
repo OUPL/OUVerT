@@ -1575,7 +1575,129 @@ Module num_Extrema.
     apply H1.
     apply argmax_ne_in.
   Qed.
+
+  (**Lemma max_ne_min_dist_max: forall (l : list Nt) (H0 : O <> length l),
+      exists c : Nt, 0 < c /\ forall x : Nt, List.In x l ->  (x = max_ne H0) \/ (x + c <= max_ne H0).
+  Proof.
+    intros.
+    induction l.
+    { exfalso. apply H0. auto. }
     
+    simpl.**)
+
+  Lemma max_ne_In: forall (l : list Nt) (H0 : O <> length l),
+      List.In (max_ne H0) l.
+  Proof.
+    intros.
+    induction l.
+    { exfalso. apply H0. auto. }
+    destruct l.
+    { simpl. auto. }
+    assert(O <> length (n :: l)).
+      unfold not. intros. inversion H1.
+    remember (n :: l).
+    destruct max_ne_cons with l0 a H1 H0; destruct H2.
+    {
+      rewrite <- H2.
+      simpl. auto.
+    }
+    rewrite <- H2.
+    simpl. auto.
+  Qed.
+
+  Lemma max_ne_min_dist_max: forall (l : list Nt) (H0 : O <> length l),
+      exists c : Nt, 0 < c /\ forall n : Nt, List.In n l ->  (n = max_ne H0) \/ (n + c <= max_ne H0).
+  Proof.
+    intros.
+    induction l.
+    { exfalso. apply H0. auto. }
+    destruct l.
+    { 
+      exists 1.
+      split. apply plus_id_lt_mult_id. intros.
+      inversion H1; auto. inversion H2.
+    }
+    assert(O <> length (n :: l)).
+      unfold not. intros. inversion H1.
+    destruct max_ne_cons with (n :: l) a H1 H0.
+    {
+      destruct H2.
+      rewrite <- H2. clear H2.
+      destruct IHl with H1. clear IHl.
+      destruct H2.
+      destruct H3.
+      {
+        exists (Numerics.min x (max_ne H1 + - a)).
+        split. 
+        {
+          unfold Numerics.min. destruct (leb x (max_ne H1 + - a)); auto.
+          apply lt_diff_pos. auto.
+        }
+        intros.
+        inversion H5.
+        { 
+          rewrite <- H6. right.
+          apply le_trans with (a + (max_ne (l:=n :: l) H1 + - a)).
+            apply plus_le_compat_l. apply ge_min_r.
+          rewrite -> plus_comm with _ (- a). rewrite plus_assoc.
+          rewrite plus_neg_r. rewrite plus_id_l. apply le_refl.
+        }
+        destruct H4 with n0; auto.
+        right.
+        apply le_trans with (n0 + x); auto.
+        apply plus_le_compat_l. apply ge_min_l.
+      }
+      rewrite <- H3 in *.
+      exists x. split; auto.
+      intros. inversion H5; auto.
+    }
+    destruct H2.
+    rewrite <- H2.
+    destruct IHl with H1.
+    clear IHl.
+    destruct H4.
+    destruct H3.
+    {      
+      exists (a + - max_ne H1).
+      split.
+        apply lt_diff_pos.  auto.
+      intros.
+      inversion H6; auto.
+      right.
+      rewrite plus_assoc. rewrite -> plus_comm with n0 _.
+      rewrite <- plus_id_r with a.
+      repeat rewrite <- plus_assoc.
+      apply plus_le_compat_l.
+      rewrite plus_id_l.
+      rewrite <- plus_neg_r with n0.
+      apply plus_le_compat_l.
+      apply le_neg. apply max_ne_correct. auto.
+    }
+    exists x.
+    split; auto.
+    intros.
+    destruct H6; auto.
+    destruct H5 with n0; auto.
+    { rewrite H3 in H7. auto. } 
+    right. rewrite H3 in H7. auto.
+  Qed.
+    
+  Lemma mapmax_ne_min_dist_max: forall (T : Type) (f : T->Nt) (l : list T) (H0 : O <> length l),
+      exists c : Nt, 0 < c /\ forall t : T, List.In t l ->  (f t = mapmax_ne f H0) \/ (f t + c <= mapmax_ne f H0).
+  Proof.
+    intros.
+    rewrite mapmax_ne_map_max_ne.
+    {
+      assert(O <> size [seq f i | i <- l]); auto.
+      rewrite size_map. auto.
+    }
+    intros.
+    edestruct max_ne_min_dist_max.
+    destruct H1.
+    exists x. split; auto.
+    intros.
+    apply H2. apply List.in_map. auto.
+  Qed.
 
   End use_Numerics.
   Section use_Numerics2.
@@ -1642,6 +1764,8 @@ Module num_Extrema.
     rewrite argmax_ne_mapmax_ne.
     auto.
   Qed.
+
+
 
    End use_Numerics2.
 End num_Extrema.

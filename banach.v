@@ -61,51 +61,50 @@ Module banach.
   Qed.
 
 
-    Definition max_dist {T Nt : Type} `{Numeric Nt} (l : list T) (H0 : O <> length l) (f g : T->Nt)  : Nt :=
-      mapmax_ne (l := l) (fun x=> abs (f x + - g x)) H0.
+  Definition max_dist {T Nt : Type} `{Numeric Nt} (l : list T) (H0 : O <> length l) (f g : T->Nt)  : Nt :=
+    mapmax_ne (l := l) (fun x=> abs (f x + - g x)) H0.
 
-    Record contraction_func {Nt:  Type} `{Numerics.Numeric Nt} : Type :=
-      contraction_mk {
-        x_t : eqType;        
-        x_t_enum : Enumerable x_t;
-        x_t_ok : @Enum_ok _ x_t_enum;
-        contr : Nt;
-        x_t_ne: O <> length x_t_enum;
-        step : (x_t -> Nt) -> (x_t -> Nt);
-        contr_pos : 0 <= contr;
-        contr_lt_1 : contr < 1;
-        step_ext: forall (f g : x_t->Nt), (forall x : x_t, f x =  g x) -> (forall x : x_t, (step f) x = (step g) x);
-        is_contr : forall x1 x2,  (max_dist x_t_enum x_t_ne (step x1) (step x2) <= contr * max_dist x_t_enum x_t_ne x1 x2 ); 
-      }.
+  Record contraction_func {Nt:  Type} `{Numerics.Numeric Nt} : Type :=
+    contraction_mk {
+      x_t : Type;        
+      x_t_enum : Enumerable x_t;
+      x_t_ok : @Enum_ok _ x_t_enum;
+      contr : Nt;
+      x_t_ne: O <> length x_t_enum;
+      step : (x_t -> Nt) -> (x_t -> Nt);
+      contr_pos : 0 <= contr;
+      contr_lt_1 : contr < 1;
+      step_ext: forall (f g : x_t->Nt), (forall x : x_t, f x =  g x) -> (forall x : x_t, (step f) x = (step g) x);
+      is_contr : forall x1 x2,  (max_dist x_t_enum x_t_ne (step x1) (step x2) <= contr * max_dist x_t_enum x_t_ne x1 x2 ); 
+    }.
 
-    Definition contraction_exists_T {Nt : Type} `{Numerics.Numeric Nt} (c : contraction_func) : (x_t c).
-      destruct c.
-      simpl.
-      destruct (x_t_enum0).
-      { exfalso. apply x_t_ne0. auto. }
-      exact s.
-    Defined.
-      
-    Fixpoint rec_f {T Nt: Type} `{Numerics.Numeric Nt} (step_f : (T->Nt) -> (T -> Nt)) (f : T->Nt)
-         (n : nat) : (T->Nt) :=
-    match n with
-    | O => f
-    | S n' => step_f (rec_f step_f f n')
-    end.
+  Definition contraction_exists_T {Nt : Type} `{Numerics.Numeric Nt} (c : contraction_func) : (x_t c).
+    destruct c.
+    simpl.
+    destruct (x_t_enum0).
+    { exfalso. apply x_t_ne0. auto. }
+    exact x.
+  Defined.
+    
+  Fixpoint rec_f {T Nt: Type} `{Numerics.Numeric Nt} (step_f : (T->Nt) -> (T -> Nt)) (f : T->Nt)
+       (n : nat) : (T->Nt) :=
+  match n with
+  | O => f
+  | S n' => step_f (rec_f step_f f n')
+  end.
 
-    Lemma rec_step_reverse: forall {T Nt : Type} `{Numerics.Numeric Nt} (step_f : (T->Nt) -> (T->Nt)) 
-      (f : T->Nt) (n : nat),  rec_f step_f (step_f f) n = step_f (rec_f step_f f n).
-    Proof.
-      intros.
-      generalize f.
-      induction n; intros.
-        repeat rewrite (recO contraction). auto.
-      simpl.
-      rewrite IHn. auto.
-    Qed.
+  Lemma rec_step_reverse: forall {T Nt : Type} `{Numerics.Numeric Nt} (step_f : (T->Nt) -> (T->Nt)) 
+    (f : T->Nt) (n : nat),  rec_f step_f (step_f f) n = step_f (rec_f step_f f n).
+  Proof.
+    intros.
+    generalize f.
+    induction n; intros.
+      repeat rewrite (recO contraction). auto.
+    simpl.
+    rewrite IHn. auto.
+  Qed.
 
-
-Section banach_Numeric.
+  Section banach_Numeric.
     Context {Nt:Type} `{Numerics.Numeric Nt}.
     Variable contraction : contraction_func.
 
@@ -724,6 +723,7 @@ Section banach_Numeric.
       apply converge_func_correct.
     Qed.
 
+    
 
   End banach_R.
 
@@ -756,6 +756,7 @@ Section banach_Numeric.
       simpl; rewrite <- (R_Nt_relates relation).
       apply (step_ext contr). auto.
     Qed.
+
 
     Lemma Cauchy_crit_to_R: forall (f : (T->Nt)) (x : T),
       Cauchy_crit (fun n => to_R ((rec_f Nt_step_f f n) x)).

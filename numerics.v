@@ -381,8 +381,10 @@ Module Numerics.
     if leb plus_id x then x else -x.
 
 
+    Definition min (x y : Nt) : Nt :=
+    if leb x y then x else y.
 
-
+    
 
     Lemma le_lt_weak: forall (n m : Nt), n < m -> n <= m.
     Proof.
@@ -1525,6 +1527,56 @@ Module Numerics.
     apply H3.
   Qed.
 
+  Lemma lt_diff_pos: forall x y : Nt, x < y -> 0 < (y + - x).
+  Proof. 
+    intros.
+    rewrite <- plus_neg_r with x.
+    apply plus_lt_compat_r. auto.
+  Qed. 
+
+  Lemma min_comm: forall x y : Nt, min x y = min y x.
+  Proof. 
+    intros. unfold min.
+    destruct (total_order_T x y).
+    {
+      destruct s.
+      2: { rewrite e. auto. }
+      assert(leb y x = false).
+        apply leb_false_iff. apply lt_not_le. auto.
+      rewrite H0.
+      apply le_lt_weak in l.
+      apply leb_true_iff in l. rewrite l. auto.
+    }
+    assert(leb x y = false).
+    { apply leb_false_iff. apply lt_not_le. auto. }
+    rewrite H0. apply le_lt_weak in l. apply leb_true_iff in l. rewrite l. auto.
+  Qed.
+
+  Lemma ge_min_l: forall x y : Nt, min x y <= x.
+  Proof. 
+    intros.
+    unfold min. 
+    destruct (total_order_T x y).
+    {
+      destruct s.
+      2:{  rewrite e. destruct (leb y y); auto. }
+      apply le_lt_weak in l.
+      apply leb_true_iff in l. rewrite l. auto.
+    }
+    apply le_lt_weak.
+    apply le_lt_trans with y; auto.
+    apply lt_not_le in l. apply leb_false_iff in l.
+    rewrite l. auto.
+  Qed.
+
+  Lemma ge_min_r: forall x y : Nt, min x y <= y.
+  Proof. intros. rewrite min_comm. apply ge_min_l. Qed.
+
+  Lemma min_id: forall x : Nt, min x x = x.
+  Proof. intros. unfold min. destruct (leb x x); auto. Qed.
+
+  Lemma min_cases: forall x y : Nt, min x y = x \/ min x y = y.
+  Proof. intros. unfold min. destruct (leb x y); auto. Qed.
 
   End use_Numeric.
 
@@ -2127,6 +2179,7 @@ Qed.
     apply to_R_lt.
     auto.
   Qed.
+
 
   End use_Numeric3.
 
