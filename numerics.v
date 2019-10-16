@@ -1965,7 +1965,7 @@ Proof.
   apply H0.
   rewrite <- ln_1 in H1.
   apply ln_inv; auto.      
-  assert (Numerics.to_R 0 < Numerics.to_R 1)%R_s. simpl. apply Fourier_util.Rlt_zero_1. 
+  assert (Numerics.to_R 0 < Numerics.to_R 1)%R_s. simpl. apply Rlt_0_1. 
   apply H2.
 Qed.
 
@@ -1998,7 +1998,7 @@ Proof.
   rewrite <- Rmult_1_r with (ln y).
   assert (ln x <> 0)%R_s.
     unfold not. intros. apply H0. rewrite <- ln_1 in H4. apply ln_inv; auto.
-    apply Fourier_util.Rlt_zero_1.  
+    apply Rlt_0_1.  
   rewrite <- Rinv_l with (ln x); auto.
   repeat rewrite <- Rmult_assoc.
   unfold Rdiv in H3.
@@ -2022,25 +2022,16 @@ Proof.
     rewrite <- ln_1 in H3.
     apply ln_inv in H3; auto.
       rewrite H3 in H. apply Numerics.lt_irrefl in H. auto.
-      apply Rlt_trans with 1; auto. apply Fourier_util.Rlt_zero_1.
-    apply Fourier_util.Rlt_zero_1.
+      apply Rlt_trans with 1; auto. apply Rlt_0_1.
+    apply Rlt_0_1.
   }
-  apply Fourier_util.Rfourier_lt with _ _ (ln x) in H2.
-  {
-    rewrite Rmult_comm in H2.
-    rewrite Rmult_assoc in H2.
-    rewrite Rinv_l in H2; auto.
-    unfold Rdiv in H2. 
-    rewrite -> Rmult_comm with (ln z) _ in H2 .
-    rewrite <- Rmult_assoc in H2.
-    rewrite Rinv_r in H2; auto.
-    rewrite Rmult_1_l in H2.
-    rewrite Rmult_1_r in H2.
+  unfold Rdiv in H2.
+  rewrite <- mult_lt_compat_r in H2.
     apply ln_lt_inv; auto.
-  }
+  apply Rinv_0_lt_compat.
   rewrite <- ln_1.
   apply ln_increasing; auto.
-  apply Fourier_util.Rlt_zero_1.
+  apply Rlt_0_1.
 Qed.
 
 
@@ -2051,7 +2042,7 @@ Proof.
   destruct H2.
     apply log_lt_inv in H2; auto.
   apply log_inv in H2; auto.
-    apply Numerics.lt_trans with 1; auto. apply Fourier_util.Rlt_zero_1.
+    apply Numerics.lt_trans with 1; auto. apply Rlt_0_1.
   apply Numerics.lt_not_eq. auto.
 Qed.
 
@@ -2082,7 +2073,7 @@ Proof.
     rewrite <- ln_1 in H4.
     apply ln_inv in H4; auto.
       rewrite H4 in H0. apply Numerics.lt_irrefl in H0. auto.
-    apply Fourier_util.Rlt_zero_1.
+    apply Rlt_0_1.
   }
   repeat rewrite <- Ropp_mult_distr_r.
   apply Ropp_gt_lt_contravar.
