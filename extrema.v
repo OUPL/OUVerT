@@ -338,6 +338,7 @@ Module num_Extrema.
         | Some x' => Some (if leb (f x) x' then x' else (f x))
         end
     end.
+    
 
     Lemma argmax_ne_ok: forall {T : Type} (l : list T) (f : T-> Nt) (h : O <> (length l)),
           (argmax l f) = Some (argmax_ne f h).
@@ -367,6 +368,23 @@ Module num_Extrema.
       simpl in e.
       destruct (mapmax l f); inversion e.
     Defined.
+
+
+
+
+    Fixpoint nth_max (l : list Nt) (n : nat) : option Nt :=
+    match n with
+    | O => max l
+    | S n' => 
+      match (max l) with
+      | None => None
+      | Some m => nth_max (filter (fun x => ltb x m) l) n'
+      end
+    end.
+
+      
+      
+
 
     Lemma mapmax_ne_ok: forall (T : Type) (l : list T) (f : T->Nt) (h : O <> (length l)), mapmax l f = Some (mapmax_ne f h).
     Proof.
@@ -842,6 +860,177 @@ Module num_Extrema.
       apply Numerics.not_le_lt in H3.
       apply Numerics.le_lt_weak.
       apply Numerics.le_lt_trans with x; auto.
+    Qed.
+
+    Lemma max_in: forall (l : list Nt) (x : Nt), max l = Some x -> List.In x l.
+    Proof.
+      intros. 
+      induction l.
+      { inversion H0. }
+      simpl in *.
+      destruct (max l) eqn:e.
+      2: { inversion H0. auto. }       
+      destruct (leb a n); auto.
+      inversion H0. auto.
+    Qed.
+
+    Lemma nth_max_in: forall (l : list Nt) (n : nat) (x : Nt),
+        nth_max l n = Some x -> List.In x l.
+    Proof.
+      intros.
+      generalize dependent x.
+      generalize dependent l.
+      induction n; intros.
+      {
+        simpl in H0.
+        apply max_in.
+        auto.
+      }
+      simpl in H0.
+      destruct (max l) eqn:e.
+      2:{ inversion H0. }
+      apply IHn in H0.
+      apply List.filter_In in H0.
+      destruct H0. auto.
+    Qed.
+
+    Lemma max_none: forall (l : list Nt), max l = None <-> l = [::].
+    Proof.
+      intros.
+      split; intros.
+      {
+        destruct l; auto.
+        simpl in H0.
+        destruct (max l);
+          inversion H0.
+      }
+      rewrite H0. auto.
+    Qed.
+
+    Lemma filter_none: forall {T : Type} (l : list T) (f : T->bool),
+      filter f l = [::] <-> (forall x : T, List.In x l ->  f x = false).
+    Proof. 
+      intros.
+      split; intros.
+      {
+        induction l.
+        { inversion H1. }
+        simpl in H0.
+        destruct (f a) eqn:e.
+          inversion H0.
+        destruct H1; auto.
+        rewrite <- H1. auto.
+      }
+      induction l; auto.
+      simpl.
+      rewrite H0; simpl; auto.
+      apply IHl.
+      simpl in H0.
+      intros.
+      destruct H0 with x; auto.
+    Qed.
+
+    Lemma second_max_none: forall (l : list Nt), nth_max l 1 = None ->
+      (forall (x : Nt), List.In x l -> max l = Some x).
+    Proof.
+      intros.
+      simpl in H0.
+      destruct l.
+      { inversion H1. }
+      remember H1.
+      clear Heqi.
+      apply max_correct in i.
+      destruct i.
+      destruct H2.
+      rewrite <- H2 in H0.
+      destruct H3.
+      2:{ rewrite H3. auto. }
+      rewrite -> max_none in H0.
+      rewrite -> filter_none in H0.
+      apply ltb_true_iff in H3.
+      apply H0 in H1.
+      rewrite H1 in H3. inversion H3.
+    Qed.
+
+    Lemma second_max_some_max_some: forall (l : list Nt) (x : Nt), nth_max l 1 = Some x ->
+      exists y : Nt, max l = Some y.
+    Proof.
+      intros.
+      simpl in H0.
+      destruct (max l) eqn:e; eauto.
+    Qed.
+
+    Lemma gt_second_max: forall (l : list Nt) (x y z: Nt), max l = Some x -> nth_max l 1 = Some y ->
+      List.In z l -> y < z -> x = z.
+    Proof.
+      intros.
+      simpl in *.
+      destruct l.
+      { inversion H2. }
+      rewrite H0 in H1.
+      remember H2. clear Heqi.
+      apply max_correct in i.
+      destruct i. destruct H4.
+      rewrite H0 in H4. inversion H4.
+      clear H4. rewrite H7 in H5.
+      clear H7. clear x0.      
+      destruct H5; auto.
+      exfalso. apply lt_not_le with y z; auto.
+      assert(List.In z ([seq x0 <- n :: l | ltb x0 x])).
+        rewrite -> List.filter_In. split; auto. rewrite ltb_true_iff. auto.
+      apply max_correct in H5. destruct H5. destruct H5. 
+      rewrite H1 in H5. inversion H5. rewrite <- H8. auto.
+    Qed.
+
+    Lemma second_max_lt_max: forall (l : list Nt) (x y : Nt), max l = Some x ->
+        nth_max l 1 = Some y -> y < x.
+    Proof.
+      intros.
+      simpl in H1.
+      destruct (max l) eqn:e.
+      2:{ inversion H0. }
+      inversion H0.
+      rewrite H3 in H1. rewrite H3 in e.
+      clear H3. clear H0. clear n.
+      apply max_in in H1.
+      apply List.filter_In in H1.
+      destruct H1. apply ltb_true_iff.
+      auto.
+    Qed.
+  
+    Lemma exists_min_dist_to_max: forall (l : list Nt) (x : Nt), max l = Some x ->
+       (exists e, 0 < e /\ (forall y : Nt, List.In y l -> abs (x + - y) < e -> x = y)).
+    Proof.
+      intros.
+      destruct (nth_max l 1) eqn:eq.
+      2:{ 
+        exists 1. split. apply plus_id_lt_mult_id. intros.
+        apply second_max_none with l y in eq; auto.
+        rewrite H0 in eq. inversion eq. auto.
+      }
+      exists (x + - n).
+      split.
+      { 
+        rewrite <- plus_neg_r with n.
+        apply plus_lt_compat_r.
+        apply second_max_lt_max with l; auto.
+      }
+      intros.
+      rewrite abs_posb in H2.
+      2:{ 
+        apply leb_true_iff.
+        rewrite <- plus_neg_r with y.
+        apply plus_le_compat_r.
+        apply max_correct in H1.
+        destruct H1. destruct H1.
+        rewrite H0 in H1. inversion H1. rewrite <- H4. auto.
+      }
+      apply gt_second_max with l n; auto.
+      apply plus_lt_compat_l with (- x ) _ _ in H2.
+      repeat rewrite plus_assoc in H2.
+      repeat rewrite plus_neg_l in H2.
+      repeat rewrite plus_id_l in H2.
+      apply lt_neg in H2. auto.
     Qed.
 
 
@@ -1764,6 +1953,8 @@ Module num_Extrema.
     rewrite argmax_ne_mapmax_ne.
     auto.
   Qed.
+
+  
 
 
 

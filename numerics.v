@@ -383,8 +383,7 @@ Module Numerics.
 
     Definition min (x y : Nt) : Nt :=
     if leb x y then x else y.
-
-    
+      
 
     Lemma le_lt_weak: forall (n m : Nt), n < m -> n <= m.
     Proof.
@@ -646,7 +645,6 @@ Module Numerics.
       auto.
     Qed.
       
-
     Lemma mult_le_compat_l_reverse: forall x y z : Nt, plus_id < x -> x * y <= x* z -> y <= z.
     Proof.
       intros.

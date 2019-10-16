@@ -21,6 +21,7 @@ Require Import Coq.FSets.FMapAVL Coq.FSets.FMapFacts.
 Require Import Structures.Orders NArith.
 
 
+
 Module Enum_table.
 
   Definition nonempty_head (T : Type) (l : list T) (H : O <> length l) : T.
@@ -423,6 +424,11 @@ Lemma prodEnumerableInstance_ok (aT bT:  eqType)
   split; auto.
 Qed.
 
+
+
+
+
+
 Record list_len {T : Type} (n : nat) : Type :=
   mk_list_len {
     list_len_l : list T;
@@ -574,6 +580,7 @@ Proof.
   2: { inversion list_len_ok1. }
   f_equal. apply proof_irrelevance.
 Qed.
+
 
 
 
@@ -822,6 +829,7 @@ Proof.
 Qed.
 
 
+
 Lemma enum_table_total: forall {T1 T2 : eqType} (T1_enum : Enumerable T1) (T2_enum : Enumerable T2) 
       (T1_enum_ok : @Enum_ok T1 T1_enum) (T2_enum_ok : @Enum_ok T2 T2_enum) (T1_enum_ne : O <> length T1_enum)
       (t : (@Enum_table.table T1 T2 T1_enum)),
@@ -864,3 +872,116 @@ Proof.
   apply enum_table_total.
 Qed.
 
+
+Record enum_nat (n : nat) : Type :=
+  mk_enum_nat {
+    enum_nat_n : nat;
+    enum_nat_lt : lt enum_nat_n n
+  }.
+
+Program Fixpoint enum_nat_enumerate_aux (n : nat) (m : nat) (H : le m n) : list (enum_nat n):=
+match m with
+| O => nil
+| S m' => (@mk_enum_nat n m' _) :: (@enum_nat_enumerate_aux n m' _)
+end.
+Next Obligation.
+  unfold lt in *.
+  apply Nat.le_trans with (S m'); auto.
+Qed.
+
+Program Definition enum_nat_enumerate (n : nat) : list (enum_nat n) :=
+  @enum_nat_enumerate_aux n n _.
+
+Lemma enum_nat_enumerate_aux_max: forall (n m : nat) (p : enum_nat n) (H : le m n),
+  In p (@enum_nat_enumerate_aux n m H) -> lt (enum_nat_n p) m.
+Admitted.
+
+Program Definition enum_nat_list_to_succ (n : nat) (l : list (enum_nat n))
+    : list (enum_nat (S n)) :=
+  map (fun x => @mk_enum_nat (S n) (enum_nat_n x) _) l.
+Next Obligation.
+  destruct x.
+  simpl.
+  apply Nat.le_trans with n; auto.
+Qed.
+
+Lemma enum_nat_enumerate_aux_to_succ: forall (n m : nat) (H0 : le m n) (H1 : le m (S n)),
+    @enum_nat_enumerate_aux (S n) m H1 = enum_nat_list_to_succ (@enum_nat_enumerate_aux n m H0).
+Admitted.
+
+
+
+Lemma enum_nat_ok: forall n : nat, @Enum_ok (enum_nat n) (enum_nat_enumerate n).
+Proof.
+  intros. 
+  constructor; unfold enumerable_fun;
+    unfold enum_nat_enumerate.
+  {
+    induction n.
+      simpl. auto.
+    simpl.
+    constructor.
+    {
+      unfold not.
+      intros.
+      apply InA_alt in H.
+      destruct H.
+      destruct H.
+      apply enum_nat_enumerate_aux_max in H0.
+      destruct x.
+      simpl in *.
+      inversion H.
+      rewrite H2 in H0.
+      eapply Nat.lt_irrefl. apply H0.
+    }
+    rewrite enum_nat_enumerate_aux_to_succ.
+    unfold enum_nat_list_to_succ.
+    apply NoDupA_map.
+    {
+      intros.
+      destruct x.
+      destruct y.
+      inversion H.
+      generalize enum_nat_lt0.
+      generalize enum_nat_lt1.
+      rewrite H1.
+      intros. f_equal. apply proof_irrelevance.
+    }
+    assert (le_n n = enum_nat_enumerate_obligation_1 n).
+      apply proof_irrelevance.
+    rewrite H.
+    auto.
+  }
+  intros.
+  induction n.
+  { inversion a. inversion enum_nat_lt0. }
+  simpl.
+  destruct (Nat.eq_dec (enum_nat_n a) n).
+  {
+    left. destruct a. simpl in e.
+    generalize enum_nat_lt0.
+    rewrite e.
+    intros. f_equal. apply proof_irrelevance.
+  }
+  right.
+  rewrite enum_nat_enumerate_aux_to_succ.
+  unfold enum_nat_list_to_succ.
+  remember (fun x : enum_nat n =>
+      {| enum_nat_n := enum_nat_n x; enum_nat_lt := enum_nat_list_to_succ_obligation_1 x |}) as f.
+  destruct a.
+  simpl in *.
+  unfold lt in enum_nat_lt0.
+  remember enum_nat_lt0 as H.
+  clear HeqH.
+  apply le_S_n in enum_nat_lt0.
+  assert(enum_nat_n0 < n)%coq_nat.
+    apply Nat.le_neq. split; auto.
+  assert ({| enum_nat_n := enum_nat_n0; enum_nat_lt := H |} = f (@mk_enum_nat n enum_nat_n0 H0)).
+    rewrite Heqf. simpl. f_equal. apply proof_irrelevance.
+  rewrite H1.
+  apply in_map.
+  assert (enum_nat_enumerate_obligation_1 n = le_n n).
+    apply proof_irrelevance.
+  rewrite <- H2.
+  apply IHn.
+Qed.
