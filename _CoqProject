@@ -15,4 +15,5 @@ extrema.v
 maplemmas.v
 strings.v
 generalized_bigops.v
-binach.v
+banach.v
+enumerables.v
