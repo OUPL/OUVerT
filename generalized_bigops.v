@@ -385,7 +385,7 @@ Qed.
 End use_Numeric.
 
 
-Lemma big_product_exp_sum (T : eqType) (cs : seq T) (f : T -> R) :
+Lemma big_product_exp_sum (T : Type) (cs : seq T) (f : T -> R) :
   big_product cs (fun x => exp (f x)) = exp (big_sum cs f).
 Proof.
   elim: cs => //=; first by rewrite exp_0.
@@ -707,7 +707,7 @@ Proof.
   auto.
 Qed.
 
-Lemma big_sum_le_abs: forall (T : eqType) (f : T -> Nt) (cs : seq T) ,
+Lemma big_sum_le_abs: forall (T : Type) (f : T -> Nt) (cs : seq T) ,
       Numerics.abs (big_sum cs f) <= big_sum cs (fun x => Numerics.abs (f x)).
 Proof.
   intros.
