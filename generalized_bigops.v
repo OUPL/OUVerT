@@ -173,6 +173,19 @@ Proof.
   move => a l /=; rewrite Numerics.plus_mult_distr_r => -> //.
 Qed.  
 
+Lemma big_sum_mult_left T (cs : seq T) c f :
+  c * (big_sum cs f) = big_sum cs (fun x => c * ( f x)).
+Proof.  
+  rewrite -> big_sum_ext with _ _ cs (fun x : T => c * f x) (fun x : T => f x * c); auto.
+  2:{ 
+    unfold eqfun.
+    intro x.
+    apply Numerics.mult_comm.
+  }
+  rewrite <- big_sum_mult_right.
+  apply Numerics.mult_comm.
+Qed.
+
 Fixpoint big_product (T : Type) (cs : seq T) (f : T -> Nt) : Nt :=
   if cs is [:: c & cs'] then ((f c) * (big_product cs' f))
   else Numerics.mult_id.
