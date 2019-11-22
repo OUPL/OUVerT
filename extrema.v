@@ -1913,7 +1913,6 @@ Module num_Extrema.
   Proof.
     intros.
     induction l.
-    SearchAbout mapmax.
     { exfalso. apply H0. auto. }
     destruct l.
       simpl. eauto.

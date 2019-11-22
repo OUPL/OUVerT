@@ -17,3 +17,5 @@ strings.v
 generalized_bigops.v
 banach.v
 enumerables.v
+
+-arg -w -arg -notation-overridden

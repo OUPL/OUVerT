@@ -582,7 +582,7 @@ Section Bernoulli.
   Lemma nonneg x : 0 <= t x.
   Proof.
     case: p_range => H1 H2; case: x => //=.
-    fourier.
+    lra.
   Qed.
 End Bernoulli.
 End Bernoulli.

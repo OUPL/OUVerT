@@ -174,10 +174,10 @@ Proof.
   { inversion 1. }
   split.
   { apply Pos2Z.is_nonneg. }
-  unfold Zle, Z.compare; rewrite H; inversion 1. 
+  unfold Z.le, Z.compare; rewrite H; inversion 1. 
   split.
   { apply Pos2Z.is_nonneg. }
-  unfold Zle, Z.compare; rewrite H; inversion 1. 
+  unfold Z.le, Z.compare; rewrite H; inversion 1. 
 Qed.
 
 Lemma Qinv_neq (n : Q) : ~0 == n -> ~0 == / n.
@@ -456,7 +456,7 @@ Qed.
 Lemma Deq_dec (d1 d2 : D) : {d1=d2} + {d1<>d2}.
 Proof.
   destruct d1, d2.
-  destruct (Z_eq_dec num0 num1).
+  destruct (Z.eq_dec num0 num1).
   { destruct (positive_eq_dec den0 den1).
     left; subst; f_equal.
     right; inversion 1; subst; apply n; auto. }
@@ -755,7 +755,7 @@ Proof.
   unfold Plub_aux.
   assert (H : (x <= Z.pow_pos 2 (Zsize x))%Z).
   { apply Zpow_pos_size_le. }
-  eapply Zle_trans; [apply H|].
+  eapply Z.le_trans; [apply H|].
   rewrite <-!two_power_pos_correct.
   apply two_power_pos_le.
   rewrite Pos2Nat.inj_le; generalize (Zsize x) as z; intro.
