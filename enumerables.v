@@ -139,7 +139,7 @@ Module Enum_table.
     intros.
     induction l; auto.
       inversion H.
-    simpl.
+    simpl. 
     destruct (eq_op t1 a) eqn:e.
     { symmetry. apply/(eqP). auto. }
     apply IHl.

@@ -673,8 +673,8 @@ Proof.
   by rewrite IH Numerics.mult_plus_id_r Numerics.plus_id_l.
 Qed.
 
-Lemma big_sum_func_leq_ub_l: forall (T : eqType) (f1 f2 : T->Nt) (cs : seq T) (n : Nt),
-      (forall t : T,  t \in cs -> 0<= f1 t /\ f2 t <= n) ->   big_sum cs (fun x : T => f1 x * f2 x) <= big_sum cs f1 * n.
+Lemma big_sum_func_leq_ub_l: forall (T : Type) (f1 f2 : T->Nt) (cs : seq T) (n : Nt),
+      (forall t : T,  List.In t cs -> 0<= f1 t /\ f2 t <= n) ->   big_sum cs (fun x : T => f1 x * f2 x) <= big_sum cs f1 * n.
 Proof.
   induction cs.
   { intros. simpl. rewrite Numerics.mult_plus_id_l. apply Numerics.le_refl. }
@@ -682,7 +682,7 @@ Proof.
   simpl.
   rewrite Numerics.plus_mult_distr_r.
   destruct H0 with a.
-    apply mem_head.
+    constructor. auto.
   apply Numerics.plus_le_compat.
   {
     apply Numerics.mult_le_compat_l; auto.
@@ -690,20 +690,19 @@ Proof.
   apply IHcs.
   intros.
   destruct H0 with t.
-    rewrite in_cons. rewrite H3. apply orb_true_r. 
+    constructor 2. apply H3. 
   split; auto.
 Qed.  
 
 
-Lemma big_sum_func_leq_max_l: forall (T : eqType) (f1 f2 : T->Nt) (cs : seq T) (H : O <> length cs),
-      (forall t : T,  t \in cs -> 0<= f1 t) ->  big_sum cs (fun x : T => f1 x * f2 x) <= big_sum cs f1 * num_Extrema.mapmax_ne f2 H.
+Lemma big_sum_func_leq_max_l: forall (T : Type) (f1 f2 : T->Nt) (cs : seq T) (H : O <> length cs),
+      (forall t : T,  List.In t  cs -> 0<= f1 t) ->  big_sum cs (fun x : T => f1 x * f2 x) <= big_sum cs f1 * num_Extrema.mapmax_ne f2 H.
 Proof.
   intros.
   apply big_sum_func_leq_ub_l.
   intros.
   split; auto.
   apply num_Extrema.mapmax_ne_correct.
-  apply In_mem.
   auto.
 Qed.
 
