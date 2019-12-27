@@ -199,13 +199,22 @@ Module MyOrdNatDep (B : BOUND) <: MyOrderedType.
   Program Definition t0 := @mk 0%N _.
   Next Obligation. by apply: B.n_gt0. Qed.
 
+
   (* FIXME: this definition should be fold_left, not fold_right *)
   Program Fixpoint enumerate_rec (m : nat) (pf : (m < n)%nat) : list t :=
+    match m with
+    | O => t0 :: nil
+    | S m' => @mk (N.of_nat m) _ :: enumerate_rec m' _
+    end .
+  Next Obligation. by rewrite Nat2N.id. Qed.
+  
+  (**Program Fixpoint enumerate_rec (m : nat) (pf : (m < n)%nat) : list t :=
     (match m as x return _ = x -> list t with
      | O => fun _ => t0 :: nil
-     | S m' => fun pf => @mk (N.of_nat m) _ :: enumerate_rec m' _
+     | S m' => fun pf0 => @mk (N.of_nat m) _ :: enumerate_rec m' _
      end) erefl.
-  Next Obligation. by rewrite Nat2N.id. Qed.
+  Next Obligation. by rewrite Nat2N.id. Qed.**)
+
 
   Lemma lt_dec x y : ({x<y} + {x>=y})%nat.
   Proof.

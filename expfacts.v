@@ -5,7 +5,7 @@ Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 
-Require Import QArith Reals Rpower Ranalysis Fourier MVT.
+Require Import QArith Reals Rpower Ranalysis Fourier MVT Lra.
 
 Lemma ln_le (x y : R) : (0 < x -> x <= y -> ln x <= ln y)%R.
 Proof.
@@ -82,7 +82,7 @@ Lemma ln_Taylor_upper' x : ((1 + x) <= exp x)%R.
       apply Rlt_gt.
       apply aux_neg.
       case: H2 => //.
-      fourier.
+      lra.
     }
     {
       case: H => H;
@@ -111,7 +111,7 @@ Proof.
     intros h.
     rewrite /ln.
     case_eq (Rlt_dec 0 (1-x)); move => h1 h2;
-    last by apply False_rec; apply h1; fourier.
+    last by apply False_rec; apply h1; lra.
     rewrite /Rln => /=.
     destruct (ln_exists (1 - x) h1) as [x0 e0].
     apply Rplus_le_reg_l with (r := 1%R).
@@ -175,7 +175,7 @@ Proof.
     apply exp_pos.
     rewrite  -(Rmult_0_r x).
     apply Rmult_lt_gt_compat_neg_l => //.
-    fourier.
+    lra.
 Qed.
 
 Lemma ln_Taylor_lower_aux_gt_0
@@ -209,7 +209,7 @@ Proof.
     left.
     apply exp_pos.
     rewrite  -(Rmult_0_r x).
-    apply Rmult_ge_compat_l => //. fourier. fourier.
+    apply Rmult_ge_compat_l => //. lra. lra.
 Qed.
 
 Lemma ln_Taylor_lower x : (x <= 1/2 -> -x - x^2 <= ln (1 - x))%R.
@@ -222,9 +222,9 @@ Proof.
     apply (Rmult_le_reg_r (/exp (- (x + x ^ 2))));
       first by apply Rinv_0_lt_compat; apply exp_pos.
     rewrite Rinv_r;
-      last by move: (exp_pos (- (x + x ^ 2))%R) => H0 H1; fourier.
+      last by move: (exp_pos (- (x + x ^ 2))%R) => H0 H1; lra.
     rewrite exp_Ropp Rinv_involutive;
-      last by move: (exp_pos (x + x^2)%R) => H0 H1; fourier.
+      last by move: (exp_pos (x + x^2)%R) => H0 H1; lra.
     set F := fun x => ((1 - x) * exp (x + x^2))%R.
     have H0 : (F x = (1 - x) * exp (x + x ^ 2))%R => //.
     rewrite -H0; clear H0.
@@ -241,10 +241,10 @@ Proof.
       rewrite h H3. apply Rge_le. clear h.
       rewrite Rminus_0_r.
       apply Ropp_0_le_ge_contravar.
-      apply Rmult_le_pos; last by fourier.
+      apply Rmult_le_pos; last by lra.
       apply Rge_le.
       apply ln_Taylor_lower_aux_gt_0 => //.
-      fourier.
+      lra.
     }
     {
       right. subst. ring.
@@ -255,7 +255,7 @@ Proof.
       rewrite H3.
       rewrite Rminus_0_l.
       rewrite -(Rmult_0_r (derive_pt F c (deriv_aux_lower c))%R).
-      apply Rmult_le_compat_neg_l; last by fourier.
+      apply Rmult_le_compat_neg_l; last by lra.
       left.
       apply ln_Taylor_lower_aux_lt_0 => //.
     }
@@ -269,8 +269,8 @@ Proof.
       rewrite -[(1 - _)%R]exp_ln.
       { apply: exp_increasing.
         apply: H2. }
-      fourier. }
-    move => ->; rewrite exp_ln; fourier.
+      lra. }
+    move => ->; rewrite exp_ln; lra.
 Qed.
 
 Lemma exp_mult x y : exp (x * INR y) = exp x ^ y.
@@ -354,9 +354,10 @@ Proof.
   ring_simplify.
   erewrite pr_nu_var2.
   erewrite derive_pt_comp.
-  Focus 2.
+  2:{
   intros. assert (exp (c * h) = (comp exp (fun x=> c * x)) h) by auto.
   rewrite H. reflexivity.
+  }
   erewrite derive_pt_exp.
   erewrite pr_nu_var2.
   erewrite derive_pt_scal.
@@ -394,7 +395,7 @@ Lemma ln_upper_01_aux_deriv_at_top c :
 Proof.
   rewrite ln_upper_01_aux_deriv_at_pt.
   rewrite Rmult_0_r exp_0. ring_simplify.
-  move: (ln_Taylor_upper' c) => H. fourier.
+  move: (ln_Taylor_upper' c) => H. lra.
 Qed.
 
 Lemma ln_upper_01_aux_deriv_at_bot c : 
@@ -404,14 +405,14 @@ Proof.
   rewrite ln_upper_01_aux_deriv_at_pt.
   rewrite Rmult_1_r.
   suffices: exp c <= 1 + (c * exp c); first by
-    (intros; fourier).
+    (intros; lra).
   move: (Rtotal_order c 0) => H1.
   destruct H1 as [H1 | [H1 | H1]].
   {
     suffices: ((1 -c) * exp c <= 1). intros H2.
     ring_simplify in H2.
     apply (Rplus_le_compat_l (c * exp c)) in H2.
-    ring_simplify in H2. fourier.
+    ring_simplify in H2. lra.
     apply (Rle_trans _ ((exp (- c)) * (exp c)) _).
     apply Rmult_le_compat_r. apply Rlt_le. apply exp_pos.
     apply ln_Taylor_upper'. rewrite <- exp_plus.
@@ -419,12 +420,12 @@ Proof.
   }
   { subst. right. rewrite exp_0. ring. }
   {
-    suffices: (0 <= 1 + c * exp c - exp c); first by (intros; fourier).
+    suffices: (0 <= 1 + c * exp c - exp c); first by (intros; lra).
     set f:= (fun x => 1 + x * exp x - exp x).
     replace 0 with (f 0); last by (rewrite /f exp_0; ring).
     replace (1 + c * exp c - exp c) with (f c); last by reflexivity.
     apply Rgt_lt in H1. left.
-    eapply (@derive_increasing_interv 0 c f _ H1); try split; try fourier.
+    eapply (@derive_increasing_interv 0 c f _ H1); try split; try lra.
     intros. rewrite /f.
     erewrite pr_nu_var2.
     erewrite derive_pt_plus.
@@ -447,7 +448,7 @@ Proof.
     ring_simplify.
     apply Rmult_lt_0_compat.
     apply exp_pos.
-    inversion H; fourier.
+    inversion H; lra.
   }
   Unshelve.
   rewrite /f.
@@ -481,10 +482,10 @@ Proof.
   intros. replace (c ^ 2) with (c * c) by ring.
   move: (Rtotal_order 0 c) => H0.
   destruct H0 as [H0 | [H0 | H0]].
-  - apply Rmult_lt_0_compat; fourier.
+  - apply Rmult_lt_0_compat; lra.
   - congruence.
   - replace (c * c) with ((- c) * (- c)) by ring.
-    apply Rmult_lt_0_compat; fourier.
+    apply Rmult_lt_0_compat; lra.
 Qed.
 
 Lemma ln_upper_01_aux_deriv_2_decreasing c :
@@ -514,9 +515,10 @@ Proof.
     2: reflexivity.
   erewrite pr_nu_var.
   erewrite derive_pt_comp.
-    Focus 2.
+    2:{
     replace (fun h : R => exp (c * h)) with (fun h : R => (comp exp (Rmult c)) h).
     all: reflexivity.
+  }
   erewrite pr_nu_var.
   erewrite derive_pt_exp.
     2: reflexivity.
@@ -527,7 +529,7 @@ Proof.
   ring_simplify.
   suffices: 0 < c ^ 2 * exp (c * x).
   intros H. apply Ropp_0_lt_gt_contravar in H. apply Rgt_lt.
-  ring_simplify in H. fourier.
+  ring_simplify in H. lra.
   apply Rmult_lt_0_compat.
   apply square_pos. auto.
   apply exp_pos.
@@ -551,16 +553,16 @@ Proof.
   rewrite exp_ln.
   case: (Req_EM_T c 0); intros.
   {
-    subst. rewrite Rmult_0_l exp_0. fourier.
+    subst. rewrite Rmult_0_l exp_0. lra.
   }
   {
     suffices: (0 <= 1 - x + x * exp c - exp (c * x)).
-    intros. fourier.
+    intros. lra.
     set f := fun x => 1 - x + x * exp c - exp (c * x).
     set f' := fun x => -1 + exp c - c * exp (c * x).
     replace (1 - x + x * exp c - exp (c * x)) with (f x); last by auto.
     move: (Rolle f 0 1) => H_rolle.
-    assert (0 < 1) as duh by fourier. 
+    assert (0 < 1) as duh by lra. 
     assert (f 0 = f 1) as H_bounds by
       (rewrite /f -(ln_upper_01_aux_bot c) -(ln_upper_01_aux_top c); auto).
     specialize (H_rolle
@@ -576,7 +578,7 @@ Proof.
       apply Rlt_le.
       inversion H.
       eapply derive_increasing_interv with
-        (a := 0) (b := z) (pr := ln_upper_01_aux_deriv c); try split; try fourier.
+        (a := 0) (b := z) (pr := ln_upper_01_aux_deriv c); try split; try lra.
       intros.
       rewrite ln_upper_01_aux_deriv_at_pt.
       rewrite ln_upper_01_aux_deriv_at_pt in z_deriv.
@@ -587,7 +589,7 @@ Proof.
       apply Rlt_le.
       inversion H.
       eapply derive_increasing_interv with
-        (a := 0) (b := z) (pr := ln_upper_01_aux_deriv c); try split; try fourier.
+        (a := 0) (b := z) (pr := ln_upper_01_aux_deriv c); try split; try lra.
       intros.
       rewrite ln_upper_01_aux_deriv_at_pt.
       rewrite ln_upper_01_aux_deriv_at_pt in z_deriv.
@@ -598,7 +600,7 @@ Proof.
       apply Rlt_le.
       inversion H. apply Rgt_lt in H0.
       eapply derive_decreasing_interv with
-        (a := z) (b := 1) (pr := ln_upper_01_aux_deriv c); try split; try fourier.
+        (a := z) (b := 1) (pr := ln_upper_01_aux_deriv c); try split; try lra.
       intros.
       rewrite ln_upper_01_aux_deriv_at_pt.
       rewrite ln_upper_01_aux_deriv_at_pt in z_deriv.
@@ -609,20 +611,20 @@ Proof.
     replace (1 - x + x * exp c) with (1 - (x * (1 - exp c))); last by ring.
     assert (1 - exp c < 1).
     {
-      move: (exp_pos c) => H0. fourier. 
+      move: (exp_pos c) => H0. lra. 
     }
     move: (Rtotal_order (1 - exp c) 0) => H1.
     apply Rlt_Rminus.
     destruct H1 as [H1 | [H1 | H1]].
     * inversion H. apply (@Rlt_trans _ 0 _).
       apply Ropp_lt_cancel.
-      assert (- ( 1 - exp c ) > 0) by fourier.
+      assert (- ( 1 - exp c ) > 0) by lra.
       replace (- (x * (1 - exp c))) with (x * - (1 - exp c)); last by ring. 
       replace (- 0) with 0; last by ring.
-      apply Rmult_lt_0_compat; fourier. fourier. 
-    * rewrite H1. fourier.
+      apply Rmult_lt_0_compat; lra. lra. 
+    * rewrite H1. lra.
     * replace 1 with (1 * 1) at 2. inversion H. 
-      apply Rmult_le_0_lt_compat; fourier. ring.
+      apply Rmult_le_0_lt_compat; lra. ring.
   }
 Qed.
 
@@ -634,9 +636,9 @@ Proof.
   { subst x; rewrite Rmult_0_r exp_0 /Rminus Ropp_0 Rplus_0_r Rmult_0_l Rplus_0_r.
     apply: Rle_refl. }
   case: H2 => H2x; last first.
-  { subst x; rewrite Rmult_1_r Rmult_1_l; fourier. }
+  { subst x; rewrite Rmult_1_r Rmult_1_l; lra. }
   have Hx: 0 < 1 - x + x * exp c.
-  { rewrite -[0]Rplus_0_l; apply: Rplus_lt_compat; try fourier.
+  { rewrite -[0]Rplus_0_l; apply: Rplus_lt_compat; try lra.
     apply: Rmult_lt_0_compat => //; apply: exp_pos. }
   move: (ln_upper_01 c (conj H1x H2x)); case.
   { move/exp_increasing => H; left; apply: Rlt_le_trans; first by apply: H.
@@ -688,9 +690,9 @@ Lemma deriv_at_point_exp_minus_1_minus_x_deriv_on_0_1 :
 Proof.
   intros. rewrite deriv_at_point_exp_minus_1_minus_x.
   suffices: (exp (x - 1) < 1).
-  intros. fourier.
+  intros. lra.
   replace 1 with (exp 0) at 2.
-  apply exp_increasing. destruct H. fourier.
+  apply exp_increasing. destruct H. lra.
   apply exp_0.
 Qed.
 
@@ -699,9 +701,9 @@ Lemma deriv_at_point_exp_minus_1_minus_x_deriv_on_1_inf :
 Proof.
   intros. rewrite deriv_at_point_exp_minus_1_minus_x.
   suffices: (1 < exp (x - 1)).
-  intros. fourier.
+  intros. lra.
   replace 1 with (exp 0) at 1.
-  apply exp_increasing. fourier.
+  apply exp_increasing. lra.
   apply exp_0.
 Qed.
 
@@ -714,11 +716,11 @@ Proof.
     set (f := fun x => exp (x - 1) - x).
     replace (exp (1 - 1) - 1) with (f 1); try auto.
     replace (exp (x - 1) - x) with (f x); try auto.
-    assert (0 < 1) by fourier.
+    assert (0 < 1) by lra.
     eapply (derive_decreasing_interv H0).
     intros. apply deriv_at_point_exp_minus_1_minus_x_deriv_on_0_1.
-    auto. split; fourier.
-    split; fourier. auto.
+    auto. split; lra.
+    split; lra. auto.
   - intros. destruct b. subst. right.
     replace (exp (1-1)) with 1. field.
     rewrite <- exp_0 at 1. f_equal. field.
@@ -726,10 +728,10 @@ Proof.
     set (f := fun x => exp (x - 1) - x).
     replace (exp (1 - 1) - 1) with (f 1); try auto.
     replace (exp (x - 1) - x) with (f x); try auto.
-    assert (1 < x + 1) by fourier.
+    assert (1 < x + 1) by lra.
     eapply (derive_increasing_interv _ _ f _ H1).
     intros. apply deriv_at_point_exp_minus_1_minus_x_deriv_on_1_inf.
-    destruct H2; fourier. split; fourier. split; fourier. fourier.
+    destruct H2; lra. split; lra. split; lra. lra.
   Unshelve.
     all: apply derivable_exp_minus_1_minus_x.
 Qed.

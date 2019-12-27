@@ -8,6 +8,7 @@ Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 
+
 Import GRing.Theory Num.Def Num.Theory.
 
 Require Import extrema numerics dyadic strings.
@@ -103,6 +104,9 @@ Class Enum_ok A `{Enumerable A} : Type :=
       enum_total : forall a : A, In a (enumerate A)
     }.
 
+
+
+
 Class RefineTypeAxiomClass (T : finType)
       (enumerateClass : Enumerable T) :=
   refineTypeAxiom_fun :
@@ -114,6 +118,11 @@ Instance prodEnumerableInstance (aT bT : Type)
          (enumerableB : Enumerable bT)
   : Enumerable (aT*bT) :=
   List.list_prod (enumerate aT) (enumerate bT).
+
+    
+
+
+
 
 Class Eq (A : Type) : Type :=
   decEq : A -> A -> Prop.

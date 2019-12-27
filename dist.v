@@ -494,7 +494,8 @@ Section markovR.
     have H3: x * z <= (y * /z) * z.
     { rewrite Rmult_assoc Rinv_l; last first.
       { move => Heq; rewrite Heq in H.
-        by move: (Rnot_lt0 0); rewrite Rmult_0_r. }
+        apply Rlt_irrefl in H. auto.
+      }
       by rewrite Rmult_1_r. }
     eapply Rmult_le_reg_r; eauto.
   Qed.    
@@ -581,7 +582,7 @@ Section Bernoulli.
   Lemma nonneg x : 0 <= t x.
   Proof.
     case: p_range => H1 H2; case: x => //=.
-    fourier.
+    lra.
   Qed.
 End Bernoulli.
 End Bernoulli.
@@ -815,12 +816,12 @@ Section general_lemmas.
     case: (Rle_lt_dec (g x) (h x)).
     { move => H2; case: (Rle_lt_dec (exp (c * g x)) (exp (c * h x))) => // H3.
       { case: H2.
-        { move => H4; move: (H (Rfourier_lt _ _ _ H4 Hlt)) => H5.
+        { move => H4; move: (H (Rmult_lt_compat_l _ _ _ Hlt H4)) => H5.
           by move: (Rlt_asym _ _ H5). }
         move => H4; elimtype False; rewrite ->H4 in H3; clear H4.
         by move: (Rlt_asym _ _ H3). }}
     move => H2; case: (Rle_lt_dec (exp (c * g x)) (exp (c * h x))) => // H3.
-    move: (exp_increasing _ _ (Rfourier_lt _ _ _ H2 Hlt)) => H4; case: H3.
+    move: (exp_increasing _ _ (Rmult_lt_compat_l _ _ _ Hlt H2)) => H4; case: H3.
     { by move => H5; move: (Rlt_asym _ _ H4). }
     by move => H5; elimtype False; rewrite H5 in H4; move: (Rlt_asym _ _ H4).
   Qed.

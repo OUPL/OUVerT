@@ -3,13 +3,21 @@ Unset Strict Implicit.
 
 Require Import NArith QArith Qreals Reals Fourier.
 
+
+
+Require Import OUVerT.dyadic.
+Import List.
+Import ListNotations.
+
+
 Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 
+
 Import GRing.Theory Num.Def Num.Theory.
 
-Require Import OUVerT.dyadic.
+
 
 (** This file defines conversions between Ssreflect/MathComp and
     Coq Standard Library implementations of various numeric types, 
@@ -18,6 +26,2168 @@ Require Import OUVerT.dyadic.
       - rat <-> Q
       - rat -> R
  *)
+
+Delimit Scope Numeric_scope with Num.
+Local Open Scope Numeric_scope.
+
+Lemma Nat_le_exists_diff: forall m n : nat, Peano.le m n -> exists p, addn m p = n.
+Proof.
+  intros.
+  exists (subn n m).
+  rewrite subnKC; auto.
+  assert(reflect (m <= n)%coq_nat (m <= n)%N).
+    apply leP; auto.
+  inversion H0. auto. exfalso. auto. 
+Qed.
+
+Module Numerics.
+
+
+  Class Numeric (T:Type) :=
+    mkNumeric {
+
+        plus: T -> T -> T where "n + m" := (plus n m) : Numeric_scope;
+        neg : T->T where "- n" := (neg n) : Num;
+        mult: T -> T -> T where "n * m" := (mult n m) : Num;
+        pow_nat: T -> nat -> T;
+    
+        of_nat: nat -> T;
+        plus_id: T;
+        mult_id: T;
+        
+        lt: T->T->Prop where "n < m" := (lt n m) : Num;
+        plus_id_lt_mult_id: plus_id < mult_id;
+
+        mult_plus_id_l: forall t : T, plus_id * t = plus_id;
+        of_nat_plus_id: of_nat O = plus_id;
+        of_nat_succ_l: forall n : nat, of_nat (S n) = mult_id + of_nat n;
+        plus_comm : forall r1 r2, r1 + r2 = r2 + r1;
+        plus_assoc : forall r1 r2 r3, r1 + (r2 + r3) = r1 + r2 + r3;
+        plus_neg_r : forall r, r + - r = plus_id;
+        plus_id_l : forall r, plus_id + r = r;
+        mult_comm : forall r1 r2, r1 * r2 = r2 * r1;
+        mult_assoc : forall r1 r2 r3, r1 * (r2 * r3) = r1 * r2 * r3;
+        mult_id_l : forall r, mult_id * r = r;
+        mult_plus_distr_l : forall r1 r2 r3, r1 * (r2 + r3) = r1 * r2 + r1 * r3;
+        total_order_T : forall r1 r2, {r1 < r2} + {r1 = r2} + {r2 < r1};
+        lt_asym : forall r1 r2, r1 < r2 -> ~ r2 < r1;
+        lt_trans : forall r1 r2 r3, r1 < r2 -> r2 < r3 -> r1 < r3;
+        plus_lt_compat_l : forall r r1 r2, r1 < r2 -> r + r1 < r + r2;
+        mult_lt_compat_l : forall r r1 r2, plus_id < r -> (r1 < r2 <-> r * r1 < r * r2);
+
+        pow_natO: forall t, pow_nat t O = mult_id;
+        pow_nat_rec: forall t n, pow_nat t (S n) = t * pow_nat t n;
+
+        to_R : T -> R;
+        to_R_plus: forall t1 t2 : T, Rplus (to_R t1) (to_R t2) = to_R (t1 + t2);
+        to_R_mult: forall t1 t2 : T, Rmult (to_R t1) (to_R t2) = to_R (t1 * t2);
+        to_R_lt: forall t1 t2 : T, t1 < t2 <-> Rlt (to_R t1) (to_R t2);
+        to_R_neg: forall t : T, Ropp (to_R t) = to_R (- t);
+        to_R_inj: forall n m : T, to_R n = to_R m -> n = m;
+      }.
+      
+
+  Infix "+" := plus : Numeric_scope.
+  Notation "- n" := (neg n) : Numeric_scope.
+  Infix "*" := mult : Numeric_scope.
+  Infix "<" := lt : Numeric_scope.
+
+  Notation "1" := Numerics.mult_id : Numeric_scope.
+  Notation "0" := Numerics.plus_id : Numeric_scope.
+
+
+  Section use_Numeric.
+
+    Context {Nt:Type} `{Numeric Nt}.
+
+    Definition le (n m : Nt) : Prop := n < m \/ n = m.
+    Infix "<=" := le : Numeric_scope.
+
+    Lemma le_lt_or_eq: forall n m : Nt, n < m \/ n = m <-> n <= m .
+    Proof. 
+      split; auto.
+    Qed.
+
+
+
+    Lemma lt_irrefl: forall n : Nt, ~ n < n.
+    Proof.
+      unfold not.
+      intros.
+      assert (~ n < n).
+      { apply lt_asym in H0. auto. }
+      apply H1. auto.
+    Qed.
+
+
+    Lemma plus_assoc_reverse : forall r1 r2 r3, r1 + r2 + r3 = r1 + (r2 + r3).
+    Proof. intros. rewrite plus_assoc. auto. Qed.
+
+    Lemma mult_plus_id_r: forall t : Nt, t * plus_id  = plus_id.
+    Proof. intros. rewrite mult_comm. apply mult_plus_id_l. Qed.
+
+    Lemma eq_dec: forall t1 t2 : Nt, {t1 = t2} + {t1 <> t2}.
+    Proof.
+      intros.
+      destruct total_order_T with t1 t2.
+      {
+        destruct s; auto.
+        right.
+        unfold not.
+        intros.
+        rewrite H0 in l.
+        apply lt_irrefl with t2.
+        auto.
+      }
+      right.
+      unfold not.
+      intros.
+      apply lt_irrefl with t2.
+      rewrite H0 in l.
+      auto.
+    Qed.
+
+    Lemma le_not_lt: forall n m : Nt, (n <= m)-> ~ (m < n).
+    Proof.
+      intros.
+      unfold not.
+      intros.
+      unfold le in H0.
+      destruct H0.
+      { apply lt_asym in H1. apply H1. auto. }
+      rewrite H0 in H1.
+      apply lt_irrefl in H1.
+      inversion H1.
+    Qed.
+
+    Lemma plus_neg_l: forall t1, (-t1) + t1 = plus_id.
+    Proof.
+      intros.
+      rewrite plus_comm.
+      apply plus_neg_r.
+    Qed.
+
+    Lemma plus_id_r: forall t : Nt, t + plus_id = t.
+    Proof.
+      intros.
+      rewrite plus_comm.
+      apply plus_id_l.
+    Qed.
+
+
+    Lemma nat1_mult_id: of_nat (S O) = mult_id.
+    Proof.
+      rewrite of_nat_succ_l.
+      rewrite of_nat_plus_id.
+      rewrite plus_id_r.
+      auto.
+    Qed.
+
+  
+    Lemma double_neg: forall t : Nt, - - t = t.
+    Proof.
+      intros.
+      rewrite <- plus_id_l.
+      rewrite <- plus_neg_l with (- t).
+      rewrite <- plus_assoc.
+      rewrite plus_neg_l.
+      rewrite plus_id_r.
+      auto.
+    Qed.
+
+    Lemma neg_plus_id: -plus_id = plus_id.
+    Proof.
+      assert(-plus_id = -plus_id + plus_id).
+      { rewrite plus_id_r. auto. }
+      rewrite H0.
+      rewrite plus_neg_l.
+      auto.
+    Qed.
+      
+    Lemma plus_lt_compat_r : forall r r1 r2, r1 < r2 -> r1 + r < r2 + r.
+    Proof.
+      intros.
+      rewrite plus_comm.
+      rewrite -> plus_comm with r2 r.
+      apply plus_lt_compat_l.
+      auto.
+    Qed.  
+ 
+    Lemma mult_lt_compat_r : forall r r1 r2, plus_id < r -> (r1 < r2 <-> r1 * r < r2 * r).
+    Proof.
+      intros.
+      rewrite mult_comm.
+      rewrite -> mult_comm with r2 r.
+      apply mult_lt_compat_l; auto.
+    Qed.
+
+    Lemma plus_elim_l: forall t1 t2 t3: Nt, t1 + t2 = t1 + t3 -> t2 = t3.
+    Proof.
+      intros.
+      rewrite <- plus_id_l.
+      rewrite <- plus_neg_l with t1.
+      rewrite <- plus_assoc.
+      rewrite <- H0.
+      rewrite plus_assoc.
+      rewrite plus_neg_l.
+      rewrite plus_id_l.
+      auto.
+    Qed.
+
+    Lemma plus_elim_r: forall t1 t2 t3: Nt, t2 + t1 = t3 + t1 -> t2 = t3.
+    Proof.
+      intros.
+      rewrite plus_comm in H0.
+      rewrite -> plus_comm with t3 t1 in H0.
+      apply plus_elim_l in H0.
+      auto.
+    Qed.    
+
+    Lemma neg_pos_neg: forall t1 : Nt, plus_id < t1 <-> - t1 < plus_id.
+    Proof.
+      intros.
+      split; intros.
+      {
+        apply plus_lt_compat_l with (-t1) plus_id t1 in H0.
+        rewrite plus_neg_l in H0.
+        rewrite plus_id_r in H0.
+        auto.
+      }
+      apply plus_lt_compat_l with t1 (-t1) plus_id in H0.
+      rewrite plus_neg_r in H0.
+      rewrite plus_id_r in H0.
+      auto.
+    Qed.
+
+
+    Lemma plus_neg_distr: forall n m : Nt, - (n + m) = -n + -m.
+    Proof.
+      intros.
+      apply plus_elim_r with m.
+      rewrite <- plus_assoc.
+      rewrite plus_neg_l.
+      rewrite plus_id_r.
+      apply plus_elim_r with n.
+      rewrite plus_neg_l.
+      rewrite <- plus_assoc.
+      rewrite -> plus_comm with n m.
+      apply plus_neg_l.
+    Qed.
+
+    Lemma plus_mult_distr_r: forall r1 r2 r3, (r2 + r3) * r1 = r2 * r1 + r3 * r1.
+    Proof.
+      intros.
+      rewrite mult_comm.
+      rewrite mult_plus_distr_l.
+      rewrite mult_comm.
+      rewrite -> mult_comm with r1 r3.
+      auto.
+    Qed.
+
+    Lemma mult_id_r: forall n : Nt, n * 1 = n.
+    Proof.
+      intros.
+      rewrite mult_comm.
+      apply mult_id_l.
+    Qed.
+    
+
+    Lemma neg_mult_distr_l: forall n m : Nt, - (n * m) = -n * m.
+    Proof.
+      intros.
+      apply plus_elim_r with (n * m).
+      rewrite plus_neg_l.
+      rewrite <- plus_mult_distr_r.
+      rewrite plus_neg_l.
+      rewrite mult_plus_id_l.
+      auto.
+    Qed.
+
+    Lemma neg_mult_distr_r: forall n m : Nt, - (n * m) = n * -m.
+    Proof.
+      intros.
+      rewrite -> mult_comm with n (-m).
+      rewrite <- neg_mult_distr_l.
+      rewrite mult_comm.
+      auto.
+    Qed.
+
+
+    Lemma mult_elim_pos: forall t1 t2 t3 : Nt, plus_id < t1 -> t1 * t2 = t1 * t3 -> t2 = t3.      
+    Proof.
+      intros.
+      destruct total_order_T with t2 t3.
+      {
+        destruct s; auto.
+        apply mult_lt_compat_l with t1 t2 t3 in l; auto.
+        rewrite H1 in l.
+        apply lt_irrefl in l.
+        inversion l.
+      }
+      apply mult_lt_compat_l with t1 t3 t2 in l; auto.
+      rewrite H1 in l.
+      apply lt_irrefl in l.
+      inversion l.
+    Qed.
+
+    Lemma mult_elim_l: forall t1 t2 t3 : Nt, plus_id <> t1 -> t1 * t2 = t1 * t3 -> t2 = t3.      
+    Proof.
+      intros.
+      destruct total_order_T with t1 plus_id.
+      {
+        destruct s; auto.
+        {           
+          apply mult_elim_pos with (-t1).
+          { apply neg_pos_neg. rewrite double_neg. auto. }
+          repeat rewrite <- neg_mult_distr_l.
+          rewrite H1.
+          auto.
+        }
+        exfalso.
+        apply H0.
+        auto.
+      }
+      apply mult_elim_pos with t1; auto.
+    Qed.
+
+    Lemma  lt_le_dec: forall t1 t2 : Nt, {t1 < t2} + {t2 <= t1}.
+    Proof.
+      intros.
+      unfold le.
+      destruct total_order_T with t1 t2; auto.
+      destruct s; auto.
+    Qed.
+
+    Lemma le_lt_dec: forall x y : Nt, {x <= y} + {y < x}.
+    Proof.
+      intros.
+      destruct lt_le_dec with y x; auto.
+    Qed.
+
+
+    Definition ltb (x y : Nt) : bool :=
+    lt_le_dec x y.
+
+    Definition leb (x y : Nt) : bool :=
+    le_lt_dec x y.
+
+    
+
+    Definition eqb (x y : Nt) : bool :=
+    eq_dec x y.
+
+
+    Definition abs (x : Nt) : Nt :=
+    if leb plus_id x then x else -x.
+
+
+    Definition min (x y : Nt) : Nt :=
+    if leb x y then x else y.
+      
+
+    Lemma le_lt_weak: forall (n m : Nt), n < m -> n <= m.
+    Proof.
+      intros.
+      unfold le.
+      left.
+      apply H0.
+    Qed.
+
+    Hint Resolve le_lt_weak.
+
+    Lemma lt_not_le: forall n m : Nt, (n < m) -> ~ (m <= n).
+    Proof.
+      unfold not.
+      intros. 
+      apply le_not_lt in H0; auto.
+    Qed.
+
+    Lemma le_refl: forall t, t <= t.
+    Proof.
+      intros.
+      unfold le.
+      auto.
+    Qed.
+
+    Hint Immediate le_refl.
+    
+    Lemma ltb_true_iff: forall x y : Nt, ltb x y = true <-> x < y.
+    Proof.
+      intros.
+      unfold ltb.
+      split; intros; destruct (lt_le_dec x y); auto.
+        inversion H0.
+      apply lt_not_le in H0; auto.
+    Qed.
+
+    Hint Resolve ltb_true_iff.
+
+    Lemma ltb_false_iff: forall x y : Nt, ltb x y = false <-> ~ x < y.
+    Proof.
+      intros.
+      unfold not.
+      unfold ltb.
+      split; intros; destruct (lt_le_dec x y); auto.
+      { apply lt_not_le in H1. auto. }
+      exfalso; apply H0; auto.
+    Qed.
+
+    Hint Resolve ltb_false_iff.
+
+    Lemma leb_true_iff: forall x y : Nt, leb x y = true <-> x <= y.
+    Proof.
+      intros.
+      unfold leb.
+      split; intros; destruct (le_lt_dec x y); auto.
+        inversion H0.
+      apply lt_not_le in H0; auto.
+    Qed.
+
+    Hint Resolve leb_true_iff.
+
+    Lemma leb_false_iff: forall x y : Nt, leb x y = false <-> ~ x <= y.
+    Proof.
+      intros.
+      unfold not.
+      unfold leb.
+      split; intros; destruct (le_lt_dec x y); auto.
+      { apply lt_not_le in H1; auto. }
+      exfalso; apply H0; auto.
+    Qed.
+
+    Hint Resolve leb_false_iff.
+
+    Lemma not_lt_le: forall n m : Nt, ~ (n < m) -> m <= n.
+    Proof.
+      intros.
+      destruct le_lt_dec with n m; auto.
+      unfold le in l.
+      destruct l; auto.
+      { exfalso; auto. }
+      rewrite H1. auto.
+    Qed.
+      
+    Lemma not_le_lt: forall n m : Nt, ~ (n <= m) -> m < n.
+    Proof.
+      intros.
+      destruct lt_le_dec with n m.
+      { apply le_lt_weak in l. exfalso; auto. }
+      unfold le in l.
+      destruct l; auto.
+      rewrite H1 in H0.
+      exfalso.
+      auto.
+    Qed.
+
+    Lemma leb_refl: forall n : Nt, leb n n = true.
+    Proof.
+      intros. auto.
+      apply leb_true_iff.
+      apply le_refl.
+    Qed.
+
+    Hint Resolve leb_refl.
+
+    Lemma ltb_irrefl: forall n : Nt, ltb n n = false.
+    Proof.
+      intros.
+      apply ltb_false_iff.
+      apply lt_irrefl.
+    Qed.
+
+    
+
+    Lemma eqb_true_iff: forall n m : Nt, eqb n m <-> n = m.
+    Proof.
+      intros.
+      split;intros.
+      {
+        unfold eqb in H0.
+        destruct (eq_dec n m); auto.
+        inversion H0.
+      }
+      rewrite H0.
+      unfold eqb.
+      destruct (eq_dec m m); auto.
+    Qed.
+
+    Lemma eqb_refl: forall n : Nt, eqb n n.
+    Proof. intros. rewrite eqb_true_iff. auto. Qed.
+
+    Lemma eqb_false_iff: forall n m : Nt, eqb n m = false <-> n <> m.
+    Proof.
+      intros.
+      split; intros; unfold eqb in *;
+        destruct (eq_dec n m); auto.
+      exfalso. apply H0. auto.
+    Qed.
+          
+    Lemma eqb_symm: forall n m: Nt, eqb n m = eqb m n.
+    Proof.
+      intros.
+      destruct (eqb n m) eqn:e.
+      { apply eqb_true_iff in e. rewrite e. rewrite eqb_refl. auto. }
+      apply eqb_false_iff in e.
+      assert (m <> n). unfold not. intros. apply e. auto.
+      apply eqb_false_iff in H0.
+      auto.
+    Qed.
+
+    Hint Resolve ltb_irrefl.
+    Hint Resolve plus_le_compat_l.
+    Hint Resolve plus_le_compat_r.
+    Hint Resolve plus_lt_compat_l.
+    Hint Resolve plus_le_compat_r.
+
+
+    Lemma plus_lt_compat: forall t1 t2 t3 t4, t1 < t2 -> t3 < t4 -> (t1 + t3) < (t2 + t4).
+    Proof.
+      intros.
+      apply plus_lt_compat_l with t3 t1 t2 in H0.
+      apply plus_lt_compat_l with t2 t3 t4 in H1.
+      apply lt_trans with (t2 + t3); auto.
+      rewrite plus_comm.
+      rewrite -> plus_comm with t2 t3.
+      auto.
+    Qed.
+
+    Lemma plus_lt_le_compat: forall t1 t2 t3 t4, t1 < t2 -> t3  <= t4 -> (t1 + t3 ) < (t2 + t4).
+    Proof.
+      intros.
+      destruct H1.
+      { apply plus_lt_compat; auto. }
+      rewrite H1.
+      rewrite plus_comm.
+      rewrite -> plus_comm with t2 t4.
+      auto.
+    Qed.
+
+    Lemma plus_le_lt_compat: forall t1 t2 t3 t4, t1 <= t2 -> t3  < t4 -> (t1 + t3 ) < (t2 + t4).
+    Proof.
+      intros.
+      rewrite plus_comm.
+      rewrite -> plus_comm with t2 t4.
+      apply plus_lt_le_compat; auto.
+    Qed.
+
+
+    Lemma plus_le_compat: forall t1 t2 t3 t4,  t1 <= t2 ->  t3 <= t4 -> (t1 + t3) <= (t2 + t4).
+    Proof.
+      intros.
+      unfold le in *.
+      destruct H1; destruct H0.
+      { left. apply plus_lt_compat; auto. }
+      { left. apply plus_le_lt_compat; auto. unfold le. right. auto. }
+      { left. apply plus_lt_le_compat; auto. unfold le. right. auto. }
+      right.
+      rewrite H0.
+      rewrite H1.
+      auto.
+    Qed.
+
+    Lemma lt_le_trans: forall x y z : Nt, x < y -> y <= z -> x < z.
+    Proof.
+      intros.
+      rewrite <- plus_id_r.
+      rewrite <- plus_id_r with x.
+      rewrite <- plus_neg_r with y.
+      repeat rewrite plus_assoc.
+      rewrite -> plus_comm with z y.
+      apply plus_lt_le_compat.
+      2 : { apply le_refl. }
+      apply plus_lt_le_compat; auto.
+    Qed.    
+
+    Lemma le_not_eq_lt: forall x y : Nt, x <= y -> x <> y -> x < y.
+    Proof.
+      intros.
+      unfold le in H0.
+      destruct H0; intuition.
+    Qed.
+
+    Lemma le_trans: forall x y z : Nt, x <= y -> y <= z -> x <= z.
+    Proof.
+      intros.
+      destruct eq_dec with x y.
+      { rewrite e. apply H1. }
+      apply le_lt_weak.
+      apply lt_le_trans with y; auto.
+      apply le_not_eq_lt; auto.
+    Qed.
+
+    Hint Resolve mult_plus_id_l.
+    Hint Resolve mult_plus_id_r.
+    Hint Resolve mult_id_l.
+    Hint Resolve mult_id_r.
+    Hint Resolve plus_id_l.
+    Hint Resolve plus_id_r.
+
+    
+    Lemma mult_le_compat_l: forall x y z : Nt, plus_id <= x -> y <= z -> x * y <= x * z.
+    Proof.
+      intros.
+      unfold le in *.
+      destruct H0.
+      2: {right. rewrite <- H0. repeat rewrite mult_plus_id_l. auto. }
+      destruct H1.
+      { left. apply mult_lt_compat_l; auto. }
+      right.
+      rewrite H1.
+      auto.
+    Qed.
+
+    Lemma lt_not_eq: forall r1 r2 : Nt, r1 < r2 -> r1 <> r2.
+    Proof.
+      unfold not.
+      intros.
+      rewrite H1 in H0.
+      apply lt_irrefl in H0.
+      auto.
+    Qed.
+      
+    Lemma mult_le_compat_l_reverse: forall x y z : Nt, plus_id < x -> x * y <= x* z -> y <= z.
+    Proof.
+      intros.
+      unfold le in *.
+      destruct H1.
+      {
+        left.
+        rewrite mult_lt_compat_l; auto.
+          apply H1.
+        auto.
+      }
+      right.
+      assert (0 <> x). apply lt_not_eq. auto.
+      apply mult_elim_l with x; auto.
+    Qed.
+
+    Lemma mult_le_compat_r: forall x y z : Nt, plus_id <= x -> y <= z -> y * x <= z * x.
+    Proof.
+      intros.
+      rewrite mult_comm.
+      rewrite -> mult_comm with z x.
+      apply mult_le_compat_l; auto.
+    Qed.
+
+    Lemma mult_le_compat_r_reverse: forall x y z : Nt, plus_id < x -> y * x <= z * x -> y <= z.
+    Proof.
+      intros.
+      rewrite mult_comm in H1.
+      rewrite -> mult_comm with z x in H1.
+      apply mult_le_compat_l_reverse with x; auto.
+    Qed.
+
+    Lemma le_both_eq: forall x y : Nt, x <= y -> y <= x -> x = y.
+    Proof.
+      intros.
+      destruct H0; auto.
+      apply lt_not_le in H0.
+      exfalso. auto.
+    Qed.
+
+    Lemma neg_neg_pos: forall t1 : Nt, t1 < 0 <-> 0 < - t1.
+    Proof.
+      intros.
+      split; intros.
+      { apply neg_pos_neg. rewrite double_neg.  auto. }
+      apply neg_pos_neg in H0. rewrite double_neg in H0. auto.
+    Qed.
+
+    Hint Resolve plus_mult_distr_r.
+
+
+    Lemma n_plus_n_eq_2n: forall n : Nt, n + n = (1 + 1) * n.
+    Proof.
+      intros. auto 20.
+      rewrite plus_mult_distr_r.
+      rewrite mult_id_l.
+      auto.
+    Qed.
+
+
+    Lemma lt_neg: forall n m : Nt, n < m <-> - m < - n.
+    Proof.
+      intros.
+      split; intros.
+      {
+        apply plus_lt_compat_l with (-n) n m in H0.
+        rewrite plus_neg_l in H0.
+        apply plus_lt_compat_r with (-m) 0 (-n + m) in H0.
+        rewrite <- plus_assoc in H0.
+        rewrite plus_neg_r in H0.
+        rewrite plus_id_r in H0.
+        rewrite plus_id_l in H0.
+        auto.
+      }
+      apply plus_lt_compat_l with n (-m) (-n) in H0.
+      rewrite plus_neg_r in H0.
+      apply plus_lt_compat_r with m (n + -m) 0 in H0.
+      rewrite <- plus_assoc in H0.
+      rewrite plus_neg_l in H0.
+      rewrite plus_id_r in H0.
+      rewrite plus_id_l in H0.
+      auto. 
+    Qed.
+
+
+    Lemma le_lt_trans: forall x y z : Nt, x <= y -> y < z -> x < z.
+    Proof.
+      intros.
+      unfold le in H0.
+      destruct H0.
+        apply lt_trans with y; auto.
+      rewrite H0. auto.
+    Qed.
+
+    Lemma neg_eq: forall n m : Nt, -n = -m -> n = m.
+    Proof.
+      intros.
+      rewrite -> plus_elim_r with (-n) n m; auto.
+      rewrite plus_neg_r.
+      rewrite -> plus_elim_r with (-m) 0 (m + - n); auto.
+      rewrite -> plus_comm with m (- n).
+      rewrite <- plus_assoc.
+      rewrite plus_neg_r.
+      rewrite plus_id_l.
+      rewrite plus_id_r.
+      rewrite H0.
+      auto.
+    Qed.
+      
+    Lemma mult_le_compat:  forall r1 r2 r3 r4,plus_id <= r1 -> plus_id <= r3 -> r1  <= r2 -> r3 <= r4 ->
+             (r1 *  r3) <= (r2 *  r4).
+    Proof.
+      intros.
+      destruct total_order_T with r2 0;
+        try (destruct s); try (
+        unfold le in H0,H1;
+        destruct H0; destruct H1; try (
+          apply mult_le_compat_l with r2 r3 r4 in H3; 
+            try (unfold le; auto; fail);
+          apply mult_le_compat_l with r3 r1 r2 in H2;
+            try (unfold le; auto; fail);
+          apply le_trans with (r3 * r2);
+            rewrite mult_comm; auto; fail); fail
+      ).
+      unfold le in H0.
+      destruct H0.
+      {
+        exfalso.
+        apply lt_irrefl with 0.
+        apply lt_le_trans with r1; auto.
+        apply le_trans with r2; auto.
+      }
+      rewrite <- H0 in H2.
+      exfalso.
+      apply lt_irrefl with 0.
+      apply le_lt_trans with r2; auto.
+    Qed.
+
+    Lemma mult_lt_0_compat: forall r1 r2 : Nt, 0 < r1 -> 0 < r2 -> 0 < r1 * r2.
+    Proof.
+      intros.
+      apply mult_lt_compat_l with r1 0 r2 in H1; auto.
+      rewrite mult_plus_id_r in H1.
+      auto.
+    Qed.
+
+    Lemma plus_le_compat_l : forall r r1 r2, r1 <= r2 -> r + r1 <= r + r2.
+    Proof.
+      unfold le.
+      intros.
+      destruct H0.
+      { left. apply plus_lt_compat_l. auto. }
+      rewrite H0.
+      auto.
+    Qed.
+
+    Lemma plus_le_compat_r : forall r r1 r2, r1 <= r2 -> r1 + r <= r2 + r.
+    Proof.
+      intros.
+      rewrite plus_comm.
+      rewrite -> plus_comm with r2 r.
+      apply plus_le_compat_l.
+      auto.
+    Qed.
+
+    Lemma plus_le_compat_l_reverse : forall r r1 r2, r + r1 <= r + r2 -> r1 <= r2 .
+    Proof.
+      intros.
+      apply plus_le_compat_l with (-r) (r + r1) (r + r2) in H0.
+      repeat rewrite plus_assoc in H0.
+      rewrite plus_neg_l in H0.
+      repeat rewrite plus_id_l in H0.
+      auto.
+    Qed.
+
+    Lemma plus_le_compat_r_reverse : forall r r1 r2, r1 + r <= r2 + r -> r1 <= r2 .
+    Proof.
+      intros.
+      rewrite plus_comm in H0.
+      rewrite -> plus_comm with r2 r in H0.
+      apply plus_le_compat_l_reverse in H0.
+      auto.
+    Qed.
+
+
+    Lemma mult_simpl_l: forall n m p : Nt, n = m -> p * n = p * m.
+    Proof. intros. rewrite H0. auto. Qed.
+
+    Lemma mult_simpl_r: forall n m p : Nt, n = m -> n * p = m * p.
+    Proof. intros. rewrite H0. auto. Qed.
+
+    Lemma plus_simpl_l: forall n m p : Nt, n = m -> p + n = p + m.
+    Proof. intros. rewrite H0. auto. Qed.
+
+    Lemma plus_simpl_r: forall n m p : Nt, n = m -> n + p = m + p.
+    Proof. intros. rewrite H0. auto. Qed.
+
+
+    Lemma abs_mult_pos_l: forall n m : Nt, 0 <= n -> abs (n * m) = n * abs m.
+    Proof.
+      intros.
+      unfold abs.
+      destruct (leb 0 m) eqn:e.
+      {
+        apply leb_true_iff in e.
+        apply mult_le_compat_l with n 0 m in e; auto.
+        rewrite mult_plus_id_r in e.
+        apply leb_true_iff in e.
+        rewrite e.
+        auto.
+      }
+      apply leb_false_iff in e.
+      apply not_le_lt in e.
+      destruct H0.
+      2: { 
+        rewrite <- H0. 
+        repeat rewrite mult_plus_id_l.
+        rewrite leb_refl.
+        auto.
+      }
+      apply mult_lt_compat_l with n m 0 in e; auto.
+      rewrite <- mult_plus_id_l with 0 in e.
+      repeat rewrite mult_plus_id_r in e.
+      apply lt_not_le in e.
+      apply leb_false_iff in e.
+      rewrite e.
+      rewrite neg_mult_distr_r.
+      auto.
+    Qed.
+
+  Lemma abs_mult_pos_r: forall n m : Nt, 0 <= n -> abs (m * n) = abs m * n.
+  Proof. intros. rewrite mult_comm. rewrite abs_mult_pos_l; auto. apply mult_comm. Qed. 
+    
+  Lemma le_abs: forall n : Nt, n <= abs n.
+  Proof. 
+    intros.
+    unfold abs.
+    destruct (leb 0 n) eqn:e.
+      apply le_refl.
+    apply plus_le_compat_l_reverse with n.
+    rewrite plus_neg_r.
+    rewrite <- plus_id_l.
+    apply leb_false_iff in e.
+    apply not_le_lt in e.
+    apply le_lt_weak in e.
+    apply plus_le_compat; auto.
+  Qed.
+
+
+  Lemma le_neg: forall n m : Nt, - n <= -m <-> m <= n.
+  Proof.
+    unfold le.
+    intros.
+    split; intros;
+      destruct H0;
+      try (apply lt_neg in H0; auto; fail);
+      try (apply neg_eq in H0);
+      try (rewrite H0);
+      auto.
+    Qed.
+
+  Lemma abs_neg: forall n : Nt, abs (-n) = abs n.
+  Proof.
+    intros.
+    unfold abs.
+    destruct (leb 0 (- n) ) eqn:e.
+    {
+      apply leb_true_iff in e.
+      rewrite <- neg_plus_id in e.
+      rewrite -> le_neg in e.
+      unfold le in e.
+      destruct e.
+      {
+        apply lt_not_le in H0.
+        apply leb_false_iff in H0.
+        rewrite H0.
+        auto.
+      }
+      rewrite H0.
+      destruct (leb 0 0); auto.
+      apply neg_plus_id.
+    }
+    apply leb_false_iff in e.
+    apply not_le_lt in e.
+    rewrite <- neg_plus_id in e.
+    apply lt_neg in e.
+    apply le_lt_weak in e.
+    apply leb_true_iff in e.
+    rewrite e.
+    apply double_neg.
+  Qed.
+
+  Lemma abs_posb: forall n : Nt, leb 0 n -> abs n = n.
+  Proof. intros. unfold abs. rewrite H0. auto. Qed.
+
+  Lemma abs_negb: forall n : Nt, leb 0 n = false -> abs n = - n.
+  Proof. intros. unfold abs. rewrite H0. auto. Qed.
+
+  Lemma abs_plus_le: forall n m : Nt, abs (n + m) <= abs n + abs m.
+  Proof.
+    intros.
+    destruct (leb 0 (n + m)) eqn:e_nm.
+    {
+      rewrite abs_posb; auto.
+      apply plus_le_compat; apply le_abs.
+    }
+    rewrite abs_negb; auto.
+    rewrite plus_neg_distr.
+    apply plus_le_compat; rewrite <- abs_neg; apply le_abs.
+  Qed.
+
+  Lemma pow_nat_add: forall (n m : nat) (x : Nt), pow_nat x (n + m) = pow_nat x n * pow_nat x m.
+  Proof.
+    intros.
+    induction m.
+      rewrite pow_natO. rewrite mult_id_r. rewrite addn0. auto.
+    rewrite addnS.
+    repeat rewrite pow_nat_rec.
+    rewrite IHm.
+    rewrite mult_assoc.
+    rewrite -> mult_comm with x (pow_nat x n).
+    rewrite mult_assoc.
+    auto.
+  Qed.
+
+  Lemma neg_mult_comm: forall (n m : Nt), -n * m = n * - m.
+  Proof.
+    intros.
+    rewrite <- neg_mult_distr_l.
+    rewrite neg_mult_distr_r.
+    auto.
+  Qed.
+
+  Lemma abs_ge_0: forall n : Nt, 0 <= abs n.
+  Proof.
+    intros.
+    unfold abs. 
+    destruct (leb 0 n) eqn:e.
+      apply leb_true_iff. auto.
+    apply leb_false_iff in e.
+    apply not_le_lt in e.
+    apply le_neg.
+    rewrite double_neg.
+    rewrite neg_plus_id.
+    apply le_lt_weak.
+    auto.
+  Qed.
+
+  Lemma abs_0: abs 0 = 0.
+  Proof. unfold abs. destruct (leb 0 0); auto. rewrite neg_plus_id. auto. Qed.
+    
+
+  Lemma pow_ge_0: forall (n : Nt) (m : nat), 0 <= n -> 0 <= pow_nat n m .
+  Proof.
+    intros.
+    induction m.
+    { rewrite pow_natO. apply le_lt_weak. apply plus_id_lt_mult_id. }
+    rewrite pow_nat_rec.
+    rewrite <- mult_plus_id_l with 0.
+    apply mult_le_compat; auto; apply le_refl.
+  Qed.
+
+  Lemma pow_0_nat: forall n : nat, pow_nat 0 (S n) = 0.
+  Proof.
+    intros.
+    rewrite pow_nat_rec.
+    apply mult_plus_id_l.
+  Qed.
+
+  Lemma pow_gt_0: forall (n : Nt) (m : nat), 0 < n -> 0 < pow_nat n m .
+  Proof.
+    intros.
+    induction m.
+    { rewrite pow_natO. apply plus_id_lt_mult_id. }
+    rewrite pow_nat_rec.
+    apply mult_lt_0_compat; auto.
+  Qed.
+
+  Lemma pow_le_1: forall (n : Nt) (m : nat), 0 <= n /\ n <= 1 -> pow_nat n m <= 1. 
+  Proof.
+    intros.
+    induction m.
+      rewrite pow_natO. apply le_refl.
+    rewrite pow_nat_rec.
+    destruct H0.
+    rewrite <- mult_id_l.
+    apply mult_le_compat; auto.
+    apply pow_ge_0.
+    auto.
+  Qed.
+
+  Lemma plus_le_l_to_r: forall x y z : Nt, x + y <= z <-> x <= z + - y.
+  Proof.
+    intros.
+    split; intros.
+    {
+      apply plus_le_compat_r with (-y) _ _ in H0.
+      rewrite <- plus_assoc in H0.
+      rewrite plus_neg_r in H0.
+      rewrite plus_id_r in H0.
+      auto.
+    }
+    apply plus_le_compat_r with y _ _ in H0.
+    rewrite <- plus_assoc in H0.
+    rewrite plus_neg_l in H0.
+    rewrite plus_id_r in H0.
+    auto.
+  Qed.
+
+  Lemma plus_le_r_to_l: forall x y z : Nt, x <= z + y <-> x + - y <= z.
+  Proof.
+    intros.
+    split; intros.
+    { rewrite plus_le_l_to_r. rewrite double_neg. auto. }
+    apply plus_le_l_to_r in H0.
+    rewrite double_neg in H0.
+    auto.
+  Qed.
+  
+
+  Lemma abs_triangle: forall (x y z : Nt), abs ( x + - z ) <= abs (x + - y) + abs (y + - z).
+  Proof.
+    intros.
+    rewrite <- plus_id_r with (x + -z).
+    rewrite <- plus_neg_l with y.
+    repeat rewrite <- plus_assoc.
+    rewrite -> plus_assoc with (-z) (-y) y.
+    rewrite -> plus_comm with (-z) _.
+    rewrite <- plus_assoc.
+    rewrite -> plus_comm with (-z) _.
+    rewrite plus_assoc.
+    apply abs_plus_le.
+  Qed.
+
+  Lemma plus_id_unique: forall n m : Nt, n + m = n -> m = 0.
+  Proof.
+    intros.
+    apply plus_elim_l with n.
+    rewrite plus_id_r.
+    auto.
+  Qed.
+
+  Lemma to_R_plus_id: to_R 0 = IZR Z0.
+  Proof.
+    rewrite <- Rplus_opp_r with (to_R 0).
+    rewrite to_R_neg.
+    rewrite to_R_plus.
+    rewrite plus_id_l.
+    rewrite neg_plus_id.
+    auto.
+  Qed.
+
+  Lemma to_R_neq: forall n m : Nt, n <> m <-> to_R n <> to_R m.
+  Proof.
+    intros.
+    split; unfold not; intros.
+      apply H0. apply to_R_inj. auto.
+    apply H0.
+    rewrite H1.
+    auto.
+  Qed.    
+      
+
+  Lemma plus_id_neq_mult_id: 0 <> 1.
+  Proof.
+    unfold not.
+    intros.
+    apply lt_irrefl with 1.
+    assert (0 < 1).
+      apply plus_id_lt_mult_id.
+    rewrite H0 in H1.
+    auto.
+  Qed.
+
+
+  Lemma mult_id_neq_plus_id: 1 <> 0.
+  Proof.
+    unfold not.
+    intros.
+    apply plus_id_neq_mult_id.
+    rewrite H0.
+    auto.
+  Qed.
+
+  Lemma to_R_mult_id: to_R 1 = IZR (Zpos xH).
+  Proof.
+    assert( forall x y : R, Rmult x y = x -> x = IZR Z0 \/ y = IZR (Zpos xH)).
+    {
+      intros.
+      destruct (Req_dec x 0).
+        rewrite H1. auto.
+      right.
+      assert ( Rmult (Rinv x) (Rmult x y) = Rmult (Rinv x)  x).
+      { rewrite H0. auto. }
+      rewrite Rinv_l in H2; auto.
+      rewrite <- Rmult_assoc in H2.
+      rewrite Rinv_l in H2; auto.
+      rewrite Rmult_1_l in H2.
+      auto.
+    }
+    destruct H0 with (to_R 1) (to_R 1); auto.
+    { rewrite to_R_mult. rewrite mult_id_l. auto. }
+    rewrite <- to_R_plus_id in H1.
+    apply to_R_inj in H1.
+    exfalso.
+    apply mult_id_neq_plus_id.
+    auto.
+  Qed.
+
+  Lemma to_R_of_nat: forall n : nat, to_R (of_nat n) = INR n.
+  Proof.
+    intros.
+    induction n.
+      rewrite of_nat_plus_id. simpl. apply to_R_plus_id.
+    rewrite of_nat_succ_l.
+    rewrite <- to_R_plus.
+    rewrite IHn.
+    rewrite S_INR.
+    rewrite to_R_mult_id.
+    apply Rplus_comm.
+  Qed.
+
+  Lemma to_R_inv_r: forall (n m : Nt), m <> 0 -> Rmult (to_R (n * m)) (Rinv (to_R m)) = to_R n.
+  Proof.
+    intros.
+    rewrite <- to_R_mult.
+    rewrite Rmult_assoc.
+    rewrite Rinv_r.
+    2: { rewrite <- to_R_plus_id. rewrite <- to_R_neq. auto. }
+    rewrite <- Rmult_1_r.
+    auto.
+  Qed.
+
+  Lemma to_R_div_eq_iff_r: forall (n m p : Nt), m <> 0 -> 
+    n * m = p <-> to_R n = Rdiv (to_R p) (to_R m).
+  Proof.
+    intros.
+    split; intros.
+    {
+      rewrite <- H1.
+      unfold Rdiv.
+      rewrite to_R_inv_r; auto.
+    }
+    apply to_R_inj.
+    rewrite <- to_R_mult.
+    rewrite <- Rmult_1_r with (to_R p).
+    rewrite <- Rinv_l with (to_R m); auto.
+    2: { rewrite <- to_R_plus_id. apply to_R_neq. auto. }
+    rewrite <- Rmult_assoc.
+    unfold Rdiv in H1.
+    rewrite <- H1.
+    auto.
+  Qed.
+
+  Lemma to_R_div_lt_iff_r: forall (n m p : Nt), 0 < m -> 
+    n * m < p <-> Rlt (to_R n) (Rdiv (to_R p) (to_R m)).
+  Proof.
+    intros.
+    assert (to_R m <> IZR 0).
+    { 
+      rewrite <- to_R_plus_id. 
+      rewrite <- to_R_neq.
+      apply lt_not_eq in H0.     
+      auto.
+    } 
+    split; intros.
+    {
+      unfold Rdiv.
+      rewrite <- Rmult_1_r with (to_R n).
+      rewrite <- Rinv_r with (to_R m); auto.
+      rewrite <- Rmult_assoc.
+      apply Rmult_lt_compat_r.
+      {
+        apply Rinv_0_lt_compat.
+        rewrite <- to_R_plus_id.
+        apply to_R_lt.
+        auto.
+      } 
+      rewrite to_R_mult.
+      apply to_R_lt.
+      auto.
+    }
+    unfold Rdiv in H2.
+    rewrite to_R_lt.
+    rewrite <- to_R_mult.
+    rewrite <- Rmult_1_r with (to_R p).
+    rewrite <- Rinv_l with (to_R m); auto.
+    rewrite <- Rmult_assoc.
+    apply Rmult_lt_compat_r; auto.
+    rewrite <- to_R_plus_id.
+    apply to_R_lt.
+    auto.
+  Qed.
+
+  Lemma to_R_div_le_iff_r: forall (n m p : Nt), 0 < m ->
+    n * m <= p <-> Rle (to_R n) (Rdiv (to_R p) (to_R m)).
+  Proof.
+    intros.
+    unfold Rle.
+    unfold le.
+    split; intros.
+    {
+      destruct H1.
+        apply to_R_div_lt_iff_r in H1; auto.
+      apply to_R_div_eq_iff_r in H1; auto.
+      apply lt_not_eq in H0.
+      auto.
+    }
+    destruct H1.
+      apply to_R_div_lt_iff_r in H1; auto.
+    apply to_R_div_eq_iff_r in H1; auto.
+    apply lt_not_eq in H0.
+    auto.
+  Qed.
+
+  Lemma to_R_neg_div_distr_l: forall (n m : Nt), m <> 0 -> Ropp (Rdiv (to_R n) (to_R m)) = Rdiv (to_R (-n)) (to_R m).
+  Proof.
+    intros.
+    unfold Rdiv.
+    rewrite Ropp_mult_distr_l.
+    rewrite to_R_neg.
+    auto.
+  Qed.
+
+  Lemma to_R_neg_div_distr_r: forall (n m : Nt), m <> 0 -> Ropp (Rdiv (to_R n) (to_R m)) = Rdiv (to_R (n)) (to_R (-m)). 
+  Proof.
+    intros.
+    unfold Rdiv.
+    rewrite Ropp_mult_distr_r.
+    rewrite Ropp_inv_permute; auto.
+      rewrite to_R_neg. auto.
+    rewrite <- to_R_plus_id.
+    apply to_R_neq.
+    auto.
+  Qed.
+
+
+  Lemma to_R_div_le_neg_l: forall (n m p : Nt), m < 0 ->
+    n * m <= p <-> Rle (Rdiv (to_R p) (to_R m)) (to_R n) .
+  Proof.
+    intros.
+    split; intros.
+    { 
+      apply Ropp_le_cancel.
+      rewrite to_R_neg_div_distr_r; auto.
+      2: { apply lt_not_eq. auto. }
+      rewrite to_R_neg.      
+      rewrite <- to_R_div_le_iff_r.
+        rewrite <- neg_mult_distr_l.
+        rewrite <- neg_mult_distr_r.
+        rewrite double_neg.
+        auto.
+      rewrite <- neg_plus_id.      
+      rewrite <- lt_neg.
+      auto.
+    }
+    rewrite <- double_neg with (n * m).
+    rewrite neg_mult_distr_l.
+    rewrite neg_mult_distr_r.
+    rewrite to_R_div_le_iff_r.
+    2: { rewrite <- neg_plus_id. rewrite <- lt_neg. auto. }
+    rewrite <- to_R_neg.
+    rewrite <- to_R_neg_div_distr_r.
+    2: { apply lt_not_eq. auto. }
+    apply Ropp_le_contravar.
+    auto.
+  Qed.
+
+  Lemma to_R_div_le_neg_r: forall (n m p : Nt), m < 0 ->
+    p <= n * m <-> Rle  (to_R n) (Rdiv (to_R p) (to_R m)) .
+  Proof.
+    intros.
+    split; intros.
+    {
+      rewrite <- le_neg in H1.
+      rewrite neg_mult_distr_l in H1.
+      rewrite -> to_R_div_le_neg_l in H1; auto.
+      rewrite <- to_R_neg_div_distr_l in H1.
+      2: { apply lt_not_eq. auto. }      
+      rewrite <- to_R_neg in H1.
+      apply Ropp_le_cancel in H1.
+      auto.
+    }    
+    rewrite <- le_neg.
+    rewrite neg_mult_distr_l.
+    rewrite -> to_R_div_le_neg_l; auto.
+    rewrite <- to_R_neg_div_distr_l.
+    2: { apply lt_not_eq. auto. }      
+    rewrite <- to_R_neg.
+    apply Ropp_le_contravar.
+    auto.
+  Qed.
+
+  Lemma plus_simpl_lr: forall (n m p q : Nt),
+    n = m -> p = q -> n + p = m + q.
+  Proof. intros. rewrite H0. rewrite H1. auto. Qed.
+
+  Lemma mult_simpl_lr: forall (n m p q : Nt),
+    n = m -> p = q -> n * p = m * q.
+  Proof. intros. rewrite H0. rewrite H1. auto. Qed.
+
+  Lemma abs_0_same: forall x y : Nt, abs (x + - y) = 0 <-> x = y.
+  Proof.
+    intros.
+    split; intros.
+    2: { rewrite H0. rewrite plus_neg_r. unfold abs. destruct (leb 0 0). auto. apply neg_plus_id. }
+    unfold abs in H0.
+    destruct (leb 0 (x + - y)) eqn:e.
+    {
+      rewrite <- plus_id_l.
+      rewrite <- H0.
+      rewrite <- plus_assoc.
+      rewrite plus_neg_l.
+      auto.
+    }
+    rewrite plus_neg_distr in H0.
+    rewrite double_neg in H0.
+    rewrite <- plus_id_r with x.
+    rewrite <- H0.
+    rewrite plus_assoc.
+    rewrite plus_neg_r. 
+    auto.
+  Qed.
+       
+  Lemma to_R_le: forall (t1 t2 : Nt), t1 <= t2 <-> (Rle (to_R t1) (to_R t2)).
+  Proof.
+    intros.
+    split; intros.
+    {
+      destruct H0.
+      { unfold Rle. left. rewrite <- to_R_lt. auto. }
+      rewrite H0.
+      apply Rle_refl.
+    }
+    unfold Rle in H0.
+    destruct H0.
+    { rewrite <- to_R_lt in H0. apply le_lt_weak. auto. }
+    apply to_R_inj in H0.
+    rewrite H0.
+    auto.
+  Qed.
+
+  Lemma to_R_ltb_true_iff: forall t1 t2 : Nt, ltb t1 t2  <-> Rlt (to_R t1) (to_R t2).
+  Proof.
+    intros.
+    split; intros.
+    { apply ltb_true_iff in H0. apply to_R_lt. auto. }
+    apply ltb_true_iff.
+    apply to_R_lt.
+    auto.
+  Qed.
+
+  Lemma to_R_leb_true_iff: forall t1 t2 : Nt, leb t1 t2  <-> Rle (to_R t1) (to_R t2).
+  Proof.
+    intros.
+    split; intros.
+    { apply leb_true_iff in H0. apply to_R_le. auto. }
+    apply leb_true_iff.
+    apply to_R_le.
+    auto.
+  Qed.
+ 
+  Lemma to_R_ltb_false_iff: forall t1 t2 : Nt, ltb t1 t2 = false  <-> ~ Rlt (to_R t1) (to_R t2).
+  Proof.
+    intros.
+    split; intros;
+      try (apply ltb_false_iff in H0);
+      try (apply ltb_false_iff); 
+      unfold not; intros; apply H0; apply to_R_lt; auto.
+  Qed.
+
+  Lemma to_R_leb_false_iff: forall t1 t2 : Nt, leb t1 t2 = false  <-> ~ Rle (to_R t1) (to_R t2).
+  Proof.
+    intros.
+    split; intros;
+      try (apply leb_false_iff in H0);
+      try (apply leb_false_iff); 
+      unfold not; intros; apply H0; apply to_R_le; auto.
+  Qed.
+
+  
+
+  Lemma leb_ltb_or_eqb: forall t1 t2 : Nt, leb t1 t2 = ltb t1 t2 || eqb t1 t2.
+  Proof.
+    intros.
+    destruct (leb t1 t2) eqn:e.
+    {
+      apply leb_true_iff in e.
+      destruct e.
+      { apply ltb_true_iff in H0. rewrite H0. auto. }
+      rewrite H0.
+      rewrite eqb_refl.      
+      rewrite orb_true_r.
+      auto.
+    }
+    apply leb_false_iff in e.
+    assert (ltb t1 t2 = false).
+      apply ltb_false_iff. unfold not. intros. apply le_lt_weak in H0. auto.
+    rewrite H0.
+    apply not_le_lt in e.
+    apply lt_not_eq in e.
+    apply eqb_false_iff in e.
+    rewrite eqb_symm.
+    rewrite e.
+    auto.
+  Qed.
+
+  Lemma to_R_abs: forall n : Nt, to_R (abs n) = Rabs (to_R n).
+  Proof.
+    intros.
+    unfold abs.
+    destruct (leb 0 n) eqn:e.
+    {
+      apply leb_true_iff in e.
+      apply to_R_le in e.
+      rewrite to_R_plus_id in e.
+      apply Rabs_pos_eq in e.
+      rewrite e.
+      auto.
+    }
+    apply leb_false_iff in e.
+    apply not_le_lt in e.
+    apply le_lt_weak in e.
+    apply to_R_le in e.
+    rewrite to_R_plus_id in e.
+    apply Rabs_left1 in e.
+    rewrite e.
+    rewrite to_R_neg.
+    auto.
+  Qed.
+
+  Lemma to_R_pow_nat: forall x n, to_R (pow_nat x n) = (to_R x) ^ n.
+  Proof.
+    intros.
+    induction n.
+    { simpl. rewrite pow_natO. apply to_R_mult_id. }
+    simpl.
+    rewrite pow_nat_rec.
+    rewrite <- to_R_mult.
+    rewrite IHn.
+    auto.
+  Qed.
+
+  Lemma pow_nat_ge1_le: forall x n m,  1 <= x -> Nat.le n m -> pow_nat x n <= pow_nat x m.
+  Proof. 
+    intros.
+    assert(forall m', pow_nat x n <=  pow_nat x (n+m')).
+    { 
+      intros. induction m'. rewrite addn0. auto.
+      rewrite addnS.
+      rewrite <- mult_id_l with (pow_nat x n).
+      rewrite pow_nat_rec.
+      apply mult_le_compat; auto.
+        apply le_lt_weak. apply plus_id_lt_mult_id.
+      apply pow_ge_0.
+      apply le_trans with 1; auto.
+      apply le_lt_weak. apply plus_id_lt_mult_id.
+    }
+    destruct Nat_le_exists_diff with n m; auto.
+    rewrite <- H3.
+    apply H2.
+  Qed.
+
+  Lemma pow_nat_le1_le: forall x n m, 0 < x -> x <= 1 -> Nat.le n m -> pow_nat x m <= pow_nat x n.
+  Proof. 
+    intros.
+    assert(forall m', pow_nat x (n+m') <=  pow_nat x n).
+    { 
+      intros. induction m'. rewrite addn0. auto.
+      rewrite addnS.
+      rewrite <- mult_id_l with (pow_nat x n).
+      rewrite pow_nat_rec.
+      apply mult_le_compat; auto.
+      apply pow_ge_0. auto.
+    }
+    destruct Nat_le_exists_diff with n m; auto.
+    rewrite <- H4.
+    apply H3.
+  Qed.
+
+  Lemma lt_diff_pos: forall x y : Nt, x < y -> 0 < (y + - x).
+  Proof. 
+    intros.
+    rewrite <- plus_neg_r with x.
+    apply plus_lt_compat_r. auto.
+  Qed. 
+
+  Lemma min_comm: forall x y : Nt, min x y = min y x.
+  Proof. 
+    intros. unfold min.
+    destruct (total_order_T x y).
+    {
+      destruct s.
+      2: { rewrite e. auto. }
+      assert(leb y x = false).
+        apply leb_false_iff. apply lt_not_le. auto.
+      rewrite H0.
+      apply le_lt_weak in l.
+      apply leb_true_iff in l. rewrite l. auto.
+    }
+    assert(leb x y = false).
+    { apply leb_false_iff. apply lt_not_le. auto. }
+    rewrite H0. apply le_lt_weak in l. apply leb_true_iff in l. rewrite l. auto.
+  Qed.
+
+  Lemma ge_min_l: forall x y : Nt, min x y <= x.
+  Proof. 
+    intros.
+    unfold min. 
+    destruct (total_order_T x y).
+    {
+      destruct s.
+      2:{  rewrite e. destruct (leb y y); auto. }
+      apply le_lt_weak in l.
+      apply leb_true_iff in l. rewrite l. auto.
+    }
+    apply le_lt_weak.
+    apply le_lt_trans with y; auto.
+    apply lt_not_le in l. apply leb_false_iff in l.
+    rewrite l. auto.
+  Qed.
+
+  Lemma ge_min_r: forall x y : Nt, min x y <= y.
+  Proof. intros. rewrite min_comm. apply ge_min_l. Qed.
+
+  Lemma min_id: forall x : Nt, min x x = x.
+  Proof. intros. unfold min. destruct (leb x x); auto. Qed.
+
+  Lemma min_cases: forall x y : Nt, min x y = x \/ min x y = y.
+  Proof. intros. unfold min. destruct (leb x y); auto. Qed.
+
+  End use_Numeric.
+
+
+
+
+(**Req_EM_T**)
+Instance Numeric_D: Numerics.Numeric (DRed.t) :=
+  @Numerics.mkNumeric
+    DRed.t
+    DRed.add
+    DRed.opp
+    DRed.mult
+    DRed.natPow
+    
+    DRed.of_nat
+    DRed.t0
+    DRed.t1
+
+    Dlt
+    DRed.lt_t0_t1
+    DRed.mult0L
+    DRed.of_natO
+    DRed.of_nat_succ_l
+
+    
+    DRed.addC
+    DRed.addA
+    _
+    DRed.add0l
+    DRed.multC
+    DRed.multA
+    DRed.mult1L
+    DRed.multDistrL
+    DRed.total_order_T
+    DRed.lt_asym
+    DRed.lt_trans
+    DRed.plus_lt_compat_l
+    DRed.mult_lt_compat_l
+    DRed.natPowO
+    DRed.natPowRec
+  
+    (fun x => Q2R (D_to_Q x))
+    _
+    _
+    _
+    _
+    _
+.
+  intros. rewrite DRed.addC. apply DRed.addOppL.
+  intros;rewrite <- Q2R_plus;apply Qeq_eqR; rewrite DRed.addP; apply Qeq_refl.
+  intros; rewrite <- Q2R_mult; apply Qeq_eqR; rewrite DRed.multP; apply Qeq_refl.
+  intros. split;intros. apply Qlt_Rlt. auto. apply Rlt_Qlt. auto.
+  intros. rewrite <- Q2R_opp. apply Qeq_eqR. rewrite DRed.oppP. apply Qeq_refl.
+  intros. apply eqR_Qeq in H. apply DRed.Dred_eq; auto.
+Defined.
+
+
+
+Delimit Scope R_scope with R_s.
+Local Open Scope R_scope.
+
+
+Instance Numeric_R: Numeric R :=
+  @Numerics.mkNumeric
+    R
+    Rplus
+    Ropp
+    Rmult
+    pow
+
+    INR
+    (IZR Z0)
+    (IZR (Zpos xH))
+
+    Rlt
+    _
+    Rmult_0_l
+    _
+    _
+    Rplus_comm
+    _
+    Rplus_opp_r
+    Rplus_0_l
+    Rmult_comm
+    _
+    Rmult_1_l
+    Rmult_plus_distr_l
+    Raxioms.total_order_T
+    Rlt_asym
+    Rlt_trans
+    Rplus_lt_compat_l
+    _
+    _
+    _
+
+    (fun x => x)
+    _
+    _
+    _
+    _
+    _
+.
+  apply Rlt_0_1.
+  auto.
+{
+  intros.
+  simpl.
+  induction n; simpl.
+   rewrite Rplus_0_r. auto.
+  rewrite IHn.
+  rewrite Rplus_assoc.
+  rewrite -> Rplus_comm with (INR n) 1.
+  repeat rewrite <- Rplus_assoc.
+  auto.
+}
+  intros. rewrite Rplus_assoc. auto.
+  intros. rewrite Rmult_assoc. auto.
+{
+  intros.
+  split; intros.
+  { apply Rmult_lt_compat_l; auto. }
+  assert( R0 <> r).
+  { apply Rlt_not_eq.  auto. }  
+  assert( R0 < / r).
+  { apply Rinv_0_lt_compat. auto. }  
+  apply Rmult_lt_compat_l with (/ r) (r * r1) (r * r2) in H0; auto.
+  repeat rewrite <- Rmult_assoc in H0.
+  repeat rewrite Rinv_l in H0; auto.
+  repeat rewrite Rmult_1_l in H0.
+  auto.
+}
+  auto. 
+  auto.
+  auto.
+  auto.
+  split; auto.
+  auto.
+  auto.
+Defined.
+
+
+  Lemma to_R_R: forall x : R, to_R x = x.
+  Proof. intros. simpl. auto. Qed.
+
+
+(**Undelimit Scope R_scope.
+Close Scope R_scope.**)
+(**Local Open Scope Z_scope.**)
+Delimit Scope Z_scope with Z.
+
+
+Instance Numeric_z : Numerics.Numeric Z :=
+  @Numerics.mkNumeric
+    Z
+    Z.add
+    Z.opp
+    Z.mul
+    Zpower_nat
+
+    Z.of_nat
+    Z0
+    (Zpos (1)%positive)
+
+    Z.lt
+    _
+    Z.mul_0_l
+    _
+    _
+    Z.add_comm
+    Z.add_assoc
+    Z.add_opp_diag_r
+    Z.add_0_l
+
+    Z.mul_comm
+    Z.mul_assoc
+    Z.mul_1_l
+    Z.mul_add_distr_l
+    _   
+    Zlt_asym
+    Z.lt_trans
+    _
+    _
+    _
+    _
+
+    IZR
+    _
+    _
+    _
+    _
+    _
+.
+  unfold Z.lt. auto.
+  auto.
+{
+  intros.
+  rewrite Nat2Z.inj_succ.
+  rewrite Z.add_1_l.
+  auto.
+}
+{ 
+  intros.
+  destruct Z_dec' with r1 r2; auto.
+  destruct s; auto.
+}
+{
+  intros.
+  apply Zplus_le_lt_compat; auto.
+  apply Z.le_refl.
+}
+{
+  intros.
+  split; intros.
+  { apply Zmult_lt_compat_l; auto. }
+  apply Zmult_gt_0_lt_reg_r with r.
+  { apply Z.lt_gt. auto. }
+  rewrite Z.mul_comm.
+  rewrite -> Z.mul_comm with r2 r.
+  auto.
+}
+  auto.
+  auto.
+  intros. rewrite <- plus_IZR. auto.
+  intros. rewrite <- mult_IZR. auto.
+  intros. split. apply IZR_lt. apply lt_IZR.
+  intros. rewrite <- opp_IZR. auto.
+  intros. apply eq_IZR; auto.
+Defined.
+  Delimit Scope R_scope with R_s.
+
+  Infix "+" := Numerics.plus : Numeric_scope.
+  Notation "- n" := (Numerics.neg n) : Numeric_scope.
+  Infix "*" := Numerics.mult : Numeric_scope.
+  Infix "<" := Numerics.lt : Numeric_scope.
+  Infix "<=" := Numerics.le : Numeric_scope.
+  Notation "1" := Numerics.mult_id : Numeric_scope.
+  Notation "0" := Numerics.plus_id : Numeric_scope.
+  Delimit Scope Numeric_scope with Num.
+  Local Open Scope Numeric_scope.
+
+  Section use_Numeric2.
+  Context {Nt:Type} `{Numeric Nt}.
+
+  Lemma to_R_eqb: forall (n m : Nt), eqb n m = eqb (to_R n) (to_R m).
+  Proof.
+    intros.
+    destruct (eqb n m) eqn:e.
+    { apply eqb_true_iff in e. rewrite e. rewrite eqb_refl. auto. }
+    apply eqb_false_iff in e.
+    assert (to_R n <> to_R m).
+      unfold not. intros. apply e. apply to_R_inj. auto.
+    apply eqb_false_iff in H0.
+    auto.
+  Qed.
+  
+  Lemma to_R_ltb: forall (n m : Nt), ltb n m = ltb (to_R n) (to_R m).
+  Proof.
+    intros.
+    destruct (ltb (to_R n) (to_R m)) eqn:e.
+    { apply ltb_true_iff in e. apply to_R_lt in e. apply ltb_true_iff in e. auto. }
+    apply ltb_false_iff in e.
+    apply not_lt_le in e.
+    apply to_R_le in e.
+    apply le_not_lt in e.
+    apply ltb_false_iff in e.
+    auto.
+  Qed.
+
+  Lemma to_R_leb: forall (n m : Nt), leb n m = leb (to_R n) (to_R m).
+  Proof.
+    intros.
+    repeat rewrite leb_ltb_or_eqb.    
+    rewrite to_R_ltb.
+    rewrite to_R_eqb.
+    auto.
+  Qed.
+
+  Lemma R_abs_same: forall x : R, abs x = Rabs x.
+  Proof.
+    intros.
+    unfold abs. 
+    simpl.
+    destruct (le_lt_dec 0 x).
+    { 
+      rewrite Rabs_right.
+        apply leb_true_iff in l. rewrite l. auto.
+      unfold Rge.
+      unfold Rgt.
+      destruct l; auto.
+    }
+    rewrite Rabs_left; auto.
+      apply lt_not_le in l. apply leb_false_iff in l. rewrite l. auto.
+  Qed.
+
+  Lemma R_dist_same: forall x y : R, abs (x + - y) = R_dist x y.
+  Proof. intros. unfold R_dist. rewrite R_abs_same. auto. Qed.
+
+  Lemma R_lt_same: forall x y : R, x < y <-> Rlt x y. 
+  Proof. intros. split; auto. Qed.
+
+  Lemma R_le_same: forall x y : R, x <= y <-> Rle x y. 
+  Proof. intros. split; auto. Qed.
+
+  Lemma Zlt_iff: forall (x y : Z), (x < y)%Z <-> lt x y.
+  Proof. intros. split; auto. Qed.
+
+  Lemma Zle_iff: forall (x y : Z), (x <= y)%Z <-> le x y.
+  Proof. 
+    intros.
+    split; intros.
+    { 
+      apply Zle_lt_or_eq in H0.
+      unfold le.
+      destruct H0; auto. 
+    }
+    destruct H0; auto.
+      apply Zlt_le. auto.
+    rewrite H0. apply Z.le_refl.
+  Qed.
+
+ 
+  Definition of_Z (i : Z) : Nt :=
+    match i with
+    | Z0 => plus_id
+    | Zpos p => of_nat (Pos.to_nat p)
+    | Zneg p => neg ( of_nat (Pos.to_nat p))
+    end.
+
+
+End use_Numeric2.
+
+Definition log (x y : R) := Rdiv (ln y) (ln x).
+    
+Lemma ln_pow: forall (x : R) (n : nat), 0 < x -> ln (x ^ n) = INR n * ln x.
+Proof. 
+  intros.
+  induction n; auto.
+    simpl. rewrite Rmult_0_l. apply ln_1.
+  simpl in IHn.
+  assert(INR n.+1 = INR n + 1)%R_s.
+  {
+    simpl.
+    destruct n; auto.
+    simpl.
+    rewrite Rplus_0_l.
+    auto.
+  }
+  rewrite H0.
+  simpl.
+  rewrite ln_mult; auto.
+  {            
+    rewrite Rmult_plus_distr_r.
+    rewrite Rmult_1_l.
+    rewrite IHn.
+    apply Rplus_comm.
+  }
+  assert( 0 < Numerics.pow_nat x n). apply Numerics.pow_gt_0. auto.
+  apply H1.
+Qed.
+
+Lemma ln_le_inv: forall x y : R, (0 < x)%R_s -> (0 < y)%R_s -> (ln x <= ln y)%R_s -> (x <= y)%R_s.
+Proof.
+  intros.
+  destruct H1.
+  { unfold Rle. left. apply ln_lt_inv; auto. }
+  unfold Rle. right. apply ln_inv; auto.
+Qed.
+
+Lemma log_pow: forall (x y : R) (n : nat), 0 < x -> 0 < y -> log x (y ^ n) = INR n * log x y.
+Proof.
+  intros.
+  unfold log.
+  rewrite ln_pow; auto. 
+  unfold Rdiv.
+  rewrite Rmult_assoc.
+  auto.
+Qed.
+  
+Lemma log_base: forall (x : R), 0 < x -> 1 <> x -> log x x = 1.
+Proof.
+  intros.
+  unfold log.
+  unfold Rdiv.
+  rewrite Rinv_r; auto.
+  unfold not.
+  intros.
+  apply H0.
+  rewrite <- ln_1 in H1.
+  apply ln_inv; auto.      
+  assert (Numerics.to_R 0 < Numerics.to_R 1)%R_s. simpl. apply Rlt_0_1. 
+  apply H2.
+Qed.
+
+Lemma log_1: forall (x : R), 0 < x -> 1 <> x -> log x 1 = 0.
+Proof.
+  intros.
+  unfold log.
+  rewrite ln_1.
+  unfold Rdiv.
+  rewrite Rmult_0_l.
+  auto.
+Qed.
+
+Lemma log_base_pow_nat: forall (x : R) (n : nat),  0 < x -> 1 <> x ->  log x (x ^ n) = INR n.
+Proof.
+  intros.
+  rewrite log_pow; auto.
+  rewrite log_base; auto.
+  apply Numerics.mult_id_r.
+Qed.
+
+Lemma log_inv: forall (x y z : R), 0 < x -> 1 <> x -> 0 < y -> 0 < z -> log x y = log x z -> y = z.
+Proof.
+  intros.
+  unfold log in H1.
+  unfold Rdiv in H1.
+  apply ln_inv; auto.
+  unfold log in H3.
+  rewrite <- Rmult_1_r.       
+  rewrite <- Rmult_1_r with (ln y).
+  assert (ln x <> 0)%R_s.
+    unfold not. intros. apply H0. rewrite <- ln_1 in H4. apply ln_inv; auto.
+    apply Rlt_0_1.  
+  rewrite <- Rinv_l with (ln x); auto.
+  repeat rewrite <- Rmult_assoc.
+  unfold Rdiv in H3.
+  rewrite H3. auto.
+Qed.
+
+(**forall (v : value_func p_props) (n m : nat),
+   (1 + - discount) *
+   value_dist p_props (value_iteration_rec p_props discount v n)
+     (value_iteration_rec p_props discount v (n + m)) <=
+   value_dist p_props v (value_iteration_step p_props discount v) *
+   pow_nat discount n**)
+
+Lemma log_lt_inv:  forall (x y z : R), 1 < x -> 0 < y -> 0 < z -> log x y < log x z -> y < z.
+Proof.
+  intros.
+  unfold log in H2.
+  assert (ln x <> 0%R_s).
+  { unfold not.
+    intros.
+    rewrite <- ln_1 in H3.
+    apply ln_inv in H3; auto.
+      rewrite H3 in H. apply Numerics.lt_irrefl in H. auto.
+      apply Rlt_trans with 1; auto. apply Rlt_0_1.
+    apply Rlt_0_1.
+  }
+  unfold Rdiv in H2.
+  rewrite <- mult_lt_compat_r in H2.
+    apply ln_lt_inv; auto.
+  apply Rinv_0_lt_compat.
+  rewrite <- ln_1.
+  apply ln_increasing; auto.
+  apply Rlt_0_1.
+Qed.
+
+
+Lemma log_le_inv:  forall (x y z : R), 1 < x -> 0 < y -> 0 < z -> log x y <= log x z -> y <= z.
+Proof.
+  intros.
+  unfold Numerics.le.
+  destruct H2.
+    apply log_lt_inv in H2; auto.
+  apply log_inv in H2; auto.
+    apply Numerics.lt_trans with 1; auto. apply Rlt_0_1.
+  apply Numerics.lt_not_eq. auto.
+Qed.
+
+Lemma gt0_lt1_inv_gt1: forall x : R, 0 < x -> x < 1 -> 1 < Rinv x.
+Proof.
+  intros.
+  assert (1 = 1%R_s). auto.
+  rewrite H1.
+  rewrite <- Rinv_l with 1.
+  2: { apply Numerics.lt_not_eq in H0. simpl. auto. }
+  rewrite Rmult_1_r.
+  apply Rinv_lt_contravar; auto.
+  rewrite Rmult_1_r.
+  auto.
+Qed.
+
+Lemma log_lt1_lt_inv:  forall (x y z : R), 0 < x -> x < 1 -> 0 < y -> 0 < z -> log x y < log x z -> z < y.
+Proof.
+  intros.
+  apply log_lt_inv with (Rinv x); auto.
+    apply gt0_lt1_inv_gt1; auto.
+  unfold log in *.
+  repeat rewrite ln_Rinv; auto.
+  unfold Rdiv in *.
+  rewrite <- Ropp_inv_permute; auto.
+  2: {
+    unfold not. intros.
+    rewrite <- ln_1 in H4.
+    apply ln_inv in H4; auto.
+      rewrite H4 in H0. apply Numerics.lt_irrefl in H0. auto.
+    apply Rlt_0_1.
+  }
+  repeat rewrite <- Ropp_mult_distr_r.
+  apply Ropp_gt_lt_contravar.
+  auto.
+Qed.
+
+Lemma log_lt1_le_inv:  forall (x y z : R), 0 < x -> x < 1 -> 0 < y -> 0 < z -> log x y <= log x z -> z <= y.
+Proof.
+  intros.
+  unfold Numerics.le.
+  destruct H3.
+    apply log_lt1_lt_inv in H3; auto.
+  apply log_inv in H3; auto.
+  apply Numerics.lt_not_eq in H0.
+  auto.
+Qed.
+
+  Lemma exists_pow_le: forall x y : R, 0 < x -> x < 1 -> 0 < y -> exists n, x ^ n <= y.
+  Proof.
+    intros.
+    exists (Z.to_nat (up (log x y))).
+    apply log_lt1_le_inv with x; auto.
+      apply pow_lt. auto. 
+    rewrite log_base_pow_nat; auto.
+    2:{ apply lt_not_eq in H0. auto. }
+    rewrite INR_IZR_INZ.
+    destruct (le_lt_dec 0 (up (log x y))).
+    {
+      rewrite Z2Nat.id; auto.
+      2: { apply Zle_iff. auto. }
+      apply Rge_le.
+      unfold Rge.
+      left.
+      apply archimed.
+    }
+    apply le_lt_weak.
+    apply lt_le_trans with 0.
+    {
+      apply lt_trans with (IZR (up (log x y))).
+        apply Rgt_lt. apply archimed.
+      apply IZR_lt. auto.
+    }
+    apply IZR_le.
+    apply Nat2Z.is_nonneg.
+  Qed.
+
+  Lemma exists_pow_lt: forall x y : R, 0 <= x -> x < 1 -> 0 < y -> exists n, x ^ n < y.
+  Proof.
+    intros.
+    destruct H.
+    2: { exists (S O). rewrite <- H. rewrite pow_1. auto. } 
+    destruct exists_pow_le with x y; auto.
+    exists x0.+1.
+    apply lt_le_trans with (x ^ x0); auto.
+    simpl.
+    rewrite <- mult_id_l.
+    apply Rmult_lt_compat_r; auto.
+    apply pow_lt. auto.
+  Qed.    
+
+  Lemma R_plus_id_same: plus_id = 0%R_s.
+  Proof. auto. Qed.
+
+  Lemma R_mult_id_same: mult_id = 1%R_s.
+  Proof. auto. Qed.
+
+
+  Section use_Numeric3.
+  Context {Nt : Type } `{Numeric Nt}.
+
+  Lemma exists_pow_nat_le: forall x y : Nt, 0 < x -> x < 1 -> 0 < y -> exists n, Numerics.pow_nat x n <= y.
+  Proof.
+    intros.
+    destruct exists_pow_le with (to_R x) (to_R y); auto.
+    { simpl; rewrite <- to_R_plus_id; apply to_R_lt; auto. }
+    { simpl; rewrite <- to_R_mult_id; apply to_R_lt; auto. }
+    { simpl; rewrite <- to_R_plus_id; apply to_R_lt; auto. }
+    exists x0.
+    rewrite <- to_R_pow_nat in H3.
+    apply to_R_le.
+    auto.
+  Qed.
+  
+  Lemma exists_pow_nat_lt: forall x y : Nt, 0 <= x -> x < 1 -> 0 < y -> exists n, Numerics.pow_nat x n < y.
+  Proof.
+    intros.
+    destruct exists_pow_lt with (to_R x) (to_R y); auto; simpl;
+      try rewrite <- to_R_plus_id; try rewrite <- to_R_mult_id;
+      try rewrite <- to_R_le; try rewrite <- to_R_lt; auto.
+    exists x0.
+    rewrite <- to_R_pow_nat in H3.
+    apply to_R_lt.
+    auto.
+  Qed.
+
+
+  End use_Numeric3.
+
+
+End Numerics.
+
+Infix "+" := Numerics.plus : Numeric_scope.
+Notation "- n" := (Numerics.neg n) : Numeric_scope.
+Infix "*" := Numerics.mult : Numeric_scope.
+Infix "<" := Numerics.lt : Numeric_scope.
+Infix "<=" := Numerics.le : Numeric_scope.
+Notation "1" := Numerics.mult_id : Numeric_scope.
+Notation "0" := Numerics.plus_id : Numeric_scope.
+
+
+
+Close Scope Numeric_scope.
+Undelimit Scope Numeric_scope.
+
 
 Section int_to_Z.
   Variable i : int.
@@ -40,7 +2210,7 @@ Section int_to_Z.
     | Negz n => Z.neg (Pos.of_succ_nat n)
     end.
 
-  Lemma posint_to_positive (H : (0 < i)%R) :
+  Lemma posint_to_positive (H : (0< i)%R) :
     Z.pos int_to_positive = int_to_Z.
   Proof.
     rewrite /int_to_positive /int_to_Z.
@@ -52,6 +2222,7 @@ Section int_to_Z.
     by move=> H2; rewrite H2 in H.
   Qed.
 End int_to_Z.
+
 
 Lemma pos_of_succ_nat_mul n m :
   (Pos.of_succ_nat n * Pos.of_succ_nat m)%positive =
@@ -309,14 +2480,14 @@ Qed.
 
 Lemma Zneg_Zlt r s :
   Pos.gt r s -> 
-  Zlt (Zneg r) (Zneg s).
+  Z.lt (Zneg r) (Zneg s).
 Proof.
   rewrite /Pos.gt.
   by rewrite /Z.lt /= => ->.
 Qed.  
 
 Lemma Zlt_Zneg r s :
-  Zlt (Zneg r) (Zneg s) ->
+  Z.lt (Zneg r) (Zneg s) ->
   Pos.gt r s.
 Proof.
   rewrite /Pos.gt.
@@ -334,7 +2505,7 @@ Qed.
 
 Lemma Zneg_Zle r s :
   Pos.ge r s -> 
-  Zle (Zneg r) (Zneg s).
+  Z.le (Zneg r) (Zneg s).
 Proof.
   rewrite /Pos.ge /Z.le /= => H; rewrite /CompOpp.
   by move: H; case: (r ?= s)%positive.
@@ -342,7 +2513,7 @@ Qed.
 
 Lemma int_to_Z_lt (s r : int) :
   ltr s r ->
-  Zlt (int_to_Z s) (int_to_Z r).
+  Z.lt (int_to_Z s) (int_to_Z r).
 Proof.
   case: s=> sn; case: r=> rn //.
   { simpl.
@@ -377,21 +2548,21 @@ Proof.
   rewrite /int_to_Z.
   case a=>n; case b=>n0; move => H.
   apply Nat2Z.inj_iff in H. auto.
-  have H1: (Zle 0 (Z.of_nat n)).
+  have H1: (Z.le 0 (Z.of_nat n)).
   { apply Nat2Z.is_nonneg. }
-  have H2: (Zlt (Z.neg (Pos.of_succ_nat n0)) 0).
+  have H2: (Z.lt (Z.neg (Pos.of_succ_nat n0)) 0).
   { apply Zlt_neg_0. }
   omega.
-  have H1: (Zle 0 (Z.of_nat n0)).
+  have H1: (Z.le 0 (Z.of_nat n0)).
   { apply Nat2Z.is_nonneg. }
-  have H2: (Zlt (Z.neg (Pos.of_succ_nat n)) 0).
+  have H2: (Z.lt (Z.neg (Pos.of_succ_nat n)) 0).
   { apply Zlt_neg_0. }
   omega.
   inversion H. apply SuccNat2Pos.inj_iff in H1. auto.
 Qed.
 
 Lemma lt_int_to_Z (s r : int) :
-  Zlt (int_to_Z s) (int_to_Z r) ->
+  Z.lt (int_to_Z s) (int_to_Z r) ->
   ltr s r.  
 Proof.
   case: s=> sn; case: r=> rn //.
@@ -412,17 +2583,19 @@ Proof.
   apply/ltP; omega.
 Qed.
 
+
 Lemma le_int_to_Z (s r : int) :
-  Zle (int_to_Z s) (int_to_Z r) ->
+  Z.le (int_to_Z s) (int_to_Z r) ->
   ler s r.  
 Proof.
+  
   move/Zle_lt_or_eq; case; first by move/lt_int_to_Z; apply/ltrW.
   move/int_to_Z_inj => -> //.
 Qed.  
 
 Lemma int_to_Z_le (s r : int) :
   ler s r ->
-  Zle (int_to_Z s) (int_to_Z r).
+  Z.le (int_to_Z s) (int_to_Z r).
 Proof.
   case: s=> sn; case: r=> rn //.
   { simpl.
@@ -496,10 +2669,10 @@ Section rat_to_Q_lemmas.
     split. apply: int_to_Z_inj. move => H. by rewrite H. Qed.
 
   Lemma int_to_Z_opp (i : int) :
-    int_to_Z (- i) = Zopp (int_to_Z i).
+    int_to_Z (- i) = Z.opp (int_to_Z i).
   Proof.
     have ->: - i = -1 * i by rewrite mulNr mul1r.
-    have ->: (Zopp (int_to_Z i) = Zmult (Zneg xH) (int_to_Z i)).
+    have ->: (Z.opp (int_to_Z i) = Zmult (Zneg xH) (int_to_Z i)).
     { by rewrite Z.opp_eq_mul_m1 Z.mul_comm. }
     rewrite -int_to_Z_mul. f_equal.
   Qed.
@@ -513,7 +2686,6 @@ Section rat_to_Q_lemmas.
   Proof.
     rewrite divn_gt0.
     {
-      case: (dvdn_gcdr `|a| `|b|)%N => H3.
       apply dvdn_leq => //.
       rewrite absz_gt0.
       rewrite ltr_neqAle in H.
@@ -1043,9 +3215,9 @@ Section Z_to_int_lemmas.
 
   (** This lemma should be in the standard library... *)
   Lemma Zneg_Zle' (r s : positive) :
-    (Zle (Z.neg r) (Z.neg s))%Z -> (r >= s)%positive.
+    (Z.le (Z.neg r) (Z.neg s))%Z -> (r >= s)%positive.
   Proof.
-    rewrite /Zle /Zcompare /CompOpp.
+    rewrite /Z.le /Z.compare /CompOpp.
     case H: (r ?= s)%positive => //.
     { move => _; move: H.
       rewrite Pos.compare_eq_iff => ->.
@@ -1056,7 +3228,7 @@ Section Z_to_int_lemmas.
   Qed.    
 
   Lemma Z_to_int_le (r s : Z) :
-    Zle r s -> (Z_to_int r <= Z_to_int s)%R.
+    Z.le r s -> (Z_to_int r <= Z_to_int s)%R.
   Proof.
     rewrite /Z_to_int.
     case: r.
@@ -1066,7 +3238,7 @@ Section Z_to_int_lemmas.
         move: (Pos2Z.is_pos p) => H2.
         omega. }
       { move => p q.
-        rewrite /Zle -(Pos2Z.inj_compare q p) Pos.compare_le_iff Pos2Nat.inj_le.
+        rewrite /Z.le -(Pos2Z.inj_compare q p) Pos.compare_le_iff Pos2Nat.inj_le.
         move/leP => //. }
       move => p q; move: (Zle_neg_pos p q); move/Zle_not_lt => H H2.
       have H3: Z.pos q <> Z.neg p by discriminate.
@@ -1080,7 +3252,7 @@ Section Z_to_int_lemmas.
   Qed.
 
   Lemma Z_to_int_opp r :
-    Z_to_int (Zopp r) = (- Z_to_int r)%R.
+    Z_to_int (Z.opp r) = (- Z_to_int r)%R.
   Proof. by rewrite Z.opp_eq_mul_m1 Z_to_int_mul /= NegzE mulrC mulN1r. Qed.
 End Z_to_int_lemmas.
       
@@ -1442,7 +3614,7 @@ Section rat_to_Q_lemmas_cont.
     by apply /ltP; apply Pos2Nat.is_pos.
   Qed.
 
-  Require Import ProofIrrelevance.
+   Import ProofIrrelevance.
 
   Lemma rat_to_Q_inj r s :
     rat_to_Q r = rat_to_Q s -> r = s.
@@ -1648,4 +3820,3 @@ Proof.
 Qed.    
 
 (** END random lemmas *)
-

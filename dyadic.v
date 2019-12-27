@@ -21,6 +21,8 @@ Definition D_to_Q (d : D) :=
 Definition D0 : D := Dmake 0 1.
 Definition D1 : D := Dmake 2 1.
 
+
+
 Lemma D_to_Q0' : D_to_Q D0 = 0 # 2.
 Proof. auto. Qed.
 
@@ -172,10 +174,10 @@ Proof.
   { inversion 1. }
   split.
   { apply Pos2Z.is_nonneg. }
-  unfold Zle, Z.compare; rewrite H; inversion 1. 
+  unfold Z.le, Z.compare; rewrite H; inversion 1. 
   split.
   { apply Pos2Z.is_nonneg. }
-  unfold Zle, Z.compare; rewrite H; inversion 1. 
+  unfold Z.le, Z.compare; rewrite H; inversion 1. 
 Qed.
 
 Lemma Qinv_neq (n : Q) : ~0 == n -> ~0 == / n.
@@ -454,7 +456,7 @@ Qed.
 Lemma Deq_dec (d1 d2 : D) : {d1=d2} + {d1<>d2}.
 Proof.
   destruct d1, d2.
-  destruct (Z_eq_dec num0 num1).
+  destruct (Z.eq_dec num0 num1).
   { destruct (positive_eq_dec den0 den1).
     left; subst; f_equal.
     right; inversion 1; subst; apply n; auto. }
@@ -753,7 +755,7 @@ Proof.
   unfold Plub_aux.
   assert (H : (x <= Z.pow_pos 2 (Zsize x))%Z).
   { apply Zpow_pos_size_le. }
-  eapply Zle_trans; [apply H|].
+  eapply Z.le_trans; [apply H|].
   rewrite <-!two_power_pos_correct.
   apply two_power_pos_le.
   rewrite Pos2Nat.inj_le; generalize (Zsize x) as z; intro.
@@ -1226,6 +1228,7 @@ Proof.
   rewrite H; auto.
 Qed.  
 
+
 Module DRed.
   Record t : Type :=
     mk { d :> D;
@@ -1242,6 +1245,7 @@ Module DRed.
   Next Obligation.
     apply Dred_complete; rewrite Dred_correct; apply Qeq_refl.
   Qed.
+
 
   Program Definition sub (d1 d2 : t) : t :=
     mk (Dred (Dsub d1.(d) d2.(d))) _.
@@ -1266,6 +1270,16 @@ Module DRed.
   Next Obligation.
     apply Dred_complete; rewrite Dred_correct; apply Qeq_refl.            
   Qed.
+
+  Program Definition of_nat (n : nat) : t :=
+    mk (Dmake (2 * (Z.of_nat n)) 1) _.
+
+  Program Fixpoint natPow (d : t) (n : nat) : t :=
+    match n with
+    | O => t1
+    | S n' => mult d (natPow d n')
+    end.
+
 
   Lemma Dred_eq (d1 d2 : t) : (D_to_Q (d d1) == D_to_Q (d d2))%Q -> d1 = d2.
   Proof.
@@ -1349,6 +1363,353 @@ Module DRed.
     unfold lub, Dle in *; simpl.
     rewrite Dmult_ok in *.
     rewrite Dred_correct in *; auto.
+  Qed.
+
+  Lemma addOppL: forall d1, add (opp d1) d1 = t0.
+  Proof.
+    intros.
+    apply Dred_eq.
+    rewrite addP.    
+    simpl.
+    rewrite D_to_Q0.
+    rewrite Dred_correct.
+    rewrite Dopp_ok.
+    rewrite Qplus_comm.
+    apply Qplus_opp_r.
+  Qed.
+    
+  Lemma addNegDistr: forall d1 d2, opp (add d1 d2) = add (opp d1) (opp d2).
+  Proof.
+    intros.
+    apply Dred_eq.
+    rewrite addP.
+    repeat (rewrite oppP).
+    rewrite addP.
+    apply Qopp_plus.
+  Qed.
+
+
+  Lemma mult1L: forall d1, mult t1 d1 = d1.
+  Proof.
+    intros.
+    apply Dred_eq.
+    rewrite multP.
+    rewrite D_to_Q1.
+    apply Qmult_1_l.
+  Qed.
+
+  Lemma multDistrL: forall d1 d2 d3, mult d1 (add d2 d3) = add (mult d1 d2) (mult d1 d3).
+  Proof.
+    intros.
+    apply Dred_eq.
+    rewrite multP.
+    repeat (rewrite addP).
+    repeat (rewrite multP).
+    apply Qmult_plus_distr_r.
+  Qed.
+
+  Lemma mult0L: forall d1, mult t0 d1 = t0.
+  Proof.
+    intros.
+    apply Dred_eq.
+    rewrite multP.
+    rewrite D_to_Q0.
+    apply Qmult_0_l.
+  Qed.
+
+
+  Lemma le_lt_or_eq: forall (t1 t2 : t), Dlt t1 t2 \/ t1 = t2 <-> Dle t1 t2.
+  Proof.
+    intros.
+    split.
+    {
+      unfold Dle,Dlt in *.
+      intros.
+      apply Qle_lteq.
+      destruct H; auto.
+      rewrite H.
+      right.  
+      apply Qeq_refl.
+    }
+    intros.
+    unfold Dle in H.
+    rewrite Qle_lteq in H.
+    destruct H; auto.
+    right.
+    apply Dred_eq; auto.
+  Qed.
+
+
+  Lemma plus_le_compat: forall (t1 t2 t3 t4 : t) , Dle t1 t2 -> Dle t3  t4 -> Dle (add t1 t3) (add t2 t4).
+  Proof.
+    intros.
+    unfold Dle in *.
+    repeat (rewrite addP).
+    apply Qplus_le_compat; auto.
+  Qed.
+
+
+  Lemma plus_lt_le_compat: forall (t1 t2 t3 t4 : t), Dlt t1 t2 ->  Dle t3 t4 -> Dlt (add t1 t3 ) (add t2 t4).
+  Proof.
+    intros.
+    unfold Dle,Dlt in *.
+    repeat (rewrite addP).
+    apply Qplus_lt_le_compat; auto.
+  Qed.
+    
+  Lemma plus_lt_compat_l : forall t t1 t2 : t, Dlt t1 t2 -> Dlt (add t t1) (add t t2).
+  Proof.
+    intros.
+    rewrite addC.
+    rewrite addC with t2 t4.
+    apply plus_lt_le_compat; auto.
+    unfold Dle.
+    apply Qle_refl.
+  Qed.
+
+
+  
+  
+  Lemma lt_t0_t1: t0 < t1.
+  Proof.
+    unfold Dlt.
+    rewrite D_to_Q0.
+    rewrite D_to_Q1.
+    unfold Qlt, Z.lt.
+    auto. 
+  Qed.
+
+  Lemma mult_le_compat: 
+        forall (r1 r2 r3 r4 : t) , Dle t0 r1 -> Dle t0 r3 -> Dle r1  r2 -> Dle r3 r4 ->
+           Dle (mult r1 r3) (mult r2   r4).
+  Proof.
+    intros.
+    unfold Dle in *.
+    repeat (rewrite multP).
+    remember (D_to_Q r1) as q1.
+    remember (D_to_Q r2) as q2.
+    remember (D_to_Q r3) as q3.
+    remember (D_to_Q r4) as q4.
+    rewrite D_to_Q0 in *.
+    unfold Qle in *.
+    simpl in *.
+    rewrite Z.mul_1_r in *.
+    repeat (rewrite Pos2Z.inj_mul).
+    rewrite Z.mul_shuffle0.
+    rewrite Z.mul_assoc.
+    rewrite <- Z.mul_assoc.
+    rewrite Z.mul_shuffle0 with (Qnum q2) (Qnum q4) (QDen q1 * QDen q3)%Z.
+    rewrite Z.mul_assoc with (Qnum q2) (QDen q1) (QDen q3).
+    rewrite <- Z.mul_assoc with (Qnum q2 * QDen q1)%Z (QDen q3) (Qnum q4).
+    apply Zmult_le_compat; auto;
+    try( apply Zmult_le_0_compat; auto ; apply Pos2Z.pos_is_nonneg).
+    rewrite Z.mul_comm.
+    rewrite Z.mul_comm with (QDen q3) (Qnum q4).
+    auto.
+  Qed.
+
+   Lemma mult_lt_compat:
+        forall (r1 r2 r3 r4 : t), Dle t0 r1 -> Dle t0 r3 -> Dlt r1 r2 -> Dlt r3 r4 ->
+           Dlt (mult r1 r3) (mult r2 r4).
+  Proof.
+    intros.
+    unfold Dle,Dlt in *.
+    repeat (rewrite multP).
+    remember (D_to_Q r1) as q1.
+    remember (D_to_Q r2) as q2.
+    remember (D_to_Q r3) as q3.
+    remember (D_to_Q r4) as q4.
+    rewrite D_to_Q0 in *.
+    unfold Qlt in *.
+    simpl.
+    repeat (rewrite Pos2Z.inj_mul).
+    rewrite Z.mul_shuffle0.
+    rewrite Z.mul_assoc.
+    rewrite <- Z.mul_assoc.
+    rewrite Z.mul_shuffle0 with (Qnum q2) (Qnum q4) (QDen q1 * QDen q3)%Z.
+    rewrite Z.mul_assoc with (Qnum q2) (QDen q1) (QDen q3).
+    rewrite <- Z.mul_assoc with (Qnum q2 * QDen q1)%Z (QDen q3) (Qnum q4).
+    apply Zmult_lt_compat.
+    {
+      split; auto.
+      apply Zmult_le_0_compat.
+      {
+        unfold Qle in H.
+        simpl in *.
+        rewrite Z.mul_1_r in H.
+        auto.
+      }
+      apply Pos2Z.pos_is_nonneg.
+    }
+    split.
+    {
+      apply Zmult_le_0_compat.
+      { apply Pos2Z.pos_is_nonneg. }
+      unfold Qle in H0.
+      simpl in *.
+      rewrite Z.mul_1_r in H0.
+      auto.
+    }
+    rewrite Z.mul_comm.
+    rewrite Z.mul_comm with (QDen q3) (Qnum q4).
+    auto.
+  Qed.
+    
+  Lemma mult_lt_compat_l : forall r r1 r2 : t, Dlt t0 r -> (Dlt r1 r2 <-> Dlt (mult r r1) (mult r r2)).
+  Proof.
+    unfold Dlt.
+    intros.
+    split; intros.
+    {
+      repeat rewrite multP.
+      unfold Qlt in *.
+      simpl in *.
+      apply Z.mul_pos_cancel_r in H.
+      2 :{  unfold Z.lt. auto. } simpl.
+      repeat rewrite <- Z.mul_assoc.
+      apply Zmult_lt_compat_l; auto.
+      repeat rewrite Pos2Z.inj_mul.
+      repeat rewrite Z.mul_assoc.
+      rewrite Z.mul_comm with (num r1) (Z.pos (shift_pos (den r) 1)).
+      rewrite Z.mul_comm with (num r2) (Z.pos (shift_pos (den r) 1)).
+      repeat rewrite <- Z.mul_assoc.
+      apply Zmult_lt_compat_l; auto.
+      apply Pos2Z.pos_is_pos.
+    }
+    repeat rewrite multP in H0.
+    unfold Qlt in *.
+    simpl in *.
+    apply Z.mul_pos_cancel_r in H.
+    2 :{  unfold Z.lt. auto. }
+    repeat rewrite <- Z.mul_assoc in H0.
+    rewrite Z.mul_comm in H0.
+    rewrite Z.mul_comm with (num r) (num r2 * Z.pos (shift_pos (den r) 1 * shift_pos (den r1) 1))%Z in H0.
+    apply Zmult_gt_0_lt_reg_r in H0.
+    2: { apply Z.lt_gt. auto. }
+    rewrite Z.mul_comm in H0.
+    rewrite Z.mul_comm with (num r2) ( Z.pos (shift_pos (den r) 1 * shift_pos (den r1) 1 )) in H0.
+    repeat rewrite Pos2Z.inj_mul in H0.
+    repeat rewrite <- Z.mul_assoc in H0.
+    rewrite Z.mul_comm in H0.
+    rewrite Z.mul_comm with (Z.pos (shift_pos (den r) 1)) ((Z.pos (shift_pos (den r1) 1) * num r2))%Z in H0.
+    apply Zmult_gt_0_lt_reg_r in H0.
+    { rewrite Z.mul_comm. rewrite -> Z.mul_comm with (num r2) (Z.pos (shift_pos (den r1) 1)). auto. }
+    apply Zgt_pos_0.
+  Qed.
+
+
+  Lemma of_natO: of_nat O = t0.
+  Proof. auto. Qed.
+
+  Lemma of_natP: forall n : nat,  D_to_Q (of_nat n) = (Qmake (2 * (Z.of_nat n)) 2).
+  Proof. auto. Qed.
+
+  Lemma of_nat_succ_l: forall n : nat, of_nat (S n) = add t1 (of_nat (n)). 
+  Proof.
+    intros.
+    apply Dred_eq.
+    rewrite addP.
+    rewrite D_to_Q1.
+    repeat (rewrite of_natP).
+    simpl.
+    unfold Qeq.
+    unfold Z.of_nat.
+    simpl.
+    destruct n.
+    { rewrite Z.mul_0_l. auto. }
+    simpl.
+    rewrite Pos.mul_1_r.
+    rewrite Pos2Z.pos_xO.
+    rewrite Pos2Z.pos_xO with ((match Pos.of_succ_nat n with
+       | q~1 => (Pos.succ q)~0
+       | q~0 => q~1
+       | 1 => 2
+       end * 2))%positive.
+    simpl.
+    destruct (Pos.of_succ_nat n); auto.
+  Qed.
+
+
+  (**Trivial, but needed for numerics**)
+  Lemma natPowO: forall (d : t), natPow d O = t1.
+  Proof. auto. Qed.
+
+  Lemma natPowRec: forall (d : t) (n : nat), natPow d (S n) = mult d (natPow d n).
+  Proof. auto. Qed.
+
+  Lemma lt_le_dec: forall d1 d2, {d1 < d2} + {d2 <= d1}.
+  Proof. intros. unfold Dle. unfold Dlt. apply Qlt_le_dec. Qed.
+
+
+  Lemma le_lt_dec: forall d1 d2,  {d1 <= d2} + {d2 < d1}.
+  Proof.
+    intros.
+    unfold Dle.
+    unfold Dlt.
+    destruct Qlt_le_dec with (D_to_Q d2) (D_to_Q d1); auto.
+  Qed.
+
+
+  Lemma eq_dec: forall d1 d2 : t, {d1 = d2} + {d1 <> d2}.
+  Proof.
+    intros.
+    destruct Deq_dec with (d d1) (d d2).
+    { 
+      left. 
+      destruct d1,d2.
+      simpl in e.
+      generalize pf0 pf1.
+      rewrite e.
+      intros.
+      f_equal.
+      apply proof_irrelevance.
+    }
+    right.
+    destruct d1,d2.
+    simpl in n.
+    unfold not in *.
+    intros.
+    apply n.
+    inversion H.
+    auto.
+  Qed.
+
+  Lemma le_not_lt: forall d1 d2 : t, (d1 <= d2)-> ~ (d2 < d1).
+  Proof.
+    intros.
+    unfold Dle in H.
+    unfold Dlt.
+    apply Qle_not_lt.
+    auto.
+  Qed.
+
+  Lemma lt_asym: forall d1 d2 : t, d1 < d2 -> ~ d2 < d1.
+  Proof.
+    intros.
+    unfold Dlt in *.
+    apply Qle_not_lt.
+    apply Qlt_le_weak.
+    auto.
+  Qed.
+
+  Lemma lt_trans: forall d1 d2 d3 : t, d1 < d2 -> d2 < d3 -> d1 < d3.
+  Proof.
+    unfold Dlt.
+    intros.
+    apply Qlt_trans with (D_to_Q d2); auto.
+  Qed.
+    
+
+  Lemma total_order_T : forall d1 d2 : t, {Dlt d1 d2} + {d1 = d2} + {Dlt d2 d1}.
+  Proof.
+    intros.
+    unfold Dlt.
+    destruct Q_dec with (D_to_Q d1) (D_to_Q d2).
+      destruct s; auto.
+    left.
+    right.
+    apply Dred_eq.
+    auto.
   Qed.
 
   (* TODO: More lemmas here! *)

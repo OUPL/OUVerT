@@ -151,7 +151,7 @@ Lemma big_product_ge0 (T : eqType) (cs : seq T) (f : T -> R) :
   (0 <= big_product cs f)%R.
 Proof.
   elim: cs=> /=.
-  { move=> _; apply: Fourier_util.Rle_zero_1. }
+  { move=> _; apply: Rle_0_1. }
   move=> a l IH H.
   have H2: (0 = 0 * 0)%R by rewrite Rmult_0_l.
   rewrite H2; apply: Rmult_le_compat.
@@ -167,7 +167,7 @@ Lemma big_product_gt0 (T : eqType) (cs : seq T) (f : T -> R) :
   (0 < big_product cs f)%R.
 Proof.
   elim: cs=> /=.
-  { move=> _; apply: Fourier_util.Rlt_zero_1. }
+  { move=> _; apply: Rlt_0_1. }
   move=> a l IH H.
   have H2: (0 = 0 * 0)%R by rewrite Rmult_0_l.
   apply: Rmult_lt_0_compat.

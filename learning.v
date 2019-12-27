@@ -127,7 +127,7 @@ Section learning.
       have H1: f / mR <= mR / mR.
       { rewrite /Rdiv; apply: Rmult_le_compat_r => //.
         rewrite -[/mR]Rmult_1_l; apply: Rle_mult_inv_pos.
-        fourier.
+        lra.
         have ->: 0 = INR 0 by [].
         apply: lt_INR; apply/ltP => //. }
       apply: Rle_trans; first by apply: H1.
@@ -151,13 +151,13 @@ Section learning.
       { move: H.
         case: (Rlt_le_dec (expVal (learn T) + eps) (empVal T (learn T))) => //. }
       move: (empVal_le1 T (learn T)) => X2.
-      have X3: eps < 1 - expVal (learn T) by fourier.
+      have X3: eps < 1 - expVal (learn T) by lra.
       have X4: Rlt_le_dec eps (1 - expVal (learn T)).
       { case: (Rlt_le_dec eps (1 - expVal (learn T))) => //.
-        move => b; fourier. }
+        move => b; lra. }
       exists (exist _ (learn T) X4) => /=.
       case: (Rle_lt_dec (expVal (learn T) + eps) (empVal T (learn T))) => //.
-      move => b; fourier.
+      move => b; lra.
     Qed.
       
     Lemma eps_Hyp_card eps : (#|eps_Hyp eps| <= #|Hyp|)%nat.
@@ -190,7 +190,7 @@ Section learning.
       apply: probOfR_le.
       { move => x; apply: prodR_nonneg => _ y; apply: d_nonneg. }
       move => x /=; case: (Rlt_le_dec _ _) => // H1 _.
-      case: (Rle_lt_dec _ _) => // H2; fourier. 
+      case: (Rle_lt_dec _ _) => // H2; lra. 
     Qed.      
 
     Definition eps_Hyp_condition_twosided (eps : R) :=
@@ -226,7 +226,7 @@ Section learning.
         { rewrite /p_hat /empVal; rewrite Rmult_comm //. }
       by []. }
       rewrite H1 H2.
-      apply: chernoff_twosided => //; try fourier.
+      apply: chernoff_twosided => //; try lra.
       { move: H1; rewrite /p_exp => <- //. }
       move: H1; rewrite /p_exp => <- //.
     Qed.
@@ -240,16 +240,16 @@ Section learning.
     Proof.
       move => h; rewrite /eps_Hyp_condition_twosided.
       exists ((Rmin (expVal h) (1 - expVal h))/2); split.
-      { apply: Rlt_mult_inv_pos; [|fourier].
+      { apply: Rlt_mult_inv_pos; [|lra].
         case: (expVal_nontrivial h) => H1 H2.
-        apply: Rmin_glb_lt => //; fourier. }
+        apply: Rmin_glb_lt => //; lra. }
       rewrite /= /is_true; case Hlt: (Rlt_le_dec _ _) => // [H].
       move {Hlt}; move: H; set (Z := Rmin _ _) => H; elimtype False.
       have H1: Z / 2 < Z.
       { rewrite /Rdiv -{2}[Z]Rmult_1_r; apply: Rmult_lt_compat_l.
         { rewrite /Z; apply: Rmin_pos; first by case: (expVal_nontrivial h).
-          case: (expVal_nontrivial h) => H1 H2; fourier. }
-        fourier. }
+          case: (expVal_nontrivial h) => H1 H2; lra. }
+        lra. }
       apply: (RIneq.Rle_not_lt _ _ H H1).
     Qed.    
     
@@ -307,7 +307,7 @@ Section learning.
     Proof.
       apply: Rle_trans; first by apply: chernoff_twosided_bound_eps_Hyp.
       apply: Rmult_le_compat_r; first by apply: Rlt_le; apply: exp_pos.
-      apply: Rmult_le_compat_l; first by fourier.
+      apply: Rmult_le_compat_l; first by lra.
       apply: le_INR; apply/leP; apply: eps_Hyp_twosided_card.
     Qed.
 
@@ -351,7 +351,7 @@ Section learning.
       <= INR #|Params| * exp (-2%R * eps^2 * mR).
     Proof.
       apply chernoff_bound => // p i x; rewrite /accuracy01; case: x => a b.
-      case: (predict p a == b)%B; split; fourier. 
+      case: (predict p a == b)%B; split; lra. 
     Qed.
 
     (*Here's the holdout version of the above lemma (the additional condition 
@@ -366,7 +366,7 @@ Section learning.
       apply: Rle_trans; last first.
       { apply: chernoff_bound_holdout => //; last by apply: eps_lt.
         move => hx i x; rewrite /accuracy01; case: x => a b.
-        case: (predict _ _ == _)%B; split; fourier. }
+        case: (predict _ _ == _)%B; split; lra. }
       apply: Rle_refl.
     Qed.      
   End zero_one_accuracy.

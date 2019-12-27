@@ -172,7 +172,7 @@ Section chernoff_geq.
       by apply: d_nonneg. }
     { move => i Hin; apply: expValR_ge0 => x.
       { rewrite -[0]Rplus_0_l; apply: Rplus_le_compat.
-        { case: (f_range i x) => _ Hleq; fourier. }
+        { case: (f_range i x) => _ Hleq; lra. }
         case: (f_range i x) => H _; rewrite -[0](Rmult_0_r 0).
         apply: Rmult_le_compat; try solve[apply: Rle_refl|by []].
         left; apply: exp_pos. }
@@ -227,13 +227,13 @@ Section chernoff_geq.
 
   Lemma one_minus_p_gt0 : p<>1 -> 0 < 1 - p.
   Proof.
-    by move => p_neq1; move: p_leq1; case => H; try fourier.
+    by move => p_neq1; move: p_leq1; case => H; try lra.
   Qed.
   
   Lemma one_minus_p_etc_gt0 : 0 < 1 - p + p * exp lambda.
   Proof.
     case: (Req_dec p 1).
-    { move => ->; move: (exp_pos lambda) => H; fourier. }
+    { move => ->; move: (exp_pos lambda) => H; lra. }
     move => p_neq1; move: (one_minus_p_gt0 p_neq1) => H.
     apply: Rplus_lt_le_0_compat => //.
     apply: Rmult_le_pos.
@@ -274,7 +274,7 @@ Section chernoff_geq.
       { by left. }
       apply: Rmult_le_pos.
       { rewrite -[/INR m]Rmult_1_l.
-        apply: Rle_mult_inv_pos; try fourier.
+        apply: Rle_mult_inv_pos; try lra.
         by apply: lt_0_INR; apply/ltP. }
       by apply: big_sum_ge0 => x0; case: (f_range x0 (x x0)). }
     { move => x; apply: prodR_nonneg => //. }
@@ -333,10 +333,10 @@ Section chernoff_geq.
       apply: (Rmult_lt_reg_r (p-r)) => //.
       rewrite Rmult_1_l Rmult_assoc Rinv_l; last first.
       { move => H2; rewrite H2 in H; apply: (Rlt_irrefl _ H). }
-      rewrite Rmult_1_r; apply: Rplus_lt_compat_r; fourier. }
+      rewrite Rmult_1_r; apply: Rplus_lt_compat_r; lra. }
     rewrite exp_ln => //.
     apply: Rlt_trans; last by apply: Hlt.
-    fourier.
+    lra.
   Qed. 
   
   Lemma phi_lambda_min :
@@ -344,10 +344,10 @@ Section chernoff_geq.
   Proof.
     rewrite /phi/lambda_min RE_Bernoulli_def.
     have H1: 0 < 1 - p + p * exp (ln (q * (1 - p) / ((1 - q) * p))).
-    { have H: 0 < 1 - p by fourier.
+    { have H: 0 < 1 - p by lra.
       apply: Rlt_le_trans; first by apply: H.
       rewrite -{1}[1-p]Rplus_0_r; apply: Rplus_le_compat_l.
-      case: p_nontrivial => H1 H2; apply: Rmult_le_pos; [fourier|]. 
+      case: p_nontrivial => H1 H2; apply: Rmult_le_pos; [lra|]. 
       by apply: Rlt_le; apply: exp_pos. }
     simpl; rewrite ln_mult; [|by apply: exp_pos|] => //.
     case: p_nontrivial => X1 X2.
@@ -484,7 +484,7 @@ Section chernoff_leq.
   Definition f_neg (i : 'I_m) (t : T) := 1 - f i t.
 
   Lemma f_neg_range : forall i x, 0 <= f_neg i x <= 1.
-  Proof. move => i x; case: (f_range i x) => H1 H2; split; rewrite /f_neg; fourier. Qed.
+  Proof. move => i x; case: (f_range i x) => H1 H2; split; rewrite /f_neg; lra. Qed.
   Lemma f_neg_identically_distributed : identically_distributed d f_neg.
   Proof.
     move => i j; rewrite /f_neg; move: (f_identically_distributed i j) => H.
@@ -506,7 +506,7 @@ Section chernoff_leq.
   Qed.    
   
   Lemma p_neg_nontrivial : 0 < p_neg < 1.
-  Proof. rewrite p_neg_one_minus_p; case: p_nontrivial => H1 H2; split; fourier. Qed.
+  Proof. rewrite p_neg_one_minus_p; case: p_nontrivial => H1 H2; split; lra. Qed.
   
   Lemma chernoff_leq : phat_ge_q d m_gt0 f_neg eps <= exp (-2%R * eps^2 * mR m).
   Proof.
@@ -591,7 +591,7 @@ Section chernoff_twosided.
   Lemma Rlt_min_eps_delt_eps : min_eps_delt <> eps -> min_eps_delt < eps.
   Proof.
     rewrite /min_eps_delt /Rmin; case: (Rle_dec _ _) => //.
-    move/Rnot_le_gt => H1 H2; fourier.
+    move/Rnot_le_gt => H1 H2; lra.
   Qed.    
   
   Lemma Rle_exp_delt_min : exp (- (2) * delt ^ 2 * mR m) <= exp (- (2) * min_eps_delt ^ 2 * mR m).
@@ -601,7 +601,7 @@ Section chernoff_twosided.
     case: (Req_dec (exp (2 * min_eps_delt ^ 2 * mR m)) (exp (2 * delt ^ 2 * mR m))).
     { by move => ->; apply: Rle_refl. }
     move => Hneq; left; apply: exp_increasing; apply: Rmult_lt_compat_r; first by apply: mR_gt0.
-    apply: Rmult_lt_compat_l; first by fourier.
+    apply: Rmult_lt_compat_l; first by lra.
     rewrite -!tech_pow_Rmult /= 2!Rmult_1_r; apply: Rmult_le_0_lt_compat.
     { apply: Rle_0_min_eps_delt. }
     { apply: Rle_0_min_eps_delt. }      
@@ -616,7 +616,7 @@ Section chernoff_twosided.
     case: (Req_dec (exp (2 * min_eps_delt ^ 2 * mR m)) (exp (2 * eps ^ 2 * mR m))).
     { by move => ->; apply: Rle_refl. }
     move => Hneq; left; apply: exp_increasing; apply: Rmult_lt_compat_r; first by apply: mR_gt0.
-    apply: Rmult_lt_compat_l; first by fourier.
+    apply: Rmult_lt_compat_l; first by lra.
     rewrite -!tech_pow_Rmult /= 2!Rmult_1_r; apply: Rmult_le_0_lt_compat.
     { apply: Rle_0_min_eps_delt. }
     { apply: Rle_0_min_eps_delt. }      
@@ -680,19 +680,19 @@ Section chernoff_twosided.
     rewrite /b2 /b3 -big_split /b1 -!big_sum_sumP; apply: big_sum_le => x /= Hin.
     set (dP := prodR _); case: (Rle_lt_dec _ _) => Hle /=; last first.
     { apply: Rplus_le_le_0_compat.
-      { case: (is_left _); [by apply: prodR_nonneg |fourier]. }
-      case: (is_left _); [by apply: prodR_nonneg |fourier]. }
+      { case: (is_left _); [by apply: prodR_nonneg |lra]. }
+      case: (is_left _); [by apply: prodR_nonneg |lra]. }
     (*have: eps <= |p-p_hat|*)
     case: (Rle_lt_dec p_exp (p_hat x)); last first => Hle2.
     { (*Case 1: p_hat < p*)
       have Hle3: eps <= p_exp - p_hat x.
-      { move: Hle; rewrite Rabs_minus_sym /Rabs; case: (Rcase_abs _) => //= Hx Hy; fourier. }
-      have Hle4: p_hat x + eps <= p_exp by fourier.
+      { move: Hle; rewrite Rabs_minus_sym /Rabs; case: (Rcase_abs _) => //= Hx Hy; lra. }
+      have Hle4: p_hat x + eps <= p_exp by lra.
       case: (Rle_lt_dec (p _ _ f + _) _) => Hle5 /=.
       { rewrite -{1}[dP x]Rplus_0_l; apply: Rplus_le_compat; first by apply: prodR_nonneg.
-        case: (Rle_lt_dec _ _) => /= y; [fourier|].
+        case: (Rle_lt_dec _ _) => /= y; [lra|].
         exfalso; rewrite /p_hat/mR/p_exp in Hle4; move: Hle4 Hle5.
-        move: (p _ _ _) => X; move: (/_ * _) => Y => H1 H2; fourier. }
+        move: (p _ _ _) => X; move: (/_ * _) => Y => H1 H2; lra. }
       rewrite Rplus_0_l; case: (Rle_lt_dec (_ + _)) => /= Hle6; first by apply: Rle_refl.
       have Hle7:
         / INR m * big_sum (enum 'I_m) (fun i1 : 'I_m => f_neg (T:=T) f i1 (x i1)) <
@@ -704,22 +704,22 @@ Section chernoff_twosided.
       { apply: Rle_lt_trans; last by apply: Hle7.
         rewrite /p_hat /f_neg big_sum_plus big_sum_nmul big_sum_constant size_enum_ord.
         rewrite Rmult_1_r Rmult_plus_distr_l Rinv_l; last first.
-        { move => Heq; move: (mR_gt0 m_gt0); rewrite /mR Heq => Hlt; fourier. }
+        { move => Heq; move: (mR_gt0 m_gt0); rewrite /mR Heq => Hlt; lra. }
         rewrite -Ropp_mult_distr_r; apply: Rle_refl. }
       have H10: eps > p_exp - p_hat x. 
       { clear - H8 H9; move: H8 H9; rewrite /p_exp; move: (p _ _) => p_exp => H1 H2.
-        fourier. }
-      fourier. }
+        lra. }
+      lra. }
     (*Case 2: p_hat >= p*)
     { have Hle3: eps <= p_hat x - p_exp.
-      { move: Hle; rewrite Rabs_minus_sym /Rabs; case: (Rcase_abs _) => //= Hx Hy; fourier. }
-      have Hle4: p_exp + eps <= p_hat x by fourier.
+      { move: Hle; rewrite Rabs_minus_sym /Rabs; case: (Rcase_abs _) => //= Hx Hy; lra. }
+      have Hle4: p_exp + eps <= p_hat x by lra.
       case: (Rle_lt_dec (p _ _ f + _) _) => Hle5 /=.
       { rewrite -{1}[dP x]Rplus_0_r; apply: Rplus_le_compat_l.
-        case: (Rle_lt_dec _ _) => /= y; [|fourier].
+        case: (Rle_lt_dec _ _) => /= y; [|lra].
           by apply: prodR_nonneg. }
       exfalso; rewrite /p_hat/mR/p_exp in Hle4; move: Hle4 Hle5.
-      move: (p _ _ _) => X; move: (/_ * _) => Y => H1 H2; fourier. }
+      move: (p _ _ _) => X; move: (/_ * _) => Y => H1 H2; lra. }
   Qed.
 End chernoff_twosided.
 
