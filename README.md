@@ -1,6 +1,13 @@
 # OUVerT
 Ohio University Verification Toolsuite
 
+# REQUIREMENTS
+
+coq 8.9.0
+mathcomp algebra 1.7.0
+mathcomp fingroup 1.7.0
+mathcomp ssreflect 1.7.0
+
 # BUILD
 
 To build OUVerT, clone it and do:
