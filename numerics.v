@@ -107,8 +107,26 @@ Module Numerics.
     Proof. 
       split; auto.
     Qed.
+    
+    Definition minus (n m : Nt) := n + - m.
 
+    Lemma plus_mult_distr_r: forall r1 r2 r3, (r2 + r3) * r1 = r2 * r1 + r3 * r1.
+    Proof.
+      intros.
+      rewrite mult_comm.
+      rewrite mult_plus_distr_l.
+      rewrite mult_comm.
+      rewrite -> mult_comm with r1 r3.
+      auto.
+    Qed.
 
+    Program Definition numeric_ring :=  @mk_rt Nt plus_id mult_id plus mult minus neg eq plus_id_l 
+      plus_comm plus_assoc mult_id_l mult_comm mult_assoc _ _ plus_neg_r.
+    Next Obligation.
+      apply plus_mult_distr_r.
+    Qed.
+
+    Add Ring NT_RING : numeric_ring.
 
     Lemma lt_irrefl: forall n : Nt, ~ n < n.
     Proof.
@@ -274,15 +292,7 @@ Module Numerics.
       apply plus_neg_l.
     Qed.
 
-    Lemma plus_mult_distr_r: forall r1 r2 r3, (r2 + r3) * r1 = r2 * r1 + r3 * r1.
-    Proof.
-      intros.
-      rewrite mult_comm.
-      rewrite mult_plus_distr_l.
-      rewrite mult_comm.
-      rewrite -> mult_comm with r1 r3.
-      auto.
-    Qed.
+    
 
     Lemma mult_id_r: forall n : Nt, n * 1 = n.
     Proof.
