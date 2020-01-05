@@ -9,6 +9,8 @@ Require Import OUVerT.dyadic.
 Import List.
 Import ListNotations.
 
+Require Import Lra Lia.
+
 
 Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import all_ssreflect.
@@ -1589,10 +1591,8 @@ Module Numerics.
   End use_Numeric.
 
 
-
-
 (**Req_EM_T**)
-Instance Numeric_D: Numerics.Numeric (DRed.t) :=
+Program Instance Numeric_D: Numerics.Numeric (DRed.t) :=
   @Numerics.mkNumeric
     DRed.t
     DRed.add
@@ -1634,13 +1634,18 @@ Instance Numeric_D: Numerics.Numeric (DRed.t) :=
     _
     _
 .
-  intros. rewrite DRed.addC. apply DRed.addOppL.
-  intros;rewrite <- Q2R_plus;apply Qeq_eqR; rewrite DRed.addP; apply Qeq_refl.
-  intros; rewrite <- Q2R_mult; apply Qeq_eqR; rewrite DRed.multP; apply Qeq_refl.
-  intros. split;intros. apply Qlt_Rlt. auto. apply Rlt_Qlt. auto.
-  intros. rewrite <- Q2R_opp. apply Qeq_eqR. rewrite DRed.oppP. apply Qeq_refl.
-  intros. apply eqR_Qeq in H. apply DRed.Dred_eq; auto.
-Defined.
+Next Obligation.
+  intros. rewrite DRed.addC. apply DRed.addOppL. Qed.
+Next Obligation.
+  intros;rewrite <- Q2R_plus;apply Qeq_eqR; rewrite DRed.addP; apply Qeq_refl. Qed.
+Next Obligation.
+  intros; rewrite <- Q2R_mult; apply Qeq_eqR; rewrite DRed.multP; apply Qeq_refl. Qed.
+Next Obligation.
+  intros. split;intros. apply Qlt_Rlt. auto. apply Rlt_Qlt. auto. Qed.
+Next Obligation.
+  intros. rewrite <- Q2R_opp. apply Qeq_eqR. rewrite DRed.oppP. apply Qeq_refl. Qed.
+Next Obligation.
+  intros. apply eqR_Qeq in H. apply DRed.Dred_eq; auto. Qed.
 
 
 
@@ -1648,7 +1653,7 @@ Delimit Scope R_scope with R_s.
 Local Open Scope R_scope.
 
 
-Instance Numeric_R: Numeric R :=
+Program Instance Numeric_R: Numeric R :=
   @Numerics.mkNumeric
     R
     Rplus
@@ -1688,47 +1693,32 @@ Instance Numeric_R: Numeric R :=
     _
     _
 .
-  apply Rlt_0_1.
-  auto.
-{
-  intros.
-  simpl.
-  induction n; simpl.
-   rewrite Rplus_0_r. auto.
-  rewrite IHn.
-  rewrite Rplus_assoc.
-  rewrite -> Rplus_comm with (INR n) 1.
-  repeat rewrite <- Rplus_assoc.
-  auto.
-}
-  intros. rewrite Rplus_assoc. auto.
-  intros. rewrite Rmult_assoc. auto.
-{
-  intros.
+Next Obligation. lra. Qed.
+Next Obligation.
+  rewrite -> Rplus_comm with 1 _.
+  destruct n; auto.
+  simpl. rewrite Rplus_0_l. auto.
+Qed.
+Next Obligation. lra. Qed.
+Next Obligation. lra. Qed. 
+Next Obligation. 
   split; intros.
-  { apply Rmult_lt_compat_l; auto. }
-  assert( R0 <> r).
-  { apply Rlt_not_eq.  auto. }  
-  assert( R0 < / r).
-  { apply Rinv_0_lt_compat. auto. }  
-  apply Rmult_lt_compat_l with (/ r) (r * r1) (r * r2) in H0; auto.
-  repeat rewrite <- Rmult_assoc in H0.
-  repeat rewrite Rinv_l in H0; auto.
-  repeat rewrite Rmult_1_l in H0.
+    apply Rmult_lt_compat_l; auto.
+  rewrite <- Rmult_1_r.  
+  rewrite <- Rmult_1_r with r1.
+  rewrite -> Rinv_r_sym with r.
+  2:{ apply Rlt_not_eq in H. auto. }
+  repeat rewrite <- Rmult_assoc.
+  apply Rmult_lt_compat_r.
+    apply Rinv_0_lt_compat. auto.
+  repeat rewrite -> Rmult_comm with _ r.
   auto.
-}
-  auto. 
-  auto.
-  auto.
-  auto.
-  split; auto.
-  auto.
-  auto.
-Defined.
+Qed.
+Next Obligation. lra. Qed.
 
 
-  Lemma to_R_R: forall x : R, to_R x = x.
-  Proof. intros. simpl. auto. Qed.
+Lemma to_R_R: forall x : R, to_R x = x.
+Proof. intros. simpl. auto. Qed.
 
 
 (**Undelimit Scope R_scope.
@@ -1737,7 +1727,7 @@ Close Scope R_scope.**)
 Delimit Scope Z_scope with Z.
 
 
-Instance Numeric_z : Numerics.Numeric Z :=
+Program Instance Numeric_z : Numerics.Numeric Z :=
   @Numerics.mkNumeric
     Z
     Z.add
@@ -1776,44 +1766,38 @@ Instance Numeric_z : Numerics.Numeric Z :=
     _
     _
     _
-    _
+    eq_IZR
 .
-  unfold Z.lt. auto.
-  auto.
-{
-  intros.
+Next Obligation. lia. Qed.
+Next Obligation. 
+  fold (Z.of_nat n.+1).
   rewrite Nat2Z.inj_succ.
-  rewrite Z.add_1_l.
-  auto.
-}
-{ 
-  intros.
+  destruct (Z.of_nat n); auto.
+  simpl.
+  destruct p; auto.
+Qed.
+Next Obligation.
   destruct Z_dec' with r1 r2; auto.
   destruct s; auto.
-}
-{
-  intros.
-  apply Zplus_le_lt_compat; auto.
-  apply Z.le_refl.
-}
-{
-  intros.
+Qed.
+Next Obligation. lia. Qed.
+Next Obligation.
   split; intros.
-  { apply Zmult_lt_compat_l; auto. }
+    apply Zmult_lt_compat_l; auto.
   apply Zmult_gt_0_lt_reg_r with r.
-  { apply Z.lt_gt. auto. }
-  rewrite Z.mul_comm.
-  rewrite -> Z.mul_comm with r2 r.
+    apply Z.lt_gt. auto.
+  repeat rewrite -> Zmult_comm with _ r.
   auto.
-}
-  auto.
-  auto.
-  intros. rewrite <- plus_IZR. auto.
-  intros. rewrite <- mult_IZR. auto.
-  intros. split. apply IZR_lt. apply lt_IZR.
-  intros. rewrite <- opp_IZR. auto.
-  intros. apply eq_IZR; auto.
-Defined.
+Qed.
+Next Obligation. rewrite plus_IZR. auto. Qed.
+Next Obligation. rewrite mult_IZR. auto. Qed. 
+Next Obligation. 
+  split.
+     apply IZR_lt.
+  apply lt_IZR.
+Qed.
+Next Obligation. rewrite opp_IZR. auto. Qed. 
+
   Delimit Scope R_scope with R_s.
 
   Infix "+" := Numerics.plus : Numeric_scope.
@@ -3048,7 +3032,7 @@ Section rat_to_R_lemmas.
     apply eqR_Qeq in H.
     rewrite /Qeq in H. simpl in H.
     ring_simplify in H.
-    induction r1 => //.
+    induction r1 => //.    
   Qed.
 
   Lemma rat_to_R_inv (r : rat) : (r != 0) -> rat_to_R r^-1 = Rinv (rat_to_R r).
@@ -3375,10 +3359,17 @@ Section rat_to_Q_lemmas_cont.
   
   Lemma cancel_Z2I x : Z_to_int (int_to_Z x) = x.
   Proof.
-    induction x => //=;
-      first by rewrite SuccNat2Pos.id_succ => //.
-    rewrite opp_posz_negz SuccNat2Pos.id_succ.
-    f_equal.
+    destruct x => //=.
+    {
+      induction n; auto.
+      rewrite Nat2Z.inj_succ.
+      rewrite <- Z.add_1_l.
+      rewrite Z_to_int_plus.
+      simpl.
+      rewrite IHn.
+      auto.
+    }
+    rewrite SuccNat2Pos.id_succ. auto.
   Qed.
 
   Lemma cancel_I2Z x : int_to_Z (Z_to_int x) = x.
@@ -3696,7 +3687,7 @@ Qed.
 Definition N_to_D (n : N.t) : D := Dmake (2*NtoZ n) 1.
 
 Lemma N_to_D_plus n1 n2 :
-  (N_to_D (n1 + n2) = N_to_D n1 + N_to_D n2)%D.
+  N_to_D (n1 + n2) = Dadd (N_to_D n1) (N_to_D n2).
 Proof.
   rewrite /N_to_D /NtoZ /Nplus.
   case: n1; case: n2 => //.
