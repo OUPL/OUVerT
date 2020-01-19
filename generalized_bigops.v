@@ -28,9 +28,10 @@ Fixpoint big_product (T : Type) (cs : seq T) (f : T -> Nt) : Nt :=
   if cs is [:: c & cs'] then ((f c) * (big_product cs' f))
   else Numerics.mult_id.
 
+End use_Numeric.
+Section use_numeric_props.
 
-
-  Context `{Nt_Numeric : Numerics.Numeric_Props Nt (numeric_t := H)}.
+  Context {Nt:Type} `{Numerics.Numeric_Props Nt}.
 
   Lemma big_sum_nmul (T : Type) (cs : seq T) (f : T -> Nt) :
     (big_sum cs (fun c => -(f c)) = -(big_sum cs [eta f])).
@@ -387,7 +388,7 @@ Proof.
 Qed.
 
 
-End use_Numeric.
+End use_numeric_props.
 
 
 Lemma big_product_exp_sum (T : Type) (cs : seq T) (f : T -> R) :
@@ -419,7 +420,7 @@ Proof.
   assert (forall (T : eqType) (cs : seq T) (f : T -> R),
   (forall c, c \in cs -> Numerics.plus_id < (f c)) ->
   (Numerics.plus_id < (big_product cs f))).
-  { apply big_product_gt0. apply Numerics.Numeric_Props_R. }
+  { apply big_product_gt0. }
   apply H1.
   intros.
   apply H.
@@ -573,7 +574,7 @@ Qed.
 
 
 Section use_Numeric2.
-  Context (Nt:Type) `{Numerics.Numeric_Props Nt}.
+  Context {Nt:Type} `{Numerics.Numeric_Props Nt}.
 
 Lemma big_sum_le (T : eqType) (cs : seq T) (f : T -> Nt) g :
   (forall c, c \in cs -> (f c)  <= (g c)) -> 

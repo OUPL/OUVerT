@@ -375,7 +375,7 @@ Module banach.
       rewrite <- neg_plus_id. 
       apply le_neg.
       apply pow_ge_0.
-      apply (contr_pos contraction). auto.
+      apply (contr_pos contraction).
     Qed.
 
 
