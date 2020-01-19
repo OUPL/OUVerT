@@ -278,11 +278,10 @@ Delimit Scope Numerics_scope with Num.
 
 Module num_Extrema.
 
-  Section use_Numerics.
+  Section extrema_defs.
 
   Context (Nt:Type) `{Numeric Nt}.
 
-    
 
     Fixpoint max (l : list Nt) : option Nt :=
       match l with
@@ -382,9 +381,10 @@ Module num_Extrema.
       end
     end.
 
-      
-      
+  End extrema_defs.
+  Section use_Numerics.
 
+    Context {Nt : Type} `{Numerics.Numeric_Props Nt}.
 
     Lemma mapmax_ne_ok: forall (T : Type) (l : list T) (f : T->Nt) (h : O <> (length l)), mapmax l f = Some (mapmax_ne f h).
     Proof.
@@ -977,7 +977,7 @@ Module num_Extrema.
       destruct H5; auto.
       exfalso. apply lt_not_le with y z; auto.
       assert(List.In z ([seq x0 <- n :: l | ltb x0 x])).
-        rewrite -> List.filter_In. split; auto. rewrite ltb_true_iff. auto.
+        rewrite -> List.filter_In. split; auto. apply ltb_true_iff. auto.
       apply max_correct in H5. destruct H5. destruct H5. 
       rewrite H1 in H5. inversion H5. rewrite <- H8. auto.
     Qed.
@@ -1891,10 +1891,10 @@ Module num_Extrema.
   End use_Numerics.
   Section use_Numerics2.
 
-  Context (Nt:Type) `{Numeric Nt}.
+  Context (Nt:Type) `{Numeric_Props Nt}.
 
   
-    
+   
   Lemma to_R_argmax: forall (T : Type) (l : list T) (f : T->Nt),
      argmax l f = argmax l (fun x => to_R (f x)).
   Proof.
