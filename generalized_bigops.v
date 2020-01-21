@@ -142,8 +142,13 @@ Section use_numeric_props.
     apply orb_true_r.
   Qed.
 
- 
-
+  Lemma big_sum_ge0' (T : Type) (cs : seq T) (f : T->Nt) (H' : forall x : T, 0 <= f x): 0 <= big_sum cs f.
+  Proof.
+    induction cs; simpl.
+      right. auto.
+    rewrite <- Numerics.plus_id_l with 0.
+    by apply Numerics.plus_le_compat.
+  Qed.
 
 
 Lemma big_sum_constant T (cs : seq T) n :
@@ -586,6 +591,17 @@ Proof.
   { by apply: H1; rewrite in_cons; apply/orP; left. }
     by apply: IH=> c H'; apply: H1; rewrite in_cons; apply/orP; right.
 Qed.
+
+Lemma big_sum_le' (T : Type) (cs : seq T) (f : T -> Nt) g :
+  (forall x : T, f x <= g x) -> ((big_sum cs f) <= (big_sum cs g)).
+Proof.
+  intros H1.
+  elim: cs=> //=.
+  { by right. }
+  intros a l IH.
+  by apply Numerics.plus_le_compat.
+Qed.
+
 
 Lemma perm_eq_nil (T:eqType) (cs : seq T) : perm_eq [::] cs -> cs=[::].
 Proof.
