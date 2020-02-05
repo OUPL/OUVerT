@@ -2,7 +2,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 
 Require Import NArith QArith Qreals Reals Fourier.
-
+Require Import Lra Reals.
 
 
 Require Import OUVerT.dyadic.
@@ -3808,7 +3808,7 @@ Lemma N2Nat_lt n m :
 Proof.
   move: n m; apply: N.peano_ind.
   { apply: N.peano_ind => //= n _ _.
-    by rewrite nat_of_bin_succ. }
+      by rewrite nat_of_bin_succ. }
   move => n /= IH m; rewrite nat_of_bin_succ N2Nat.inj_succ.
   move: m; apply: N.peano_ind => // m _.
   rewrite nat_of_bin_succ N2Nat.inj_succ => H.
@@ -3816,7 +3816,23 @@ Proof.
   { move: H; move: (N.to_nat n); move: (N.to_nat m) => x y.
     move/ltP => H; apply/ltP; omega. }
   suff: (n < m)%N => //.
-  by apply: (IH _ H2).
+    by apply: (IH _ H2).
 Qed.    
+
+Lemma rat_to_R_opp_neq (n:nat) : rat_to_R n%:R = (Ropp R1) -> False.
+Proof.
+  move => H.
+  suff: Rdefinitions.Rle 0 (rat_to_R n%:R).
+  {
+    lra.
+  }
+  {
+    rewrite -rat_to_R0; apply: rat_to_R_le.
+    Local Open Scope ring_scope.  
+    change ((0:rat) <= n%:R).
+    apply: ler0n. 
+  }
+Qed.    
+
 
 (** END random lemmas *)
