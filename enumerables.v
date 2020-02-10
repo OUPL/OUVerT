@@ -894,7 +894,23 @@ Program Definition enum_nat_enumerate (n : nat) : list (enum_nat n) :=
 
 Lemma enum_nat_enumerate_aux_max: forall (n m : nat) (p : enum_nat n) (H : le m n),
   In p (@enum_nat_enumerate_aux n m H) -> lt (enum_nat_n p) m.
-Admitted.
+Proof.
+  intros.
+  generalize dependent p.
+  generalize dependent n.
+  induction m; intros.
+    inversion H0.
+  simpl in H0.
+  destruct H0.
+  { 
+    destruct p.
+    simpl in *.
+    by inversion H0.
+  }
+  apply IHm in H0.
+  apply lt_trans with m; auto.
+Qed.
+
 
 Program Definition enum_nat_list_to_succ (n : nat) (l : list (enum_nat n))
     : list (enum_nat (S n)) :=
@@ -907,9 +923,26 @@ Qed.
 
 Lemma enum_nat_enumerate_aux_to_succ: forall (n m : nat) (H0 : le m n) (H1 : le m (S n)),
     @enum_nat_enumerate_aux (S n) m H1 = enum_nat_list_to_succ (@enum_nat_enumerate_aux n m H0).
-Admitted.
-
-
+Proof.
+  intros.
+  generalize dependent n.
+  induction m; auto; intros.
+  unfold enum_nat_list_to_succ in *.
+  simpl in *.
+  rewrite IHm; auto.
+  {
+    apply le_trans with (S m); auto.
+  }
+  intros.
+  assert(H1 = enum_nat_list_to_succ_obligation_1 {| enum_nat_n := m; enum_nat_lt := H0 |}).
+    apply proof_irrelevance.
+  rewrite <- H.
+  assert((enum_nat_enumerate_aux Hyp0) = enum_nat_enumerate_aux (enum_nat_enumerate_aux_obligation_2 H0 (erefl m.+1))).
+  2:{ rewrite H2. auto. }
+  assert(Hyp0 =   (enum_nat_enumerate_aux_obligation_2 H0 (erefl m.+1))).
+    apply proof_irrelevance.
+  by rewrite H2.
+Qed.
 
 Lemma enum_nat_ok: forall n : nat, @Enum_ok (enum_nat n) (enum_nat_enumerate n).
 Proof.
