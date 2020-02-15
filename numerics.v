@@ -109,6 +109,12 @@ Module Numerics.
         ltb_true_iff: forall n m, ltb n m <-> n < m;
 
       }.
+      Ltac to_R_distr := 
+    repeat (
+      try (rewrite <- to_R_mult);
+      try (rewrite <- to_R_plus);
+      try (rewrite <- to_R_neg)
+    ).
 
   Section use_Numeric.
 
@@ -1598,6 +1604,7 @@ Module Numerics.
   End use_Numeric.
 
 
+
 (**Req_EM_T**)
 Program Instance Numeric_D: Numerics.Numeric (DRed.t) :=
   @Numerics.mkNumeric
@@ -2000,7 +2007,6 @@ Qed.
     | Zpos p => of_nat (Pos.to_nat p)
     | Zneg p => neg ( of_nat (Pos.to_nat p))
     end.
-
 
 End use_Numeric2.
 
