@@ -2126,7 +2126,7 @@ Qed.
     destruct H.
     2: { exists (S O). rewrite <- H. rewrite pow_1. auto. } 
     destruct exists_pow_le with x y; auto.
-    exists x0.+1.
+    exists (S x0).
     apply lt_le_trans with (x ^ x0); auto.
     simpl.
     rewrite <- mult_id_l.
@@ -2371,7 +2371,7 @@ Proof. move => H. by rewrite addnC subnKC. Qed.
 Lemma int_to_positive_mul_1 (a b : nat) (H : (a <> 0)%N) :
   (a * b.+1)%N = ((a * b.+1 - 1).+1)%N.
 Proof.
-   rewrite -[(_ * _ - 1).+1] addn1 -le_plus_minus_r //. rewrite muln_gt0.
+   rewrite -[S (_ * _ - 1)] addn1 -le_plus_minus_r //. rewrite muln_gt0.
    apply /andP. split; auto. rewrite lt0n. apply /eqP. auto.
 Qed.
 
@@ -3087,7 +3087,7 @@ Section Z_to_int.
     end.
 End Z_to_int.
 
-Lemma Pos_to_natNS p : (Pos.to_nat p).-1.+1 = Pos.to_nat p.
+Lemma Pos_to_natNS p : S (Pos.to_nat p).-1 = Pos.to_nat p.
 Proof.
   rewrite -(S_pred _ 0) => //.
   apply: Pos2Nat.is_pos.
@@ -3198,7 +3198,7 @@ Section Z_to_int_lemmas.
       { by rewrite mulr0. }
       { by rewrite /= Pos2Nat.inj_mul. }
       rewrite /= 2!NegzE Pos2Nat.inj_mul.
-      have ->: (Pos.to_nat q).-1.+1 = Pos.to_nat q.
+      have ->: (S (Pos.to_nat q).-1) = Pos.to_nat q.
       { apply: Pos_to_natNS. }
       rewrite mulrN.
       rewrite prednK //. rewrite muln_gt0. apply /andP.
@@ -3683,7 +3683,7 @@ Proof.
   rewrite N_to_Q_plus; f_equal.
 Qed.  
 
-Definition N_to_D (n : N.t) : D := Dmake (2*NtoZ n) 1.
+Definition N_to_D (n : N.t) : D := DD (Dmake (2*NtoZ n) 1).
 
 Lemma N_to_D_plus n1 n2 :
   (N_to_D (n1 + n2) = N_to_D n1 + N_to_D n2)%D.
@@ -3744,7 +3744,7 @@ Proof. apply: (projT2 (projT2 d)). Qed.
 
 (** Some random lemmas on nat_of_bin, etc. *)
 
-Lemma nat_of_bin_succ n : nat_of_bin (N.succ n) = (nat_of_bin n).+1.
+Lemma nat_of_bin_succ n : nat_of_bin (N.succ n) = S (nat_of_bin n).
 Proof.
   elim: n => //= p.
   by rewrite nat_of_succ_gt0.
@@ -3755,12 +3755,12 @@ Proof. by []. Qed.
 
 Lemma nat_of_pos_s p : exists n, nat_of_pos p = S n.
 Proof.
-  set (P p := exists n, nat_of_pos p = n.+1).
+  set (P p := exists n, nat_of_pos p = S n).
   change (P p).
   apply: Pos.peano_ind.
   { by exists O. }
   move => p'; rewrite /P => [][]n IH.
-  exists n.+1.
+  exists (S n).
   by rewrite nat_of_succ_gt0 IH.
 Qed.    
 
@@ -3779,7 +3779,7 @@ Proof.
     case: (nat_of_pos_s p') => x -> //. }
   move => p1 IH p2.
   rewrite nat_of_succ_gt0.
-  set (Q p2 := (nat_of_pos p1).+1 = nat_of_pos p2 -> Pos.succ p1 = p2).
+  set (Q p2 := S (nat_of_pos p1) = nat_of_pos p2 -> Pos.succ p1 = p2).
   change (Q p2).
   apply: Pos.peano_ind.
   { rewrite /Q.

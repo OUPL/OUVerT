@@ -128,7 +128,7 @@ Instance showable_list {A : Type} `{Showable A} : Showable (list A) :=
                 (append newline
                         (F l'))
        end).
-
+Local Open Scope nat_scope.
 Instance showable_nat : Showable nat :=
   mkShowable
     (fun n => match n with
