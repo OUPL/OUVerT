@@ -132,53 +132,63 @@ Module Enum_table.
     exfalso. apply H. auto.
   Qed.**)
 
+  Section eqb_proofs.
+    Variable T : Type.
+    Hypothesis eqb: forall (t1 t2 : T), {t1 = t2} + {t1 <> t2}.
 
-  Lemma nth_index_of_eqb: forall (T : eqType) (l : list T) (t1 t2 : T),
-    In t1 l -> nth (index_of l (eq_op t1)) l t2 = t1.
-  Proof.
-    intros.
-    induction l; auto.
+    Lemma nth_index_of_eqb: forall (l : list T) (t1 t2 : T),
+      In t1 l -> nth (index_of l (eqb t1)) l t2 = t1.
+    Proof.
+      intros.
+      induction l; auto.
+        inversion H.
+      simpl. 
+      destruct (eqb t1 a) eqn:e; auto.
+      apply IHl.
+      simpl in H.
+      destruct H; auto.
+      exfalso. auto.
+    Qed.
+
+    Lemma eqb_refl: forall t : T, eqb t t.
+    Proof. intros. destruct eqb; auto. Qed.
+
+    Lemma eqb_iff: forall t1 t2 : T, eqb t1 t2 <-> t1 = t2.
+    Proof.
+      intros.
+      split; intros; destruct (eqb t1 t2); auto.
       inversion H.
-    simpl. 
-    destruct (eq_op t1 a) eqn:e.
-    { symmetry. apply/(eqP). auto. }
-    apply IHl.
-    simpl in H.
-    destruct H; auto.
-    rewrite H in e.
-    rewrite eq_refl in e.
-    inversion e.
-  Qed.
+    Qed.
 
-  Lemma index_of_nth_dec_eq: forall (T : eqType) (l : list T) (A : T) (n : nat),
-    NoDupA (fun x : T => [eta eq x]) l -> (n < length l)%coq_nat -> index_of l (eq_op (nth n l A)) = n.
-  Proof.
-    intros.
-    generalize dependent l.
-    induction n.
-    { 
+    Lemma index_of_nth_dec_eq: forall (l : list T) (A : T) (n : nat),
+      NoDupA (fun x : T => [eta eq x]) l -> (n < length l)%coq_nat -> index_of l (eqb (nth n l A)) = n.
+    Proof.
+      intros.
+      generalize dependent l.
+      induction n.
+      { 
+        intros.
+        destruct l; auto.
+        simpl.
+        rewrite eqb_refl; auto.
+      }
       intros.
       destruct l; auto.
-      simpl. rewrite eq_refl. auto.
-    }
-    intros.
-    destruct l; auto.
-      inversion H0. 
-    simpl.
-    destruct (eq_op (nth n l A) s) eqn:e; auto.
-    {
-      inversion H.
-      exfalso. apply H3.
-      apply In_InA; auto.
-      assert(nth n l A = s).
-        apply/(eqP).  auto.
-      rewrite <- H5. apply nth_In.
+        inversion H0. 
+      simpl.
+      destruct (eqb (nth n l A) t) eqn:e; auto.
+      {
+        inversion H.
+        exfalso. apply H3.
+        apply In_InA; auto.
+        rewrite <- e0.
+        apply nth_In.
+        apply lt_S_n; auto.
+      }
+      rewrite IHn; auto.
+        inversion H; auto.
       apply lt_S_n; auto.
-    }
-    rewrite IHn; auto.
-      inversion H; auto.
-    apply lt_S_n; auto.
-  Qed.
+    Qed.
 
   (**Lemma reflet_eqType_eqb: forall (T : eqType) (x y : T), reflect (x=y) (eqType_eqb x y).
   Proof.
@@ -187,14 +197,15 @@ Module Enum_table.
     { constructor. apply eqType_eqb_true_iff. auto. }
     constructor. apply eqType_eqb_false_iff. auto.
   Qed.**)
-  
+  End eqb_proofs.
   Section enum_table.
 
-    Variable T1 : eqType.
+    Variable T1 : Type.
     Variable T2 : Type.
     Variable T1_enum : Enumerable T1.
     Variable T1_enum_ok : @Enum_ok T1 T1_enum.
     Variable T1_enum_ne : O <> length T1_enum.
+    Variable T1_eqdec : forall t1 t2 : T1, {t1 = t2} + {t1 <> t2}.
     
 
     Record table : Type :=
@@ -210,7 +221,7 @@ Module Enum_table.
 
     
     Definition lookup  (t : table) (x : T1) : T2 :=
-     nth  (index_of T1_enum (eq_op x)) (t_list t) (table_head t).
+     nth  (index_of T1_enum (T1_eqdec x)) (t_list t) (table_head t).
 
     Definition zip_table (t : table)  := zip T1_enum (t_list t).
 
@@ -329,7 +340,7 @@ Module Enum_table.
 End Enum_table.
 
 
-Lemma InA_map_inj: forall (T1 T2 : eqType) (l : list T1) (f : T1->T2) (x : T1),
+Lemma InA_map_inj: forall (T1 T2 : Type) (l : list T1) (f : T1->T2) (x : T1),
     (forall (t1 t2 : T1), f t1 = f t2 -> t1 = t2) ->
     (InA (fun x : T1 => [eta eq x]) x l <-> InA (fun x : T2 => [eta eq x]) (f x) (map f l)).
 Proof.
@@ -347,7 +358,7 @@ Proof.
   inversion H0; auto.
 Qed. 
 
-Lemma NoDupA_map_inj: forall (T1 T2 : eqType) (l : list T1) (f : T1->T2),
+Lemma NoDupA_map_inj: forall (T1 T2 : Type) (l : list T1) (f : T1->T2),
     NoDupA (fun x : T1 => [eta eq x]) l -> 
     (forall (t1 t2 : T1), f t1 = f t2 -> t1 = t2) ->
     NoDupA (fun x : T2 => [eta eq x]) (map f l).
@@ -361,7 +372,7 @@ Proof.
   rewrite <- InA_map_inj; auto.
 Qed.
 
-Lemma In_pair: forall (T1 T2 : eqType) (x1 x2: T1) (y : T2) (l : list T2),
+Lemma In_pair: forall (T1 T2 : Type) (x1 x2: T1) (y : T2) (l : list T2),
     In (x1, y) (map [eta pair x2] l) -> x1 = x2.
 Proof.
   intros.
@@ -373,7 +384,7 @@ Proof.
 Qed.
 
 
-Lemma prodEnumerableInstance_nodup: forall (aT bT:  eqType) (la : Enumerable aT) (lb : Enumerable bT),
+Lemma prodEnumerableInstance_nodup: forall (aT bT:  Type) (la : Enumerable aT) (lb : Enumerable bT),
      NoDupA (fun x : aT => [eta eq x]) (enumerate _ la) ->
      NoDupA (fun x : bT => [eta eq x]) (enumerate _ lb) -> 
      NoDupA (fun x : aT * bT => [eta eq x]) (prodEnumerableInstance la lb).
@@ -408,7 +419,7 @@ Qed.
 
 
 
-Lemma prodEnumerableInstance_ok (aT bT:  eqType)
+Lemma prodEnumerableInstance_ok (aT bT:  Type)
      (enumerableA : Enumerable aT)
      (enumerableB : Enumerable bT)
      (enum_okA: @Enum_ok aT enumerableA)
@@ -591,7 +602,7 @@ Next Obligation.
   apply list_enum_len with l. auto.
 Defined.
 
-Lemma no_dup_cons_all: forall (T : eqType) (l : list T) (l2 : list (list T)), 
+Lemma no_dup_cons_all: forall (T : Type) (l : list T) (l2 : list (list T)), 
     NoDupA (fun x => [eta eq x]) l -> NoDupA (fun x => [eta eq x]) l2 -> NoDupA (fun x => [eta eq x]) (cons_all l l2).
 Proof.
   intros.
@@ -625,11 +636,11 @@ Proof.
   inversion H3.
   rewrite H7 in H4. clear H3 H7 x0.
   inversion H.  apply H7. 
-  apply InA_alt. exists s; auto.
+  apply InA_alt. eauto.
 Qed.
 
 
-Lemma no_dup_enum_list: forall (T : eqType) (l : list T) (n : nat), 
+Lemma no_dup_enum_list: forall (T : Type) (l : list T) (n : nat), 
   NoDupA (fun x => [eta eq x]) l -> NoDupA (fun x => [eta eq x]) (list_enum l n).
 Proof.
   intros.
@@ -639,7 +650,7 @@ Proof.
   apply no_dup_cons_all; auto.
 Qed.
 
-Lemma in_list_to_len_list: forall (T : eqType) (l : list (list T)) (n : nat) (H : forall l' : list T, In l' l -> length l' = n)
+Lemma in_list_to_len_list: forall (T : Type) (l : list (list T)) (n : nat) (H : forall l' : list T, In l' l -> length l' = n)
     (x : list T) (H0 : length x = n), In  (@mk_list_len T n x H0) (@list_to_list_len T l n H) <-> In x l.
 Proof.
   intros.
@@ -670,7 +681,7 @@ Proof.
   Unshelve. auto.
 Qed.
   
-Lemma no_dup_list_to_len_list: forall (T : eqType) (l : list (list T)) (n : nat) (H : forall l' : list T, In l' l -> length l' = n),
+Lemma no_dup_list_to_len_list: forall (T : Type) (l : list (list T)) (n : nat) (H : forall l' : list T, In l' l -> length l' = n),
     NoDupA (fun x => [eta eq x]) l -> NoDupA (fun x => [eta eq x]) (@list_to_list_len T l n H).
 Proof. 
   intros.
@@ -696,7 +707,7 @@ Proof.
 Qed.
   
     
-Lemma list_len_enumerate_ok: forall (T : eqType) (enum : Enumerable T) (enum_ok : @Enum_ok T enum) (n : nat),
+Lemma list_len_enumerate_ok: forall (T : Type) (enum : Enumerable T) (enum_ok : @Enum_ok T enum) (n : nat),
     @Enum_ok (@list_len T n) (@enumerable_fun (@list_len T n) (@list_len_enumerate T enum n)).
 Proof.
   intros.
@@ -739,7 +750,7 @@ Proof.
 Qed.
 
 
-Program Definition enumerate_table {T1 T2 : eqType} (T1_enum : Enumerable T1) (T2_enum : Enumerable T2) 
+Program Definition enumerate_table {T1 T2 : Type} (T1_eqdec : forall a b : T1, {a = b} + {a <> b}) (T1_enum : Enumerable T1) (T2_enum : Enumerable T2) 
       (T1_enum_ok : @Enum_ok T1 T1_enum) (T2_enum_ok : @Enum_ok T2 T2_enum) (T1_enum_ne : O <> length T1_enum)
        : Enumerable (@Enum_table.table T1 T2 T1_enum)
   := map (fun l => @Enum_table.table_mk  T1 T2 T1_enum (list_len_l l) _) 
@@ -749,7 +760,7 @@ Next Obligation.
 Defined.
 
 
-Lemma length_list_to_list_len:forall (T : eqType) (l : list (list T)) (n : nat)
+Lemma length_list_to_list_len:forall (T : Type) (l : list (list T)) (n : nat)
       (H : forall l' : list T, In l' l -> length l' = n) (x : list T),
         length (list_to_list_len H) = length l.
 Proof. intros. induction l; simpl; auto. Qed.
@@ -788,8 +799,8 @@ Qed.
     
 
 
-Lemma enumerate_table_nonempty: forall {T1 T2 : eqType} T1_enum T2_enum  T1_enum_ok T2_enum_ok  T1_enum_ne , 
-      O <> (length T2_enum) -> O <> length (@enumerate_table T1 T2 T1_enum T2_enum T1_enum_ok T2_enum_ok T1_enum_ne ).
+Lemma enumerate_table_nonempty: forall {T1 T2 : Type} (T1_eqdec : forall a b : T1, {a = b} + {a <> b}) T1_enum T2_enum  T1_enum_ok T2_enum_ok  T1_enum_ne , 
+      O <> (length T2_enum) -> O <> length (@enumerate_table T1 T2 T1_eqdec T1_enum T2_enum T1_enum_ok T2_enum_ok T1_enum_ne ).
 Proof.
   intros.
   unfold enumerate_table.
@@ -830,10 +841,10 @@ Qed.
 
 
 
-Lemma enum_table_total: forall {T1 T2 : eqType} (T1_enum : Enumerable T1) (T2_enum : Enumerable T2) 
+Lemma enum_table_total: forall {T1 T2 : Type} (T1_eqdec : forall a b : T1, {a = b} + {a <> b}) (T1_enum : Enumerable T1) (T2_enum : Enumerable T2) 
       (T1_enum_ok : @Enum_ok T1 T1_enum) (T2_enum_ok : @Enum_ok T2 T2_enum) (T1_enum_ne : O <> length T1_enum)
       (t : (@Enum_table.table T1 T2 T1_enum)),
-      In t (@enumerate_table T1 T2 T1_enum T2_enum  _ _ T1_enum_ne).
+      In t (@enumerate_table T1 T2 T1_eqdec T1_enum T2_enum  _ _ T1_enum_ne).
 Proof.
   intros.
   unfold enumerate_table.
@@ -850,9 +861,9 @@ Proof.
 Qed.
 
 
-Lemma enum_table_ok: forall {T1 T2 : eqType} (T1_enum : Enumerable T1) (T2_enum : Enumerable T2) 
+Lemma enum_table_ok: forall {T1 T2 : Type} (T1_eqdec : forall a b : T1, {a = b} + {a <> b}) (T1_enum : Enumerable T1) (T2_enum : Enumerable T2) 
       (T1_enum_ok : @Enum_ok T1 T1_enum) (T2_enum_ok : @Enum_ok T2 T2_enum) (T1_enum_ne : O <> length T1_enum),
-  @Enum_ok (@Enum_table.table T1 T2 T1_enum) (@enumerate_table T1 T2 T1_enum T2_enum  _ _ T1_enum_ne).
+  @Enum_ok (@Enum_table.table T1 T2 T1_enum) (@enumerate_table T1 T2 T1_eqdec T1_enum T2_enum  _ _ T1_enum_ne).
 Proof.
   intros.
   constructor; unfold enumerable_fun.
