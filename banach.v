@@ -18,7 +18,27 @@ Require Import Reals.Rcomplete.
 Require Import Psatz.
 
 From mathcomp Require Import all_ssreflect.
+Require Import JMeq.
+Definition JMeqfun {T1 T2 T3: Type} (f1 : T1 -> T3) (f2 : T2 -> T3) :=
+    forall (a : T1) (b : T2), JMeq a b -> f1 a = f2 b.
 
+
+
+Lemma JMeq_exists_convert: forall {T1 T2 : Type}, (exists x : T1, exists y : T2, JMeq x y) -> exists f : T1 -> T2, (forall (a : T1) (b : T2), JMeq a b <-> f a = b).
+Proof.
+  intros.
+  destruct H.
+  destruct H.
+  inversion H.
+  rewrite H0 in x H H3.
+  exists id.
+  intros.
+  split; intros.
+    apply JMeq_eq. auto.
+  rewrite H1. auto.
+Qed.
+    
+  
 
 Delimit Scope Numeric_scope with Num.
 Delimit Scope R_scope with R.
@@ -737,6 +757,29 @@ Module banach.
 
   End banach_R.
 
+
+  Lemma contraction_fixpoint_ext: forall (c1 c2 : @contraction_func R _), 
+      (forall (f1 : x_t c1 -> R ) (f2 : x_t c2 -> R), JMeqfun f1 f2 -> JMeqfun ( step c1 f1 ) (step c2 f2)) ->
+      JMeqfun (converge_func c1) (converge_func c2).
+  Proof.
+    unfold JMeqfun.
+    intros.
+    edestruct (JMeq_exists_convert (T1:=x_t c1) (T2 := x_t c2) ) as [f1_2]. eauto.    
+    edestruct (JMeq_exists_convert (T1:=x_t c2) (T2 := x_t c1) ) as [f2_1]. eauto.    
+    destruct (H1 a b). destruct (H2 b a).    
+    rewrite <- (@fixpoint_unique c1 (fun x : x_t c1 => converge_func c2 (f1_2 x)) ).
+      rewrite H3; auto. 
+    intros.
+    erewrite -> (H _ (converge_func c2 ) _ x (f1_2 x) ).
+    2: { rewrite H1; auto. }
+    apply rec_fixpoint.
+    Unshelve.
+      intros.
+      simpl.
+      f_equal.
+      apply H1. auto.
+  Qed.    
+    
 
 
   Record R_Nt_relation {Nt : Type} `{Numerics.Numeric Nt} : Type :=
