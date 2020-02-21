@@ -2168,6 +2168,7 @@ Qed.
 
 Lemma Is_Pow_eq_spec : forall p1 p2, 
     Is_Pos_Power2 p1~0 = Is_Pos_Power2 p2~0 ->
+
     Is_Pos_Power2 p1 = Is_Pos_Power2 p2.
 Proof.
   intros.
@@ -2410,17 +2411,6 @@ Proof.
   apply Qred_complete; auto.
 Qed.
 
-Lemma bin_ind : 
-  forall P : nat -> Prop,
-  P 0%nat ->
-  (forall n : nat, P n -> P (2* n)%nat) ->
-  (forall n : nat, P n -> P (S (2 * n))) -> forall n : nat, P n.
-Proof.
-  pose proof N.binary_ind.
-  intros.
-  specialize (H (fun n => P (N.to_nat n))).
-  Admitted.
-
 Open Scope nat_scope.
 Theorem strong_induction : forall P : nat -> Prop,
   (forall m : nat, (forall n : nat, n < m -> P n) -> P m) ->
@@ -2520,12 +2510,55 @@ Proof.
   inversion H.
 Qed.
 
+Lemma Pos_Div2_succ2 : forall p,
+    (p <> 1)%positive -> 
+    Pos.div2 (Pos.succ (Pos.succ p)) =
+    Pos.succ (Pos.div2 p).
+Proof.
+  intros.
+  induction p; auto.
+  simpl.
+  lia.
+Qed.
+  
 Lemma Pos_of_nat_Div2_spec : forall n, Pos.of_nat (Nat.div2 n) =
                       Pos.div2 (Pos.of_nat n).
 Proof.
-  induction n; auto.
-  simpl Pos.div2.
-  Admitted.
+  induction n using strong_induction; auto.
+  destruct n; auto.
+  destruct n; auto.
+  specialize (H n).
+  assert (Pos.of_nat (Nat.div2 n) = Pos.div2 (Pos.of_nat n)) by auto.
+  clear H.
+  simpl Nat.div2.
+  destruct (Nat.eq_dec 0 n).
+  subst; auto.
+  destruct (Nat.eq_dec 1 n).
+  subst; auto.
+  rewrite Nat2Pos.inj_succ; try lia.
+  2:{
+    intros Hnot.
+    rewrite Hnot in H0.
+    simpl in H0.
+    destruct n; try lia.
+    destruct n; try lia.
+    inversion Hnot.
+  }
+  {
+    rewrite H0.
+    pose proof (Pos_Div2_succ2 (Pos.of_nat n)).
+    rewrite <- H; try lia.
+    {
+      rewrite Nat2Pos.inj_succ; try lia.
+      rewrite Nat2Pos.inj_succ; lia.
+    }
+    {
+      intros Hnot.
+      destruct n; auto.
+      rewrite Nat2Pos.inj_succ in Hnot; try lia.
+    }
+  }
+Qed.
 
 Lemma Pos_Pow2_xO_spec : forall x p,
     (x <> 1)%positive -> 
@@ -2593,14 +2626,15 @@ Proof.
     apply Pos_Pow2_xO_spec; auto.
   }
 Qed.
-  
+
 Lemma shift_nat_spec : forall p q,
     q <> 0 -> 
     shift_nat p 1 = Pos.of_nat q  -> 
     shift_nat (S p) 1 = Pos.of_nat (2 * q).
 Proof.
   intros.
-  induction p; auto.
+  generalize dependent q.
+  induction p; auto; intros.
   simpl in *.
   assert (q = 1).
   {
@@ -2614,9 +2648,12 @@ Proof.
     subst; auto.
   }
   {
-    admit.
+    rewrite Nat2Pos.inj_mul; try lia.
+    rewrite <- H0.
+    simpl.
+    auto.
   }
-Admitted.
+Qed.
 
 Lemma Pow2_Div2_Not_0 : forall p q,
     Is_Pos_Power2 q = Some p ->
@@ -2661,13 +2698,55 @@ Proof.
   }
 Qed.
 
-Lemma Pow2_Mult_Div_inv : forall q p,
-    Is_Pos_Power2 (Pos.of_nat q) = Some (Pos.of_nat p) ->
-    2 * (q / 2) = q.
+Lemma Pow2_Mult_Div_inv' : forall q p : positive ,
+    Is_Pos_Power2 q = Some p ->
+    (2 * (Pos.div2 q) = q)%positive.
 Proof.
-  induction q; auto.
   intros.
-Admitted.
+  generalize dependent p.
+  destruct q; auto.
+  intros.
+  {
+    inversion H.
+  }
+  {  
+    intros.
+    simpl in H.
+    inversion H.
+  }
+Qed.
+
+Lemma Pow2_Mult_Div_inv : forall q p : nat ,
+    Is_Pos_Power2 (Pos.of_nat q) = Some (Pos.of_nat p) ->
+    (2 * (q / 2) = q).
+Proof.
+  intros.
+  pose proof H.
+  apply Pow2_Mult_Div_inv' in H.
+  rewrite <- Pos_of_nat_Div2_spec in H.
+  rewrite <- Nat.div2_div.
+  destruct q; auto.
+  {
+    destruct q; auto. 
+    {
+      simpl in *.
+      inversion H0.
+    }
+    {
+      assert (S (S q) = Pos.to_nat (Pos.of_nat (S (S q)))).
+      {
+        rewrite Nat2Pos.id; try lia.
+      }
+      rewrite H1 at 2.      
+      rewrite <- H.
+      rewrite Pos2Nat.inj_mul.
+      rewrite Nat2Pos.id; try lia.
+      intros Hnot.
+      simpl in Hnot.
+      inversion Hnot.
+    }
+  }
+Qed.
 
 Lemma Shift_Is_Pos_Pow2_inv_nat' : forall p q,
     p <> 0 -> 
@@ -2763,8 +2842,6 @@ Lemma Try_Q_to_D_Qred_spec : forall q d,
 Proof.
   intros.
   pose proof H as h.
-  (* assert (h0 : num d = Qnum (Qred q) \/ (num d = (2 * (Qnum (Qred q)))%Z) /\ den d = 1%positive) *)
-  (*   by (apply Try_Q_to_D_num; auto). *)
   unfold Try_Q_to_D in H.
   destruct (Is_Pos_Power2 (Qden (Qred q))) eqn:h1.
   {
@@ -2782,17 +2859,127 @@ Proof.
     auto.
   }
   {
-    admit.
+    rewrite <- Qred_correct.
+    destruct (Qden (Qred q) =? 1) eqn:Hd.
+    {
+      apply Peqb_true_eq in Hd.
+      inversion H.
+      subst.
+      clear H.
+      unfold Qeq.
+      simpl.
+      destruct (Qnum (Qred q)) eqn:Hq; auto.
+      rewrite <- Hq.
+      simpl.
+      destruct (Qred q).
+      {
+        simpl in *.
+        subst.
+        unfold Try_Q_to_D in h.
+        simpl in h.
+        lia.
+      }
+      {
+        simpl.
+        assert ((p * Qden (Qred q))~0 = (p * Qden (Qred q)) * 2) by lia.
+        rewrite H.
+        rewrite <- Pos.mul_assoc.
+        f_equal.
+        rewrite Hd.
+        lia.
+      }
+    }
+    {
+      inversion H.
+    }
   }
-Admitted.
+Qed.
 
 Lemma Try_Q_to_D_Qred_spec1 : forall q d,
     Try_Q_to_D (Qred q) = Some d ->
     DOred d = d.
 Proof.
   intros.
+  unfold Try_Q_to_D in H.
+  destruct (Is_Pos_Power2 (Qden (Qred q))) eqn:Hm.
+  {
+    inversion H.
+    unfold DOred.
+    simpl.
+    unfold DO_of_DOred'.
+    destruct (DOred' _ _) eqn:Hd.
+    subst.
+    destruct ((Init.Nat.pred (Pos.to_nat p))) eqn:Hp.
+    {
+      simpl in Hd.
+      inversion Hd; subst; auto.
+      assert (p = 1) by lia.
+      subst.
+      auto.
+    }
+    {
+      (*  Relate n0 to n  *)
+      destruct (DOred' _ _).
+      inversion Hd; subst.
   Admitted.
 
+
+Lemma QeqD_is_pow2 : forall q d,
+    q == DO_to_Q d -> 
+    Try_Q_to_D (Qred q) = None -> False.
+Proof.
+  intros q d H H1.
+    simpl in *.
+    pose proof H1 as Ht.
+    unfold Try_Q_to_D in H1.
+    destruct (Is_Pos_Power2 (Qden (Qred q))) eqn:Hm.
+    {
+      inversion H1.
+    }
+    {
+      destruct (Qden (Qred q) =? 1) eqn:Hm1.
+      {
+        inversion H1.
+      }
+      {
+        rewrite H in Hm.
+        apply Positive_as_OT.eqb_neq in Hm1.
+        rewrite  H in Hm1.
+        clear -Hm Ht Hm1 H.
+        simpl in Hm.
+        destruct d; subst.
+        simpl in *.
+        destruct (snd (Z.ggcd num0 (Z.pos (shift_pos den0 1)))) eqn:H1.
+        simpl in Hm.
+        unfold Z.ggcd in H1.
+        destruct (num0) eqn:H2.
+        {
+          simpl in H1.
+          inversion H1; 
+            subst.
+          simpl in *.
+          lia.
+        }
+        {
+          subst.
+          simpl in *.
+          pose proof Pos.ggcd_correct_divisors as H0.
+          specialize (H0 p (shift_pos den0 1)).
+          destruct (Pos.ggcd p (shift_pos den0 1)) eqn:H1'.
+          destruct p1; subst; auto.
+          intuition.
+          simpl in *.
+          pose proof (Is_Pow_Pow_Shift_inv den0) as H0.
+          inversion H1; subst.
+          simpl in *.
+        admit.
+        }
+        {
+          subst.
+          admit.
+        }
+    }
+Admitted.
 
 Lemma Dred_complete d1 d2 :
   D_to_Q d1 == D_to_Q d2 ->
@@ -2831,9 +3018,10 @@ Proof.
       auto.
     }
     {
-      simpl in *.
       exfalso.
-      admit.
+      simpl in *.
+      symmetry in H.
+      apply QeqD_is_pow2 in H; auto.
     }
   }
   {
@@ -2864,7 +3052,7 @@ Proof.
     {
       simpl in *.
       exfalso.
-      admit.
+      apply QeqD_is_pow2 in H; auto.
     }
   }
   {
@@ -2875,7 +3063,7 @@ Proof.
     rewrite H.
     auto.
   }
-Admitted.
+Qed.
 
 Lemma Dred'_idem x y :
   Dred' (fst (Dred' x y)) (snd (Dred' x y)) = Dred' x y.
@@ -2901,7 +3089,66 @@ Proof.
     apply DOred_idem.
   }
   {
-    admit.
+    unfold Dred.
+    unfold DOred.
+    destruct (Try_Q_to_D (Qred q)) eqn:Hm; auto.
+    {
+      apply Try_Q_to_D_Qred_spec1 in Hm.
+      rewrite <- Hm.
+      unfold DO_of_DOred'.
+      destruct (DOred' _ _) eqn:H.
+      rewrite Hm in H.
+      rewrite <- Hm in H.    
+      destruct ((Init.Nat.pred (Pos.to_nat (den (DOred d))))) eqn:H1;
+        subst.
+      {
+        simpl in H.
+        inversion H; subst; auto.
+        simpl.
+        assert (den (DOred d) = 1) by lia.
+        rewrite Hm.
+        rewrite Hm in H0.
+        destruct d.
+        simpl in *.
+        rewrite H0.
+        auto.
+      }
+      {      
+        simpl in H.
+        destruct Zeven_dec eqn:He.
+        {
+          destruct (DOredP d); subst; auto.
+          {
+            exfalso.
+            apply (Zodd_not_Zeven _ H0); eauto.
+          }
+          {
+            rewrite H0 in H1.
+            simpl in H1.
+            inversion H1.
+          }
+        }        
+        {
+          inversion H; subst; auto.
+          rewrite Hm in *.
+          rewrite <- H1.
+          rewrite Nat.succ_pred; try lia.
+          rewrite Pos2Nat.id.
+          destruct d; auto.
+        }
+      }
+    }
+    {
+      destruct (Try_Q_to_D (Qred (Qred q))) eqn:Hm1.
+      {
+        (* Qred of Qred is Qred *)
+        admit.
+      }
+      {      
+        (* Qred of Qred is Qred *)
+        admit.
+      }
+    }
   }
 Admitted.
 
