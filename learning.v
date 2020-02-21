@@ -51,7 +51,7 @@ Section learning.
       have ->: expVal h = p_exp d m_gt0 (X h) by [].
       set (P := probOfR _ _).
       have ->: P =
-        probOfR (T:=finfun_of_finType (ordinal_finType m) (prod_finType A B))
+        probOfR 
          (prodR (T:=prod_finType A B) (fun _ : 'I_m => d))
          (fun T => Rle_lt_dec (p_exp (T:=prod_finType A B) d m_gt0 (X h) + eps) (p_hat (X h) T)).
       { rewrite /probOfR; apply: big_sum_ext => //=; apply eq_in_filter => /= T Hin.
@@ -84,7 +84,7 @@ Section learning.
       { by apply: prodR_nonneg. }
       have Hle:
         \big[Rplus/0]_(i in 'I_#|eps_Hyp eps|)
-         probOfR (T:=finfun_of_finType (ordinal_finType m) (prod_finType A B))
+         probOfR
          (prodR (T:=prod_finType A B) (fun _ : 'I_m => d)) [eta P i]
         <= \big[Rplus/0]_(i in 'I_#|eps_Hyp eps|) (exp (-2%R * eps^2 * mR)).
       { rewrite -2!big_sum_sumP; apply big_sum_le => c Hin.
@@ -214,11 +214,11 @@ Section learning.
       { apply: Rlt_le_trans; [by apply: eps_range|by apply: Rmin_l]. }    
       have H1: expVal h = p_exp d m_gt0 (X h) by [].
       have H2:
-        probOfR (T:=finfun_of_finType (ordinal_finType m) (prod_finType A B))
+        probOfR 
                 (prodR (T:=prod_finType A B) (fun _ : 'I_m => d))
                 (fun T : training_set =>
                    Rle_lt_dec eps (Rabs (p_exp (T:=prod_finType A B) d m_gt0 (X h) - empVal T h))) = 
-        probOfR (T:=finfun_of_finType (ordinal_finType m) (prod_finType A B))
+        probOfR 
                 (prodR (T:=prod_finType A B) (fun _ : 'I_m => d))
                 (fun T => Rle_lt_dec eps (Rabs (p_exp (T:=prod_finType A B) d m_gt0 (X h) - p_hat (X h) T))).
       { rewrite /probOfR; apply: big_sum_ext => //=; apply eq_in_filter => T Hin.
@@ -273,7 +273,7 @@ Section learning.
       rewrite [2 * _]Rmult_comm.
       have Hle:
         \big[Rplus/0]_(i in 'I_#|eps_Hyp_twosided eps|)
-         probOfR (T:=finfun_of_finType (ordinal_finType m) (prod_finType A B))
+         probOfR
          (prodR (T:=prod_finType A B) (fun _ : 'I_m => d)) [eta P i]
         <= \big[Rplus/0]_(i in 'I_#|eps_Hyp_twosided eps|) (2 * exp (-2%R * eps^2 * mR)).
       { rewrite -2!big_sum_sumP; apply big_sum_le => c Hin.

@@ -3141,8 +3141,12 @@ Section rat_to_R_lemmas.
     apply eqR_Qeq in H.
     rewrite /Qeq in H. simpl in H.
     ring_simplify in H.
-    induction r1 => //.    
-  Qed.
+    induction r1 => //.
+    simpl in H.
+    rewrite <- Nat2Z.inj_0 in H.
+    apply Nat2Z.inj in H.
+    rewrite H. auto.
+  Qed. 
 
   Lemma rat_to_R_inv (r : rat) : (r != 0) -> rat_to_R r^-1 = Rinv (rat_to_R r).
   Proof.
@@ -3857,7 +3861,7 @@ Proof. apply: (projT2 (projT2 d)). Qed.
 Lemma nat_of_bin_succ n : nat_of_bin (N.succ n) = (nat_of_bin n).+1.
 Proof.
   elim: n => //= p.
-  by rewrite nat_of_succ_gt0.
+  by rewrite nat_of_succ_pos.
 Qed.
 
 Lemma nat_of_bin0 : nat_of_bin 0 = 0%nat.
@@ -3871,7 +3875,7 @@ Proof.
   { by exists O. }
   move => p'; rewrite /P => [][]n IH.
   exists n.+1.
-  by rewrite nat_of_succ_gt0 IH.
+  by rewrite nat_of_succ_pos IH.
 Qed.    
 
 Lemma nat_of_pos_inj p1 p2 : nat_of_pos p1 = nat_of_pos p2 -> p1=p2.
@@ -3885,17 +3889,17 @@ Proof.
     change (Q p2).
     apply: Pos.peano_ind => //.
     move => p'; rewrite /Q => IH.
-    rewrite nat_of_succ_gt0 => //.
+    rewrite nat_of_succ_pos => //.
     case: (nat_of_pos_s p') => x -> //. }
   move => p1 IH p2.
-  rewrite nat_of_succ_gt0.
+  rewrite nat_of_succ_pos.
   set (Q p2 := (nat_of_pos p1).+1 = nat_of_pos p2 -> Pos.succ p1 = p2).
   change (Q p2).
   apply: Pos.peano_ind.
   { rewrite /Q.
     case: (nat_of_pos_s p1) => x -> //. }
   move => p; rewrite /Q => IH2.
-  rewrite nat_of_succ_gt0; case => H.
+  rewrite nat_of_succ_pos; case => H.
   by rewrite (IH _ H).
 Qed.
 

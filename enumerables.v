@@ -330,11 +330,11 @@ Module Enum_table.
     rewrite eq_refl in e. inversion e.
   Qed.
 
-  Definition table_eqMixin (T1 T2 : eqType) (T1_enum : Enumerable T1) : Equality.mixin_of (Enum_table.table T2 T1_enum) :=
+  (**Definition table_eqMixin (T1 T2 : eqType) (T1_enum : Enumerable T1) : Equality.mixin_of (Enum_table.table T2 T1_enum) :=
     EqMixin (op:=(@table_eqb T1 T2 T1_enum)) (@table_eqnP _ _ _).
 
   Definition table_eqType (T1 T2: eqType) (T1_enum : Enumerable T1) := Equality.Pack (@table_eqMixin T1 T2 T1_enum) (@table T1 T2 T1_enum).
-
+  **)
   
 
 End Enum_table.
