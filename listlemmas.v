@@ -142,7 +142,6 @@ Proof.
   - apply IHperm.
     + simpl. case (f x); case (f y); try solve [by constructor].
   - apply Permutation_refl.
-  SearchAbout Permutation.
     + apply (Permutation.perm_trans IHperm1 IHperm2).
 Qed.
 
