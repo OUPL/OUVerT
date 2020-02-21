@@ -9,7 +9,7 @@ Require Import OUVerT.dyadic.
 Import List.
 Import ListNotations.
 
-Require Import Lra Lia.
+Require Import Lra Lia Reals.
 
 
 Require Import mathcomp.ssreflect.ssreflect.
@@ -47,6 +47,7 @@ Module Numerics.
 
   Class Numeric (T:Type) :=
     mkNumeric {
+
         plus: T -> T -> T where "n + m" := (plus n m) : Numeric_scope;
         neg : T->T where "- n" := (neg n) : Num;
         mult: T -> T -> T where "n * m" := (mult n m) : Num;
@@ -56,7 +57,7 @@ Module Numerics.
         of_nat: nat -> T;
         plus_id: T;
         mult_id: T;
-
+        
         lt: T->T->Prop where "n < m" := (lt n m) : Num;
         ltb: T->T->bool;
 
@@ -77,7 +78,7 @@ Module Numerics.
     mkNumericProps {
 
         plus_id_lt_mult_id: plus_id < mult_id;
-        
+
         mult_plus_id_l: forall t : T, plus_id * t = plus_id;
         of_nat_plus_id: of_nat O = plus_id;
         of_nat_succ_l: forall n : nat, of_nat (S n) = mult_id + of_nat n;
@@ -222,9 +223,9 @@ Module Numerics.
     Qed.
 
     Lemma eq_dec: forall t1 t2 : Nt, {t1 = t2} + {t1 <> t2}.
-    Proof. 
+    Proof.
       intros.
-      destruct (total_order_T t1 t2).
+      destruct total_order_T with t1 t2.
       {
         destruct s; auto.
         apply lt_not_eq in l. auto.
@@ -438,6 +439,7 @@ Module Numerics.
     Qed.
 
 
+
     Definition abs (x : Nt) : Nt :=
     if leb plus_id x then x else -x.
 
@@ -474,6 +476,7 @@ Module Numerics.
     
 
     Hint Resolve ltb_true_iff.
+
     Hint Resolve ltb_false_iff.
 
     Lemma leb_true_iff: forall x y : Nt, leb x y <-> x <= y.
@@ -551,8 +554,11 @@ Module Numerics.
       apply lt_irrefl.
     Qed.
 
+    
+
     Lemma eqb_refl: forall n : Nt, eqb n n.
     Proof. intros. rewrite eqb_true_iff. auto. Qed.
+
           
     Lemma eqb_symm: forall n m: Nt, eqb n m = eqb m n.
     Proof.
@@ -1605,6 +1611,7 @@ Module Numerics.
 
 
 
+
 (**Req_EM_T**)
 Program Instance Numeric_D: Numerics.Numeric (DRed.t) :=
   @Numerics.mkNumeric
@@ -2008,6 +2015,7 @@ Qed.
     | Zneg p => neg ( of_nat (Pos.to_nat p))
     end.
 
+
 End use_Numeric2.
 
 Definition log (x y : R) := Rdiv (ln y) (ln x).
@@ -2229,7 +2237,7 @@ Qed.
     destruct H.
     2: { exists (S O). rewrite <- H. rewrite pow_1. auto. } 
     destruct exists_pow_le with x y; auto.
-    exists x0.+1.
+    exists (S x0).
     apply lt_le_trans with (x ^ x0); auto.
     simpl.
     rewrite <- mult_id_l.
@@ -2474,7 +2482,7 @@ Proof. move => H. by rewrite addnC subnKC. Qed.
 Lemma int_to_positive_mul_1 (a b : nat) (H : (a <> 0)%N) :
   (a * b.+1)%N = ((a * b.+1 - 1).+1)%N.
 Proof.
-   rewrite -[(_ * _ - 1).+1] addn1 -le_plus_minus_r //. rewrite muln_gt0.
+   rewrite -[S (_ * _ - 1)] addn1 -le_plus_minus_r //. rewrite muln_gt0.
    apply /andP. split; auto. rewrite lt0n. apply /eqP. auto.
 Qed.
 
@@ -3194,7 +3202,7 @@ Section Z_to_int.
     end.
 End Z_to_int.
 
-Lemma Pos_to_natNS p : (Pos.to_nat p).-1.+1 = Pos.to_nat p.
+Lemma Pos_to_natNS p : S (Pos.to_nat p).-1 = Pos.to_nat p.
 Proof.
   rewrite -(S_pred _ 0) => //.
   apply: Pos2Nat.is_pos.
@@ -3305,7 +3313,7 @@ Section Z_to_int_lemmas.
       { by rewrite mulr0. }
       { by rewrite /= Pos2Nat.inj_mul. }
       rewrite /= 2!NegzE Pos2Nat.inj_mul.
-      have ->: (Pos.to_nat q).-1.+1 = Pos.to_nat q.
+      have ->: (S (Pos.to_nat q).-1) = Pos.to_nat q.
       { apply: Pos_to_natNS. }
       rewrite mulrN.
       rewrite prednK //. rewrite muln_gt0. apply /andP.
@@ -3797,10 +3805,10 @@ Proof.
   rewrite N_to_Q_plus; f_equal.
 Qed.  
 
-Definition N_to_D (n : N.t) : D := Dmake (2*NtoZ n) 1.
+Definition N_to_D (n : N.t) : D := DD (Dmake (2*NtoZ n) 1).
 
 Lemma N_to_D_plus n1 n2 :
-  N_to_D (n1 + n2) = Dadd (N_to_D n1) (N_to_D n2).
+  (N_to_D (n1 + n2) = N_to_D n1 + N_to_D n2)%D.
 Proof.
   rewrite /N_to_D /NtoZ /Nplus.
   case: n1; case: n2 => //.
@@ -3858,7 +3866,7 @@ Proof. apply: (projT2 (projT2 d)). Qed.
 
 (** Some random lemmas on nat_of_bin, etc. *)
 
-Lemma nat_of_bin_succ n : nat_of_bin (N.succ n) = (nat_of_bin n).+1.
+Lemma nat_of_bin_succ n : nat_of_bin (N.succ n) = S (nat_of_bin n).
 Proof.
   elim: n => //= p.
   by rewrite nat_of_succ_pos.
@@ -3869,12 +3877,12 @@ Proof. by []. Qed.
 
 Lemma nat_of_pos_s p : exists n, nat_of_pos p = S n.
 Proof.
-  set (P p := exists n, nat_of_pos p = n.+1).
+  set (P p := exists n, nat_of_pos p = S n).
   change (P p).
   apply: Pos.peano_ind.
   { by exists O. }
   move => p'; rewrite /P => [][]n IH.
-  exists n.+1.
+  exists (S n).
   by rewrite nat_of_succ_pos IH.
 Qed.    
 
@@ -3893,7 +3901,7 @@ Proof.
     case: (nat_of_pos_s p') => x -> //. }
   move => p1 IH p2.
   rewrite nat_of_succ_pos.
-  set (Q p2 := (nat_of_pos p1).+1 = nat_of_pos p2 -> Pos.succ p1 = p2).
+  set (Q p2 := S (nat_of_pos p1) = nat_of_pos p2 -> Pos.succ p1 = p2).
   change (Q p2).
   apply: Pos.peano_ind.
   { rewrite /Q.
@@ -3922,7 +3930,7 @@ Lemma N2Nat_lt n m :
 Proof.
   move: n m; apply: N.peano_ind.
   { apply: N.peano_ind => //= n _ _.
-    by rewrite nat_of_bin_succ. }
+      by rewrite nat_of_bin_succ. }
   move => n /= IH m; rewrite nat_of_bin_succ N2Nat.inj_succ.
   move: m; apply: N.peano_ind => // m _.
   rewrite nat_of_bin_succ N2Nat.inj_succ => H.
@@ -3932,5 +3940,21 @@ Proof.
   suff: (n < m)%N => //.
   by apply: (IH _ H2).
 Qed.    
+
+Lemma rat_to_R_opp_neq (n:nat) : rat_to_R n%:R = (Ropp R1) -> False.
+Proof.
+  move => H.
+  suff: Rdefinitions.Rle 0 (rat_to_R n%:R).
+  {
+    lra.
+  }
+  {
+    rewrite -rat_to_R0; apply: rat_to_R_le.
+    Local Open Scope ring_scope.  
+    change ((0:rat) <= n%:R).
+    apply: ler0n. 
+  }
+Qed.    
+
 
 (** END random lemmas *)

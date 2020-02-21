@@ -909,8 +909,9 @@ Module DPayloadRep.
       apply Dred_complete.
       assert (H3: dyadic_rat_to_D (D_to_dyadic_rat tx) = tx).
       { unfold dyadic_rat_to_D, D_to_dyadic_rat.
-        destruct tx; simpl in *.
-        auto. }
+        destruct tx; simpl in *;
+        auto. 
+      }
       rewrite H3; apply Qeq_refl. }
     clear - H2.
     generalize (Dred_idem (D_to_dyadic_rat tx)).

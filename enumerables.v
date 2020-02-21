@@ -948,9 +948,9 @@ Proof.
   assert(H1 = enum_nat_list_to_succ_obligation_1 {| enum_nat_n := m; enum_nat_lt := H0 |}).
     apply proof_irrelevance.
   rewrite <- H.
-  assert((enum_nat_enumerate_aux Hyp0) = enum_nat_enumerate_aux (enum_nat_enumerate_aux_obligation_2 H0 (erefl m.+1))).
+  assert((enum_nat_enumerate_aux Hyp0) = enum_nat_enumerate_aux (enum_nat_enumerate_aux_obligation_2 H0 (erefl (S m)))).
   2:{ rewrite H2. auto. }
-  assert(Hyp0 =   (enum_nat_enumerate_aux_obligation_2 H0 (erefl m.+1))).
+  assert(Hyp0 =   (enum_nat_enumerate_aux_obligation_2 H0 (erefl (S m)))).
     apply proof_irrelevance.
   by rewrite H2.
 Qed.

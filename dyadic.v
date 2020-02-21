@@ -1,6 +1,7 @@
 Require Import ZArith PArith QArith ProofIrrelevance.
+Require Import Lia.
 
-Record D : Set :=
+Record DO : Set :=
   Dmake { num : Z;
           den : positive }.
 
@@ -15,27 +16,27 @@ Proof.
   intros p; simpl; rewrite <-IHn; auto.
 Qed.
 
-Definition D_to_Q (d : D) :=
+Definition DO_to_Q (d : DO) :=
   Qmake (num d) (shift_pos (den d) 1).
 
-Definition D0 : D := Dmake 0 1.
-Definition D1 : D := Dmake 2 1.
+(* Coercion DO_to_Q : DO >-> Q. *)
 
+Definition DO0 : DO := Dmake 0 1.
+Definition DO1 : DO := Dmake 2 1.
 
-
-Lemma D_to_Q0' : D_to_Q D0 = 0 # 2.
+Lemma DO_to_Q0' : DO_to_Q DO0 = 0 # 2.
 Proof. auto. Qed.
 
-Lemma D_to_Q0 : D_to_Q D0 == 0.
-Proof. rewrite D_to_Q0'; unfold Qeq; simpl; auto. Qed.
+Lemma DO_to_Q0 : DO_to_Q DO0 == 0.
+Proof. rewrite DO_to_Q0'; unfold Qeq; simpl; auto. Qed.
 
-Lemma D_to_Q1' : D_to_Q D1 = 2 # 2.
+Lemma DO_to_Q1' : DO_to_Q DO1 = 2 # 2.
 Proof. auto. Qed.
 
-Lemma D_to_Q1 : D_to_Q D1 == 1.
-Proof. rewrite D_to_Q1'; unfold Qeq; simpl; auto. Qed.
+Lemma DO_to_Q1 : DO_to_Q DO1 == 1.
+Proof. rewrite DO_to_Q1'; unfold Qeq; simpl; auto. Qed.
 
-Definition Dadd (d1 d2 : D) : D :=
+Definition DOadd (d1 d2 : DO) : DO :=
   match d1, d2 with
   | Dmake x1 y1, Dmake x2 y2 =>
     if Pos.ltb y1 y2 then
@@ -243,8 +244,8 @@ Proof.
   apply (Zpow_pos_neq_0 _ _ H H2).
 Qed.  
 
-Lemma Dadd_ok d1 d2 :
-  D_to_Q (Dadd d1 d2) == D_to_Q d1 + D_to_Q d2.
+Lemma DOadd_ok d1 d2 :
+  DO_to_Q (DOadd d1 d2) == DO_to_Q d1 + DO_to_Q d2.
 Proof.
   destruct d1, d2; simpl.
   generalize den0 as X; intro.
@@ -297,7 +298,7 @@ Proof.
         { omega. }
         omega. }
       rewrite Qmult_1_r; apply Qeq_refl. }
-    unfold D_to_Q; simpl.
+    unfold DO_to_Q; simpl.
     rewrite <-inject_Z_mult, <-inject_Z_plus.
     assert (Z.pow_pos 2 Z = Z.pow_pos 2 Z * Z.pos 1)%Z as ->.
     { rewrite Zmult_1_r; auto. }
@@ -343,7 +344,7 @@ Proof.
         { omega. }
         omega. }
       rewrite Qmult_1_r; apply Qeq_refl. }
-    unfold D_to_Q; simpl.
+    unfold DO_to_Q; simpl.
     rewrite <-inject_Z_mult, <-inject_Z_plus.
     assert (Z.pow_pos 2 X = Z.pow_pos 2 X * Z.pos 1)%Z as ->.
     { rewrite Zmult_1_r; auto. }
@@ -359,7 +360,7 @@ Proof.
     intros _ _.
     apply Pos.compare_eq; auto. }
   (* eq case *)
-  subst Z; unfold D_to_Q; simpl; clear H H'.
+  subst Z; unfold DO_to_Q; simpl; clear H H'.
   unfold Qdiv; rewrite Qmult_plus_distr_l.
   assert (inject_Z Y * inject_Z (Z.pow_pos 2 X) *
           / inject_Z (Z.pow_pos 2 (X + X)) ==
@@ -373,7 +374,7 @@ Proof.
   unfold Qdiv; rewrite shift_pos_correct, Zmult_1_r; apply Qeq_refl.
 Qed.
 
-Definition Dmult (d1 d2 : D) : D :=
+Definition DOmult (d1 d2 : DO) : DO :=
   match d1, d2 with
   | Dmake x1 y1, Dmake x2 y2 =>
     Dmake (x1 * x2) (y1 + y2)
@@ -386,74 +387,76 @@ Proof.
   rewrite IHn; auto.
 Qed.
  
-Lemma Dmult_ok d1 d2 :
-  D_to_Q (Dmult d1 d2) = D_to_Q d1 * D_to_Q d2.
+Lemma DOmult_ok d1 d2 :
+  DO_to_Q (DOmult d1 d2) = DO_to_Q d1 * DO_to_Q d2.
 Proof.
   destruct d1, d2; simpl.
   generalize den0 as X; intro.
   generalize num0 as Y; intro.
   generalize den1 as Z; intro.
   generalize num1 as W; intro.
-  unfold D_to_Q; simpl.
+  unfold DO_to_Q; simpl.
   unfold Qmult; simpl.
   rewrite !shift_pos_nat, Pos2Nat.inj_add, shift_nat_plus.
   rewrite shift_nat1_mult; auto.
 Qed.
 
-Definition Dopp (d : D) : D :=
+
+Definition DOopp (d : DO) : DO :=
   match d with
   | Dmake x y => Dmake (-x) y
   end.
 
-Lemma Dopp_ok d : D_to_Q (Dopp d) = Qopp (D_to_Q d).
+Lemma DOopp_ok d : DO_to_Q (DOopp d) = Qopp (DO_to_Q d).
 Proof.
   destruct d; simpl.
-  unfold D_to_Q; simpl.
+  unfold DO_to_Q; simpl.
   unfold Qopp; simpl; auto.
 Qed.
 
-Definition Dsub (d1 d2 : D) : D := Dadd d1 (Dopp d2).
+Definition DOsub (d1 d2 : DO) : DO := DOadd d1 (DOopp d2).
 
-Lemma Dsub_ok d1 d2 :
-  D_to_Q (Dsub d1 d2) == D_to_Q d1 - D_to_Q d2.
+Lemma DOsub_ok d1 d2 :
+  DO_to_Q (DOsub d1 d2) == DO_to_Q d1 - DO_to_Q d2.
 Proof.
-  unfold Dsub.
-  rewrite Dadd_ok.
-  rewrite Dopp_ok.
+  unfold DOsub.
+  rewrite DOadd_ok.
+  rewrite DOopp_ok.
   unfold Qminus; apply Qeq_refl.
 Qed.
 
-Definition Dle (d1 d2 : D) : Prop :=
-  Qle (D_to_Q d1) (D_to_Q d2).  
+
+Definition DOle (d1 d2 : DO) : Prop :=
+  Qle (DO_to_Q d1) (DO_to_Q d2).  
 
 (*TODO: There's probably a more efficient way to implement the following:*)
-Definition Dle_bool (d1 d2 : D) : bool :=
-  Qle_bool (D_to_Q d1) (D_to_Q d2).
+Definition DOle_bool (d1 d2 : DO) : bool :=
+  Qle_bool (DO_to_Q d1) (DO_to_Q d2).
 
-Lemma Dle_bool_iff d1 d2 : (Dle_bool d1 d2 = true) <-> Dle d1 d2.
+Lemma DOle_bool_iff d1 d2 : (DOle_bool d1 d2 = true) <-> DOle d1 d2.
 Proof.
-  unfold Dle_bool, Dle.
+  unfold DOle_bool, DOle.
   apply Qle_bool_iff.
 Qed.
 
-Definition Dlt (d1 d2 : D) : Prop :=
-  Qlt (D_to_Q d1) (D_to_Q d2).  
+Definition DOlt (d1 d2 : DO) : Prop :=
+  Qlt (DO_to_Q d1) (DO_to_Q d2).  
 
-Definition Dlt_bool (d1 d2 : D) : bool :=
-  match D_to_Q d1 ?= D_to_Q d2 with
+Definition DOlt_bool (d1 d2 : DO) : bool :=
+  match DO_to_Q d1 ?= DO_to_Q d2 with
   | Lt => true
   | _ => false
   end.
 
-Lemma Dlt_bool_iff d1 d2 : (Dlt_bool d1 d2 = true) <-> Dlt d1 d2.
+Lemma DOlt_bool_iff d1 d2 : (DOlt_bool d1 d2 = true) <-> DOlt d1 d2.
 Proof.
-  unfold Dlt_bool; split.
-  destruct (Qcompare_spec (D_to_Q d1) (D_to_Q d2));
+  unfold DOlt_bool; split.
+  destruct (Qcompare_spec (DO_to_Q d1) (DO_to_Q d2));
     try solve[inversion 1|auto].
-  unfold Dlt; rewrite Qlt_alt; intros ->; auto.
+  unfold DOlt; rewrite Qlt_alt; intros ->; auto.
 Qed.  
 
-Lemma Deq_dec (d1 d2 : D) : {d1=d2} + {d1<>d2}.
+Lemma DOeq_dec (d1 d2 : DO) : {d1=d2} + {d1<>d2}.
 Proof.
   destruct d1, d2.
   destruct (Z.eq_dec num0 num1).
@@ -467,7 +470,7 @@ Qed.
 Fixpoint f (n : nat) (d : D) : D :=
   match n with
   | O => d
-  | S n' => Dadd d (f n' d)
+  | S n' => DOadd d (f n' d)
   end.
 
 Time Compute f 5000 (Dmake 3 2).
@@ -483,28 +486,28 @@ Time Compute g 5000 (Qmake 3 2).
 (*Finished transaction in 0.847 secs (0.848u,0.s) (successful)*)
 (*Speedup on this microbenchmark: 70x*)*)
 
-Delimit Scope D_scope with D.
-Bind Scope D_scope with D.
+Delimit Scope DO_scope with DO.
+Bind Scope DO_scope with DO.
 Arguments Dmake _%Z _%positive.
 
-Infix "<" := Dlt : D_scope.
-Infix "<=" := Dle : D_scope.
-Notation "x > y" := (Dlt y x)(only parsing) : D_scope.
-Notation "x >= y" := (Dle y x)(only parsing) : D_scope.
-Notation "x <= y <= z" := (x<=y/\y<=z) : D_scope.
+Infix "<" := DOlt : DO_scope.
+Infix "<=" := DOle : DO_scope.
+Notation "x > y" := (DOlt y x)(only parsing) : DO_scope.
+Notation "x >= y" := (DOle y x)(only parsing) : DO_scope.
+Notation "x <= y <= z" := (x<=y/\y<=z) : DO_scope.
 
-Infix "+" := Dadd : D_scope.
-Notation "- x" := (Dopp x) : D_scope.
-Infix "-" := Dsub : D_scope.
-Infix "*" := Dmult : D_scope.
+Infix "+" := DOadd : DO_scope.
+Notation "- x" := (DOopp x) : DO_scope.
+Infix "-" := DOsub : DO_scope.
+Infix "*" := DOmult : DO_scope.
 
-Notation "'0'" := D0 : D_scope.
-Notation "'1'" := D1 : D_scope.
+Notation "'0'" := DO0 : DO_scope.
+Notation "'1'" := DO1 : DO_scope.
 
-(** Dmax *)
+(** DOmax *)
 
-Definition Dmax (d1 d2 : D) : D :=
-  if Dlt_bool d1 d2 then d2 else d1.
+Definition DOmax (d1 d2 : DO) : DO :=
+  if DOlt_bool d1 d2 then d2 else d1.
 
 (** The smallest power of 2 greater than a given rational *)
 
@@ -518,7 +521,7 @@ Definition Zsize (z : Z) : positive :=
 Definition Plub_aux (x : Z) (y : positive) : positive :=
   Zsize x - y.
 
-Definition Dlub (max : D) : D :=
+Definition DOlub (max : DO) : DO :=
   match max with
   | Dmake x y => Dmake 1 (Plub_aux x y)
   end.
@@ -743,12 +746,12 @@ Proof.
   intros _; apply Pos.le_1_l.
 Qed.
   
-Local Open Scope D_scope.
+Local Open Scope DO_scope.
 
-Lemma Dlub_mult_le1 d : d * Dlub d <= 1.
+Lemma DOlub_mult_le1 d : d * DOlub d <= 1.
 Proof.
-  unfold Dle; rewrite Dmult_ok.
-  unfold D_to_Q, Qle; destruct d as [x y]; simpl.
+  unfold DOle; rewrite DOmult_ok.
+  unfold DO_to_Q, Qle; destruct d as [x y]; simpl.
   rewrite Zmult_1_r; apply Zpos_2_mult.
   rewrite Pos2Z.inj_mul, !shift_pos_correct, !Zmult_1_r.
   rewrite <-Zpower_pos_is_exp.
@@ -771,35 +774,35 @@ Proof.
   omega.
 Qed.
 
-Lemma Dlub_nonneg (d : D) :
-  0 <= d -> 0 <= Dlub d.
+Lemma DOlub_nonneg (d : DO) :
+  0 <= d -> 0 <= DOlub d.
 Proof.
   destruct d; simpl; intros H.
-  unfold Dle; rewrite D_to_Q0; unfold D_to_Q; simpl.
+  unfold DOle; rewrite DO_to_Q0; unfold DO_to_Q; simpl.
   unfold Qle; simpl; omega.
 Qed.
 
-Lemma Dlub_ok (d : D) :
+Lemma DOlub_ok (d : DO) :
   0 <= d -> 
-  Dle 0 (d * Dlub d) /\ Dle (d * Dlub d) 1.
+  DOle 0 (d * DOlub d) /\ DOle (d * DOlub d) 1.
 Proof.
   intros H.
   split.
-  { unfold Dle; rewrite Dmult_ok.
-    rewrite D_to_Q0; apply Qmult_le_0_compat.
-    { rewrite <-D_to_Q0; auto. }
-    rewrite <-D_to_Q0; apply Dlub_nonneg; auto. }
-  apply Dlub_mult_le1.
+  { unfold DOle; rewrite DOmult_ok.
+    rewrite DO_to_Q0; apply Qmult_le_0_compat.
+    { rewrite <-DO_to_Q0; auto. }
+    rewrite <-DO_to_Q0; apply DOlub_nonneg; auto. }
+  apply DOlub_mult_le1.
 Qed.
 
-Fixpoint Dred' (n : Z) (d : nat) : (Z * nat) :=
+Fixpoint DOred' (n : Z) (d : nat) : (Z * nat) :=
   match d with
   | O => (n,d)
-  | S d' => if Zeven_dec n then Dred' (Z.div2 n) d'
+  | S d' => if Zeven_dec n then DOred' (Z.div2 n) d'
             else (n,d)
   end.
 
-Lemma Dred'P n d : Zodd (fst (Dred' n d)) \/ (snd (Dred' n d) = 0%nat).
+Lemma DOred'P n d : Zodd (fst (DOred' n d)) \/ (snd (DOred' n d) = 0%nat).
 Proof.
   revert n; induction d; auto.
   intros n; simpl; destruct (Zeven_dec n).
@@ -810,32 +813,32 @@ Proof.
   elimtype False; apply n0; auto.
 Qed.  
 
-Definition D_of_Dred' (p : Z*nat) : D :=
+Definition DO_of_DOred' (p : Z*nat) : DO :=
   let (x,y) := p in Dmake x (Pos.of_nat (S y)).
 
-Definition Dred (d : D) : D := 
-  D_of_Dred' (Dred' (num d) (pred (Pos.to_nat (den d)))).
+Definition DOred (d : DO) : DO := 
+  DO_of_DOred' (DOred' (num d) (pred (Pos.to_nat (den d)))).
 
-Lemma DredP d : Zodd (num (Dred d)) \/ (den (Dred d) = 1%positive).
+Lemma DOredP d : Zodd (num (DOred d)) \/ (den (DOred d) = 1%positive).
 Proof.
-  unfold Dred; destruct d as [x y]; simpl.
-  destruct (Dred'P x (pred (Pos.to_nat y))).
-  { unfold D_of_Dred'.
-    destruct (Dred' _ _); auto. }
-  destruct (Dred' _ _); right; simpl in *.
+  unfold DOred; destruct d as [x y]; simpl.
+  destruct (DOred'P x (pred (Pos.to_nat y))).
+  { unfold DO_of_DOred'.
+    destruct (DOred' _ _); auto. }
+  destruct (DOred' _ _); right; simpl in *.
   rewrite H; auto.
 Qed.  
 
-Lemma D_of_Dred'_correct x y :
-  D_to_Q (D_of_Dred' (Dred' x y)) == D_to_Q (D_of_Dred' (x,y)).
+Lemma DO_of_DOred'_correct x y :
+  DO_to_Q (DO_of_DOred' (DOred' x y)) == DO_to_Q (DO_of_DOred' (x,y)).
 Proof.
   revert x; induction y.
   { intros x; apply Qeq_refl. }
   intros x.
-  unfold Dred'; fold Dred'.
+  unfold DOred'; fold DOred'.
   destruct (Zeven_dec x) as [pf|pf].
   { rewrite IHy.
-    unfold D_to_Q; simpl.
+    unfold DO_to_Q; simpl.
     unfold Qeq; simpl.
     pattern x at 2.
     rewrite (Zeven_div2 x pf).
@@ -848,13 +851,13 @@ Proof.
   apply Qeq_refl.
 Qed.  
 
-Lemma Dred_correct d : D_to_Q (Dred d) == D_to_Q d.
+Lemma DOred_correct d : DO_to_Q (DOred d) == DO_to_Q d.
 Proof.
-  unfold Dred.
+  unfold DOred.
   destruct d as [x y] eqn:Heq.
   simpl.
-  rewrite D_of_Dred'_correct.
-  unfold D_of_Dred'.
+  rewrite DO_of_DOred'_correct.
+  unfold DO_of_DOred'.
   rewrite <-Pos.of_nat_succ.
   generalize (Pos2Nat.is_pos y).
   destruct (Pos.to_nat y) eqn:Heq'; try omega.
@@ -1062,43 +1065,43 @@ Proof.
   try inversion H; try inversion H1; auto.
 Qed.  
 
-Lemma Dred_complete d1 d2 :
-  D_to_Q d1 == D_to_Q d2 ->
-  Dred d1 = Dred d2.
+Lemma DOred_complete d1 d2 :
+  DO_to_Q d1 == DO_to_Q d2 ->
+  DOred d1 = DOred d2.
 Proof.
-  generalize (Dred_correct d1). intros <-.
-  generalize (Dred_correct d2). intros <-.
+  generalize (DOred_correct d1). intros <-.
+  generalize (DOred_correct d2). intros <-.
   intros H.
   apply Qred_complete in H.
-  unfold D_to_Q in H|-*.
+  unfold DO_to_Q in H|-*.
   generalize H; clear H.
   rewrite !shift_pos_pow_pos.
-  destruct (DredP d1).
-  (* Zodd (num (Dred d1)) *)
-  { destruct (DredP d2).
-    (* Zodd (num (Dred d2)) *)
+  destruct (DOredP d1).
+  (* Zodd (num (DOred d1)) *)
+  { destruct (DOredP d2).
+    (* Zodd (num (DOred d2)) *)
     { rewrite !Qred_odd_pow2; auto.
-      destruct (Dred d1); simpl.
-      destruct (Dred d2); simpl.
+      destruct (DOred d1); simpl.
+      destruct (DOred d2); simpl.
       inversion 1; subst.
       f_equal.
       apply pow_pos_2inj; auto. }
 
-    (* den (Dred d2) = 1 *)    
+    (* den (DOred d2) = 1 *)    
     rewrite H0.
     rewrite Qred_odd_pow2; auto.
     intros H2.
     assert (Hpow : pow_pos 2 1 = 2%positive) by auto.
     rewrite Hpow in H2.
-    destruct (Zeven_odd_dec (num (Dred d2))).
-    { assert (Qred (num (Dred d2) # 2) = Z.div2 (num (Dred d2)) # 1).
+    destruct (Zeven_odd_dec (num (DOred d2))).
+    { assert (Qred (num (DOred d2) # 2) = Z.div2 (num (DOred d2)) # 1).
       { rewrite Qred_even_2; auto. }
       rewrite H1 in H2; clear H1.
       inversion H2.
-      assert (1 < pow_pos 2 (den (Dred d1)))%positive.
+      assert (1 < pow_pos 2 (den (DOred d1)))%positive.
       { rewrite <-shift_pos_pow_pos.
         rewrite shift_pos_nat.
-        destruct (Pos2Nat.is_succ (den (Dred d1))) as [x H1].
+        destruct (Pos2Nat.is_succ (den (DOred d1))) as [x H1].
         rewrite H1; simpl.
         generalize (shift_nat x 1); intros p.
         unfold Pos.lt, Pos.compare; simpl; auto. }
@@ -1109,31 +1112,31 @@ Proof.
     rewrite Hpow in H2.
     inversion H2; subst.
     revert H3 H4 H0.
-    destruct (Dred d1); simpl.
-    destruct (Dred d2); simpl.
+    destruct (DOred d1); simpl.
+    destruct (DOred d2); simpl.
     intros -> Hx ->.
     assert (Hy: pow_pos 2 1 = pow_pos 2 den0).
     { rewrite Hx, Hpow; auto. }
     f_equal.
     apply pow_pos_2inj; auto. }
 
-  (* den (Dred d1) = 1 *)    
-  destruct (DredP d2).
-    (* Zodd (num (Dred d2)) *)
+  (* den (DOred d1) = 1 *)    
+  destruct (DOredP d2).
+    (* Zodd (num (DOred d2)) *)
     { rewrite H.
       rewrite (Qred_odd_pow2 _ _ H0).
       intros H2.
       assert (Hpow : pow_pos 2 1 = 2%positive) by auto.
       rewrite Hpow in H2.
-      destruct (Zeven_odd_dec (num (Dred d1))).
-      { assert (Qred (num (Dred d1) # 2) = Z.div2 (num (Dred d1)) # 1).
+      destruct (Zeven_odd_dec (num (DOred d1))).
+      { assert (Qred (num (DOred d1) # 2) = Z.div2 (num (DOred d1)) # 1).
         { rewrite Qred_even_2; auto. }
         rewrite H1 in H2; clear H1.
         inversion H2.
-        assert (1 < pow_pos 2 (den (Dred d2)))%positive.
+        assert (1 < pow_pos 2 (den (DOred d2)))%positive.
         { rewrite <-shift_pos_pow_pos.
           rewrite shift_pos_nat.
-          destruct (Pos2Nat.is_succ (den (Dred d2))) as [x H1].
+          destruct (Pos2Nat.is_succ (den (DOred d2))) as [x H1].
           rewrite H1; simpl.
           generalize (shift_nat x 1); intros p.
           unfold Pos.lt, Pos.compare; simpl; auto. }
@@ -1144,8 +1147,8 @@ Proof.
       rewrite Hpow in H2.
       inversion H2; subst.
       revert H3 H4 H0.
-      destruct (Dred d2); simpl.
-      destruct (Dred d1); simpl.            
+      destruct (DOred d2); simpl.
+      destruct (DOred d1); simpl.            
       intros <- Hx Hodd.
       simpl in H.
       subst den1.
@@ -1154,12 +1157,12 @@ Proof.
       f_equal.
       apply pow_pos_2inj; auto. }
 
-    (* den (Dred d1) = 1 *)
+    (* den (DOred d1) = 1 *)
     rewrite H, H0.
     assert (Hpow : pow_pos 2 1 = 2%positive) by auto.
     rewrite Hpow.
-    destruct (Dred d1) as [num1 den1].
-    destruct (Dred d2) as [num2 den2].
+    destruct (DOred d1) as [num1 den1].
+    destruct (DOred d2) as [num2 den2].
     destruct (Zeven_odd_dec num1); destruct (Zeven_odd_dec num2).
     { rewrite !Qred_even_2; auto.
       simpl.
@@ -1181,6 +1184,1699 @@ Proof.
     simpl in H0, H; subst; auto. 
 Qed.
 
+Lemma DOred'_idem x y :
+  DOred' (fst (DOred' x y)) (snd (DOred' x y)) = DOred' x y.
+Proof.
+  destruct (DOred'P x y).
+  { revert H.
+    generalize (DOred' x y).
+    destruct p.
+    simpl; intros H.
+    unfold DOred'.
+    destruct n; auto.
+    destruct (Zeven_dec z); auto.
+    apply Zodd_not_Zeven in H; contradiction. }
+  destruct (DOred' x y); simpl in H|-*; rewrite H; auto.
+Qed.  
+    
+Lemma DOred_idem d : DOred (DOred d) = DOred d.
+Proof.
+  unfold DOred.
+  destruct (DOred' _ _) eqn:H.
+  unfold DO_of_DOred' in H.
+  assert (H2: (num
+           (let (x, y) :=
+              DOred' (num d) (Init.Nat.pred (Pos.to_nat (den d))) in
+            {| num := x; den := Pos.of_nat (S y) |})) =
+              fst (DOred' (num d) (Init.Nat.pred (Pos.to_nat (den d))))).
+  { destruct (DOred' _ _).
+    destruct (DOred' _ _); auto. }
+  rewrite H2 in H.
+  assert (H3: (Init.Nat.pred
+           (Pos.to_nat
+              (den
+                 (let (x, y) :=
+                    DOred' (num d) (Init.Nat.pred (Pos.to_nat (den d))) in
+                  {| num := x; den := Pos.of_nat (S y) |})))) =
+              snd (DOred' (num d) (Init.Nat.pred (Pos.to_nat (den d))))).
+  { destruct (DOred' _ _).
+    destruct (DOred' _ _); auto.
+    simpl.
+    destruct n1; auto.
+    rewrite Pos2Nat.inj_succ.
+    unfold Init.Nat.pred.
+    rewrite Nat2Pos.id; auto. }
+  rewrite H3 in H.
+  rewrite DOred'_idem in H.
+  rewrite H; auto.
+Qed.  
+
+
+Module DORed.
+  Record t : Type :=
+    mk { d :> DO;
+         pf : DOred d = d }.
+
+  Definition build (d : DO) : t := @mk (DOred d) (DOred_idem d).
+  
+  Program Definition t0 := mk 0 _.
+
+  Program Definition t1 := mk 1 _.
+  
+  Program Definition add (d1 d2 : t) : t :=
+    mk (DOred (DOadd d1.(d) d2.(d))) _.
+  Next Obligation.
+    apply DOred_complete; rewrite DOred_correct; apply Qeq_refl.
+  Qed.
+
+  Program Definition sub (d1 d2 : t) : t :=
+    mk (DOred (DOsub d1.(d) d2.(d))) _.
+  Next Obligation.
+    apply DOred_complete; rewrite DOred_correct; apply Qeq_refl.    
+  Qed.
+
+  Program Definition mult (d1 d2 : t) : t := 
+    mk (DOred (DOmult d1.(d) d2.(d))) _.
+  Next Obligation.
+    apply DOred_complete; rewrite DOred_correct; apply Qeq_refl.        
+  Qed.
+
+  Program Definition opp (dx : t) : t := 
+    mk (DOred (DOopp dx.(d))) _.
+  Next Obligation.
+    apply DOred_complete; rewrite DOred_correct; apply Qeq_refl.            
+  Qed.
+
+  Program Definition lub (dx : t) : t := 
+    mk (DOred (DOlub dx.(d))) _.
+  Next Obligation.
+    apply DOred_complete; rewrite DOred_correct; apply Qeq_refl.            
+  Qed.
+
+  Program Definition of_nat (n : nat) : t :=
+    mk (Dmake (2 * (Z.of_nat n)) 1) _.
+
+  Program Fixpoint natPow (d : t) (n : nat) : t :=
+    match n with
+    | O => t1
+    | S n' => mult d (natPow d n')
+    end.
+
+
+  Lemma DOred_eq (d1 d2 : t) : (DO_to_Q (d d1) == DO_to_Q (d d2))%Q -> d1 = d2.
+  Proof.
+    destruct d1 as [x1 pf1]; destruct d2 as [x2 pf2]; simpl.
+    intros H; assert (H2: x1 = x2).
+    { rewrite <-pf1, <-pf2; apply DOred_complete; auto. }
+    generalize pf1 pf2; rewrite H2; intros; f_equal; apply proof_irrelevance.
+  Qed.    
+  
+  Lemma addP d1 d2 :
+    DO_to_Q (d (add d1 d2)) == (DO_to_Q (d d1) + DO_to_Q (d d2))%Q.
+  Proof.
+    unfold add; simpl.
+    rewrite DOred_correct.
+    rewrite DOadd_ok; apply Qeq_refl.
+  Qed.    
+  
+  Lemma addC d1 d2 : add d1 d2 = add d2 d1.
+  Proof.
+    apply DOred_eq; simpl; rewrite 2!DOred_correct, 2!DOadd_ok.
+    apply Qplus_comm.
+  Qed.
+
+  Lemma addA d1 d2 d3 : add d1 (add d2 d3) = add (add d1 d2) d3.
+  Proof.
+    apply DOred_eq; simpl.
+    rewrite !DOred_correct, !DOadd_ok, !DOred_correct, !DOadd_ok.
+    apply Qplus_assoc.
+  Qed.    
+
+  Lemma add0l d : add t0 d = d.
+  Proof.
+    unfold t0; apply DOred_eq; unfold add.
+    generalize (add_obligation_1 {|d:=0;pf:=t0_obligation_1|} d).
+    unfold DORed.d; rewrite DOred_correct; intros e.
+    rewrite DOadd_ok, DO_to_Q0, Qplus_0_l; apply Qeq_refl.
+  Qed.    
+        
+  Lemma subP d1 d2 :
+    DO_to_Q (d (sub d1 d2)) == (DO_to_Q (d d1) - DO_to_Q (d d2))%Q.
+  Proof.
+    unfold sub; simpl.
+    rewrite DOred_correct.
+    rewrite DOsub_ok; apply Qeq_refl.
+  Qed.
+
+  Lemma multP d1 d2 :
+    DO_to_Q (d (mult d1 d2)) == (DO_to_Q (d d1) * DO_to_Q (d d2))%Q.
+  Proof.
+    unfold mult; simpl.
+    rewrite DOred_correct.
+    rewrite DOmult_ok; apply Qeq_refl.
+  Qed.    
+  
+  Lemma multC d1 d2 : mult d1 d2 = mult d2 d1.
+  Proof.
+    apply DOred_eq; simpl; rewrite 2!DOred_correct, 2!DOmult_ok.
+    apply Qmult_comm.
+  Qed.
+
+  Lemma multA d1 d2 d3 : mult d1 (mult d2 d3) = mult (mult d1 d2) d3.
+  Proof.
+    apply DOred_eq; simpl.
+    rewrite !DOred_correct, !DOmult_ok, !DOred_correct, !DOmult_ok.
+    apply Qmult_assoc.
+  Qed.    
+
+  Lemma oppP dx :
+    DO_to_Q (d (opp dx)) == (- DO_to_Q (d dx))%Q.
+  Proof.
+    unfold opp; simpl.
+    rewrite DOred_correct.
+    rewrite DOopp_ok; apply Qeq_refl.
+  Qed.
+
+  Lemma lubP (dx : t) :
+    0 <= dx -> 0 <= dx * lub dx /\ dx * lub dx <= 1.
+  Proof.
+    intros H.
+    generalize (DOlub_ok dx H); intros [H1 H2].
+    unfold lub, DOle in *; simpl.
+    rewrite DOmult_ok in *.
+    rewrite DOred_correct in *; auto.
+  Qed.
+
+  Lemma addOppL: forall d1, add (opp d1) d1 = t0.
+  Proof.
+    intros.
+    apply DOred_eq.
+    rewrite addP.    
+    simpl.
+    rewrite DO_to_Q0.
+    rewrite DOred_correct.
+    rewrite DOopp_ok.
+    rewrite Qplus_comm.
+    apply Qplus_opp_r.
+  Qed.
+    
+  Lemma addNegDistr: forall d1 d2, opp (add d1 d2) = add (opp d1) (opp d2).
+  Proof.
+    intros.
+    apply DOred_eq.
+    rewrite addP.
+    repeat (rewrite oppP).
+    rewrite addP.
+    apply Qopp_plus.
+  Qed.
+
+
+  Lemma mult1L: forall d1, mult t1 d1 = d1.
+  Proof.
+    intros.
+    apply DOred_eq.
+    rewrite multP.
+    rewrite DO_to_Q1.
+    apply Qmult_1_l.
+  Qed.
+
+  Lemma multDistrL: forall d1 d2 d3, mult d1 (add d2 d3) = add (mult d1 d2) (mult d1 d3).
+  Proof.
+    intros.
+    apply DOred_eq.
+    rewrite multP.
+    repeat (rewrite addP).
+    repeat (rewrite multP).
+    apply Qmult_plus_distr_r.
+  Qed.
+
+  Lemma mult0L: forall d1, mult t0 d1 = t0.
+  Proof.
+    intros.
+    apply DOred_eq.
+    rewrite multP.
+    rewrite DO_to_Q0.
+    apply Qmult_0_l.
+  Qed.
+
+
+  Lemma le_lt_or_eq: forall (t1 t2 : t), DOlt t1 t2 \/ t1 = t2 <-> DOle t1 t2.
+  Proof.
+    intros.
+    split.
+    {
+      unfold DOle,DOlt in *.
+      intros.
+      apply Qle_lteq.
+      destruct H; auto.
+      rewrite H.
+      right.  
+      apply Qeq_refl.
+    }
+    intros.
+    unfold DOle in H.
+    rewrite Qle_lteq in H.
+    destruct H; auto.
+    right.
+    apply DOred_eq; auto.
+  Qed.
+
+
+  Lemma plus_le_compat: forall (t1 t2 t3 t4 : t) , DOle t1 t2 -> DOle t3  t4 -> DOle (add t1 t3) (add t2 t4).
+  Proof.
+    intros.
+    unfold DOle in *.
+    repeat (rewrite addP).
+    apply Qplus_le_compat; auto.
+  Qed.
+
+
+  Lemma plus_lt_le_compat: forall (t1 t2 t3 t4 : t), DOlt t1 t2 ->  DOle t3 t4 -> DOlt (add t1 t3 ) (add t2 t4).
+  Proof.
+    intros.
+    unfold DOle,DOlt in *.
+    repeat (rewrite addP).
+    apply Qplus_lt_le_compat; auto.
+  Qed.
+    
+  Lemma plus_lt_compat_l : forall t t1 t2 : t, DOlt t1 t2 -> DOlt (add t t1) (add t t2).
+  Proof.
+    intros.
+    rewrite addC.
+    rewrite addC with t2 t4.
+    apply plus_lt_le_compat; auto.
+    unfold DOle.
+    apply Qle_refl.
+  Qed.
+
+
+  
+  
+  Lemma lt_t0_t1: t0 < t1.
+  Proof.
+    unfold DOlt.
+    rewrite DO_to_Q0.
+    rewrite DO_to_Q1.
+    unfold Qlt, Z.lt.
+    auto. 
+  Qed.
+
+  Lemma mult_le_compat: 
+        forall (r1 r2 r3 r4 : t) , DOle t0 r1 -> DOle t0 r3 -> DOle r1  r2 -> DOle r3 r4 ->
+           DOle (mult r1 r3) (mult r2   r4).
+  Proof.
+    intros.
+    unfold DOle in *.
+    repeat (rewrite multP).
+    remember (DO_to_Q r1) as q1.
+    remember (DO_to_Q r2) as q2.
+    remember (DO_to_Q r3) as q3.
+    remember (DO_to_Q r4) as q4.
+    rewrite DO_to_Q0 in *.
+    unfold Qle in *.
+    simpl in *.
+    rewrite Z.mul_1_r in *.
+    repeat (rewrite Pos2Z.inj_mul).
+    rewrite Z.mul_shuffle0.
+    rewrite Z.mul_assoc.
+    rewrite <- Z.mul_assoc.
+    rewrite Z.mul_shuffle0 with (Qnum q2) (Qnum q4) (QDen q1 * QDen q3)%Z.
+    rewrite Z.mul_assoc with (Qnum q2) (QDen q1) (QDen q3).
+    rewrite <- Z.mul_assoc with (Qnum q2 * QDen q1)%Z (QDen q3) (Qnum q4).
+    apply Zmult_le_compat; auto;
+    try( apply Zmult_le_0_compat; auto ; apply Pos2Z.pos_is_nonneg).
+    rewrite Z.mul_comm.
+    rewrite Z.mul_comm with (QDen q3) (Qnum q4).
+    auto.
+  Qed.
+
+   Lemma mult_lt_compat:
+        forall (r1 r2 r3 r4 : t), DOle t0 r1 -> DOle t0 r3 -> DOlt r1 r2 -> DOlt r3 r4 ->
+           DOlt (mult r1 r3) (mult r2 r4).
+  Proof.
+    intros.
+    unfold DOle,DOlt in *.
+    repeat (rewrite multP).
+    remember (DO_to_Q r1) as q1.
+    remember (DO_to_Q r2) as q2.
+    remember (DO_to_Q r3) as q3.
+    remember (DO_to_Q r4) as q4.
+    rewrite DO_to_Q0 in *.
+    unfold Qlt in *.
+    simpl.
+    repeat (rewrite Pos2Z.inj_mul).
+    rewrite Z.mul_shuffle0.
+    rewrite Z.mul_assoc.
+    rewrite <- Z.mul_assoc.
+    rewrite Z.mul_shuffle0 with (Qnum q2) (Qnum q4) (QDen q1 * QDen q3)%Z.
+    rewrite Z.mul_assoc with (Qnum q2) (QDen q1) (QDen q3).
+    rewrite <- Z.mul_assoc with (Qnum q2 * QDen q1)%Z (QDen q3) (Qnum q4).
+    apply Zmult_lt_compat.
+    {
+      split; auto.
+      apply Zmult_le_0_compat.
+      {
+        unfold Qle in H.
+        simpl in *.
+        rewrite Z.mul_1_r in H.
+        auto.
+      }
+      apply Pos2Z.pos_is_nonneg.
+    }
+    split.
+    {
+      apply Zmult_le_0_compat.
+      { apply Pos2Z.pos_is_nonneg. }
+      unfold Qle in H0.
+      simpl in *.
+      rewrite Z.mul_1_r in H0.
+      auto.
+    }
+    rewrite Z.mul_comm.
+    rewrite Z.mul_comm with (QDen q3) (Qnum q4).
+    auto.
+  Qed.
+    
+  Lemma mult_lt_compat_l : forall r r1 r2 : t, DOlt t0 r -> (DOlt r1 r2 <-> DOlt (mult r r1) (mult r r2)).
+  Proof.
+    unfold DOlt.
+    intros.
+    split; intros.
+    {
+      repeat rewrite multP.
+      unfold Qlt in *.
+      simpl in *.
+      apply Z.mul_pos_cancel_r in H.
+      2 :{  unfold Z.lt. auto. } simpl.
+      repeat rewrite <- Z.mul_assoc.
+      apply Zmult_lt_compat_l; auto.
+      repeat rewrite Pos2Z.inj_mul.
+      repeat rewrite Z.mul_assoc.
+      rewrite Z.mul_comm with (num r1) (Z.pos (shift_pos (den r) 1)).
+      rewrite Z.mul_comm with (num r2) (Z.pos (shift_pos (den r) 1)).
+      repeat rewrite <- Z.mul_assoc.
+      apply Zmult_lt_compat_l; auto.
+      apply Pos2Z.pos_is_pos.
+    }
+    repeat rewrite multP in H0.
+    unfold Qlt in *.
+    simpl in *.
+    apply Z.mul_pos_cancel_r in H.
+    2 :{  unfold Z.lt. auto. }
+    repeat rewrite <- Z.mul_assoc in H0.
+    rewrite Z.mul_comm in H0.
+    rewrite Z.mul_comm with (num r) (num r2 * Z.pos (shift_pos (den r) 1 * shift_pos (den r1) 1))%Z in H0.
+    apply Zmult_gt_0_lt_reg_r in H0.
+    2: { apply Z.lt_gt. auto. }
+    rewrite Z.mul_comm in H0.
+    rewrite Z.mul_comm with (num r2) ( Z.pos (shift_pos (den r) 1 * shift_pos (den r1) 1 )) in H0.
+    repeat rewrite Pos2Z.inj_mul in H0.
+    repeat rewrite <- Z.mul_assoc in H0.
+    rewrite Z.mul_comm in H0.
+    rewrite Z.mul_comm with (Z.pos (shift_pos (den r) 1)) ((Z.pos (shift_pos (den r1) 1) * num r2))%Z in H0.
+    apply Zmult_gt_0_lt_reg_r in H0.
+    { rewrite Z.mul_comm. rewrite -> Z.mul_comm with (num r2) (Z.pos (shift_pos (den r1) 1)). auto. }
+    apply Zgt_pos_0.
+  Qed.
+
+
+  Lemma of_natO: of_nat O = t0.
+  Proof. auto. Qed.
+
+  Lemma of_natP: forall n : nat,  DO_to_Q (of_nat n) = (Qmake (2 * (Z.of_nat n)) 2).
+  Proof. auto. Qed.
+
+  Lemma of_nat_succ_l: forall n : nat, of_nat (S n) = add t1 (of_nat (n)). 
+  Proof.
+    intros.
+    apply DOred_eq.
+    rewrite addP.
+    rewrite DO_to_Q1.
+    repeat (rewrite of_natP).
+    simpl.
+    unfold Qeq.
+    unfold Z.of_nat.
+    simpl.
+    destruct n.
+    { rewrite Z.mul_0_l. auto. }
+    simpl.
+    rewrite Pos.mul_1_r.
+    rewrite Pos2Z.pos_xO.
+    rewrite Pos2Z.pos_xO with ((match Pos.of_succ_nat n with
+       | q~1 => (Pos.succ q)~0
+       | q~0 => q~1
+       | 1 => 2
+       end * 2))%positive.
+    simpl.
+    destruct (Pos.of_succ_nat n); auto.
+  Qed.
+
+
+  (**Trivial, but needed for numerics**)
+  Lemma natPowO: forall (d : t), natPow d O = t1.
+  Proof. auto. Qed.
+
+  Lemma natPowRec: forall (d : t) (n : nat), natPow d (S n) = mult d (natPow d n).
+  Proof. auto. Qed.
+
+  Lemma lt_le_dec: forall d1 d2, {d1 < d2} + {d2 <= d1}.
+  Proof. intros. unfold DOle. unfold DOlt. apply Qlt_le_dec. Qed.
+
+
+  Lemma le_lt_dec: forall d1 d2,  {d1 <= d2} + {d2 < d1}.
+  Proof.
+    intros.
+    unfold DOle.
+    unfold DOlt.
+    destruct Qlt_le_dec with (DO_to_Q d2) (DO_to_Q d1); auto.
+  Qed.
+
+
+  Lemma eq_dec: forall d1 d2 : t, {d1 = d2} + {d1 <> d2}.
+  Proof.
+    intros.
+    destruct DOeq_dec with (d d1) (d d2).
+    { 
+      left. 
+      destruct d1,d2.
+      simpl in e.
+      generalize pf0 pf1.
+      rewrite e.
+      intros.
+      f_equal.
+      apply proof_irrelevance.
+    }
+    right.
+    destruct d1,d2.
+    simpl in n.
+    unfold not in *.
+    intros.
+    apply n.
+    inversion H.
+    auto.
+  Qed.
+
+  Lemma le_not_lt: forall d1 d2 : t, (d1 <= d2)-> ~ (d2 < d1).
+  Proof.
+    intros.
+    unfold DOle in H.
+    unfold DOlt.
+    apply Qle_not_lt.
+    auto.
+  Qed.
+
+  Lemma lt_asym: forall d1 d2 : t, d1 < d2 -> ~ d2 < d1.
+  Proof.
+    intros.
+    unfold DOlt in *.
+    apply Qle_not_lt.
+    apply Qlt_le_weak.
+    auto.
+  Qed.
+
+  Lemma lt_trans: forall d1 d2 d3 : t, d1 < d2 -> d2 < d3 -> d1 < d3.
+  Proof.
+    unfold DOlt.
+    intros.
+    apply Qlt_trans with (DO_to_Q d2); auto.
+  Qed.
+    
+
+  Lemma total_order_T : forall d1 d2 : t, {DOlt d1 d2} + {d1 = d2} + {DOlt d2 d1}.
+  Proof.
+    intros.
+    unfold DOlt.
+    destruct Q_dec with (DO_to_Q d1) (DO_to_Q d2).
+      destruct s; auto.
+    left.
+    right.
+    apply DOred_eq.
+    auto.
+  Qed.
+
+  (* TODO: More lemmas here! *)
+End DORed.      
+
+Coercion DORed.d : DORed.t >-> DO.
+
+Delimit Scope DORed_scope with DORed.
+Bind Scope DORed_scope with DORed.t.
+
+(* notations repeated from DO_scope *)
+Infix "<" := DOlt : DORed_scope.
+Infix "<=" := DOle : DORed_scope.
+Notation "x > y" := (DOlt y x)(only parsing) : DORed_scope.
+Notation "x >= y" := (DOle y x)(only parsing) : DORed_scope.
+Notation "x <= y <= z" := (x<=y/\y<=z) : DORed_scope.
+(* END *)
+
+Infix "+" := DORed.add : DORed_scope.
+Notation "- x" := (DORed.opp x) : DORed_scope.
+Infix "-" := DORed.sub : DORed_scope.
+Infix "*" := DORed.mult : DORed_scope.
+
+Notation "'0'" := DORed.t0 : DORed_scope.
+Notation "'1'" := DORed.t1 : DORed_scope.
+
+(* A generalization of Dyadic rationals that allows conversion to Q *)
+Inductive D : Set :=
+| DD : DO -> D
+| DQ : Q -> D.
+
+(* Coercion DD : DO >-> D. *)
+
+Definition D_to_Q (d : D) :=
+  match d with
+  | DD d => 
+    DO_to_Q d
+  | DQ q => q
+  end.
+
+Definition D0 : D := (DD (Dmake 0 1)).
+Definition D1 : D := (DD (Dmake 2 1)).
+
+Lemma D_to_Q0' : D_to_Q D0 = 0 # 2.
+Proof. auto. Qed.
+
+Lemma D_to_Q0 : D_to_Q D0 == 0.
+Proof. rewrite D_to_Q0'; unfold Qeq; simpl; auto. Qed.
+
+Lemma D_to_Q1' : D_to_Q D1 = 2 # 2.
+Proof. auto. Qed.
+
+Lemma D_to_Q1 : D_to_Q D1 == 1.
+Proof. rewrite D_to_Q1'; unfold Qeq; simpl; auto. Qed.
+
+Definition Dadd (d1 d2 : D) : D :=
+  match d1,d2 with
+  | DD d1, DD d2 => 
+    DD (DOadd d1 d2)
+  | _, _ => DQ (D_to_Q d1 + D_to_Q d2)
+  end.
+
+Lemma Dadd_ok d1 d2 :
+  D_to_Q (Dadd d1 d2) == D_to_Q d1 + D_to_Q d2.
+Proof.
+  destruct d1, d2.
+  {
+    simpl.
+    apply DOadd_ok.
+  }
+  all: (unfold Dadd;
+        unfold D_to_Q at 1;
+           reflexivity).
+Qed.
+
+Definition Dmult (d1 d2 : D) : D :=
+  match d1,d2 with
+  | DD d1, DD d2 => 
+    DD (DOmult d1 d2)
+  | _, _ => DQ (D_to_Q d1 * D_to_Q d2)
+  end.
+
+Close Scope DO_scope.
+Lemma Dmult_ok d1 d2 :
+  D_to_Q (Dmult d1 d2) = D_to_Q d1 * D_to_Q d2.
+Proof.
+  destruct d1, d2.
+  {
+    apply DOmult_ok.
+  }
+  all: unfold Dmult; unfold D_to_Q at 1; reflexivity.
+Qed.
+
+Definition Dopp (d : D) : D :=
+  match d with
+  | DD d => 
+    DD (DOopp d)
+  | _ => DQ (Qopp (D_to_Q d))
+  end.
+
+Hint Immediate DOopp_ok.
+
+Lemma Dopp_ok d : D_to_Q (Dopp d) = Qopp (D_to_Q d).
+Proof.
+  destruct d; simpl; auto.
+Qed.
+
+Definition Dsub (d1 d2 : D) : D := Dadd d1 (Dopp d2).
+
+Lemma Dsub_ok d1 d2 :
+  D_to_Q (Dsub d1 d2) == D_to_Q d1 - D_to_Q d2.
+Proof.
+  unfold Dsub.
+  rewrite Dadd_ok.
+  rewrite Dopp_ok.
+  unfold Qminus; apply Qeq_refl.
+Qed.
+
+Definition Dle (d1 d2 : D) : Prop :=
+  Qle (D_to_Q d1) (D_to_Q d2).  
+
+(*TODO: There's probably a more efficient way to implement the following:*)
+Definition Dle_bool (d1 d2 : D) : bool :=
+  Qle_bool (D_to_Q d1) (D_to_Q d2).
+
+Lemma Dle_bool_iff d1 d2 : (Dle_bool d1 d2 = true) <-> Dle d1 d2.
+Proof.
+  unfold Dle_bool, Dle.
+  apply Qle_bool_iff.
+Qed.
+
+Definition Dlt (d1 d2 : D) : Prop :=
+  Qlt (D_to_Q d1) (D_to_Q d2).  
+
+Definition Dlt_bool (d1 d2 : D) : bool :=
+  match D_to_Q d1 ?= D_to_Q d2 with
+  | Lt => true
+  | _ => false
+  end.
+
+Lemma Dlt_bool_iff d1 d2 : (Dlt_bool d1 d2 = true) <-> Dlt d1 d2.
+Proof.
+  unfold Dlt_bool; split.
+  destruct (Qcompare_spec (D_to_Q d1) (D_to_Q d2));
+    try solve[inversion 1|auto].
+  unfold Dlt; rewrite Qlt_alt; intros ->; auto.
+Qed.  
+
+Lemma Deq_dec (d1 d2 : D) : {d1=d2} + {d1<>d2}.
+Proof.
+  destruct d1, d2.
+  {
+    destruct (DOeq_dec d d0) as [H1 | H1]; [left; f_equal; auto
+                                           | right; intros Hnot; inversion Hnot; eauto].
+  }
+  {
+    right.
+    inversion 1.
+  }
+  {
+    right; inversion 1.
+  }
+  {
+    destruct q,q0.
+    destruct (Z.eq_dec Qnum Qnum0).
+    { destruct (positive_eq_dec Qden Qden0).
+      left; subst; f_equal.
+      right; inversion 1; subst; apply n; auto. }
+    right; inversion 1; subst; auto.
+  }
+Defined.
+
+(*(* MICROBENCHMARK *)
+Fixpoint f (n : nat) (d : D) : D :=
+  match n with
+  | O => d
+  | S n' => Dadd d (f n' d)
+  end.
+
+Time Compute f 5000 (Dmake 3 2).
+(*Finished transaction in 0.012 secs (0.012u,0.s) (successful)*)
+
+Fixpoint g (n : nat) (q : Q) : Q :=
+  match n with
+  | O => q
+  | S n' => Qplus q (g n' q)
+  end.
+
+Time Compute g 5000 (Qmake 3 2).
+(*Finished transaction in 0.847 secs (0.848u,0.s) (successful)*)
+(*Speedup on this microbenchmark: 70x*)*)
+
+Delimit Scope D_scope with D.
+Bind Scope D_scope with D.
+Arguments Dmake _%Z _%positive.
+
+Infix "<" := Dlt : D_scope.
+Infix "<=" := Dle : D_scope.
+Notation "x > y" := (Dlt y x)(only parsing) : D_scope.
+Notation "x >= y" := (Dle y x)(only parsing) : D_scope.
+Notation "x <= y <= z" := (x<=y/\y<=z) : D_scope.
+
+Infix "+" := Dadd : D_scope.
+Notation "- x" := (Dopp x) : D_scope.
+Infix "-" := Dsub : D_scope.
+Infix "*" := Dmult : D_scope.
+
+Notation "'0'" := D0 : D_scope.
+Notation "'1'" := D1 : D_scope.
+
+(** Dmax *)
+
+Definition Dmax (d1 d2 : D) : D :=
+  if Dlt_bool d1 d2 then d2 else d1.
+
+Definition Dlub (max : D) : D :=
+  match max with
+  | DD max => 
+    DD (DOlub max)
+  | DQ q => DQ (Qinv q)
+  end.
+
+Eval compute in (D_to_Q (Dlub ((DD (Dmake 2 2))))).
+
+Eval compute in (Zsize 2).
+
+Local Open Scope D_scope.
+
+Lemma Dlub_mult_le1 d : d * Dlub d <= 1.
+Proof.
+  destruct d.
+  {
+    simpl.
+    pose proof (DOlub_mult_le1 d).
+    unfold Dle.
+    unfold DOle in H.
+    auto.
+  }
+  {
+    simpl.
+    destruct (Qeq_dec q 0).
+    {
+      unfold Dle.
+      simpl.
+      rewrite q0.
+      unfold Qinv.
+      field_simplify.
+      unfold Qle.
+      simpl.
+      omega.
+    }
+    {
+      unfold Dle.
+      simpl.
+      apply Qmult_inv_r in n.
+      rewrite n.
+      unfold Qle.
+      simpl.
+      omega.
+    }
+  }
+Qed.
+
+Lemma Dlub_nonneg (d : D) :
+  0 <= d -> 0 <= Dlub d.
+Proof.
+  destruct d; simpl; intros H.
+  {
+    pose proof (DOlub_nonneg d).
+    unfold Dle, DOle in *; auto.
+  }
+  {
+    unfold Dle in *.
+    simpl in *.
+    assert ((0 # 2) == (0)).
+    {
+      clear.
+      field.
+    }
+    rewrite H0.
+    rewrite H0 in H.
+    apply Qinv_le_0_compat; auto.
+  }
+Qed.
+
+Lemma Dlub_ok (d : D) :
+  0 <= d -> 
+  Dle 0 (d * Dlub d) /\ Dle (d * Dlub d) 1.
+Proof.
+  intros H.
+  split.
+  { unfold Dle; rewrite Dmult_ok.
+    rewrite D_to_Q0; apply Qmult_le_0_compat.
+    { rewrite <-D_to_Q0; auto. }
+    rewrite <-D_to_Q0; apply Dlub_nonneg; auto. }
+  apply Dlub_mult_le1.
+Qed.
+
+Fixpoint Dred' (n : Z) (d : nat) : (Z * nat) :=
+  match d with
+  | O => (n,d)
+  | S d' => if Zeven_dec n then Dred' (Z.div2 n) d'
+            else (n,d)
+  end.
+
+Lemma Dred'P n d : Zodd (fst (Dred' n d)) \/ (snd (Dred' n d) = 0%nat).
+Proof.
+  revert n; induction d; auto.
+  intros n; simpl; destruct (Zeven_dec n).
+  { apply (IHd (Z.div2 n)). }
+  left; simpl.
+  destruct (Zodd_dec n); auto.
+  destruct (Zeven_odd_dec n); auto.
+  elimtype False; apply n0; auto.
+Qed.  
+
+Definition D_of_Dred' (p : Z*nat) : D :=
+  let (x,y) := p in DD (Dmake x (Pos.of_nat (S y))).
+
+Eval compute in (log_inf 10).
+
+
+Fixpoint Is_Pos_Power2 (p : positive) : option positive :=
+  match p with
+  | xH => None 
+  | xO xH => Some xH
+  | xO p' => match Is_Pos_Power2 p' with
+             | None => None
+             | Some pow2 => Some (Pos.succ pow2)
+             end
+  | xI p' => None
+  end.
+
+Definition Try_Q_to_D (q : Q) : option DO :=
+  match Is_Pos_Power2 (Qden q) with
+  | None =>
+    if
+      ((Qden q) =? xH)%positive 
+    then
+      Some (Dmake (2 * (Qnum q))%Z 1)
+    else
+      None
+  | Some pow2 =>
+    Some (Dmake (Qnum q) pow2)
+  end.
+
+Definition Dred (d : D) : D :=
+  match d with
+  | DD d => 
+    DD (DOred d)
+  | DQ q =>
+    let qr := Qred q in
+    match Try_Q_to_D qr with
+    | None => DQ qr
+    | Some d => DD d
+    end
+  end.
+
+Definition Dnum (d : D) : Z :=
+  match d with
+  | DD d => num d
+  | DQ q => Qnum q
+  end.
+
+Definition Dden (d : D) : positive :=
+  match d with
+  | DD d => den d
+  | DQ q => Qden q
+  end.
+
+Lemma DredP d : Zodd (Dnum (Dred d)) \/ (Dden (Dred d) = 1%positive) \/ (exists q, d = DQ q).
+Proof.
+  destruct d.
+  {
+    destruct (DOredP d); auto.
+  }
+  {
+    right.
+    right.
+    eauto.
+  }
+Qed.
+
+Lemma D_of_Dred'_correct x y :
+  D_to_Q (D_of_Dred' (Dred' x y)) == D_to_Q (D_of_Dred' (x,y)).
+Proof.
+  revert x; induction y.
+  { intros x; apply Qeq_refl. }
+  intros x.
+  unfold Dred'; fold Dred'.
+  destruct (Zeven_dec x) as [pf|pf].
+  { rewrite IHy.
+    unfold D_to_Q; simpl.
+    unfold Qeq; simpl.
+    pattern x at 2.
+    rewrite (Zeven_div2 x pf).
+    rewrite 2!shift_pos_correct, 2!Zmult_1_r.
+    rewrite 2!Zpower_pos_nat.
+    rewrite Pos2Nat.inj_succ.
+    rewrite Zpower_nat_succ_r.
+    rewrite Zmult_assoc.
+    pattern (Z.div2 x * 2)%Z; rewrite Zmult_comm; auto. }
+  apply Qeq_refl.
+Qed.  
+
+Lemma Shift_Pos_Not_xI : forall p acc, ~exists res, shift_pos p acc = xI res.
+Proof.
+  induction p; intros. 
+  +
+    intros Hnot; eauto.
+    destruct Hnot.
+    eapply IHp; eauto.
+    eexists; eauto.
+    unfold shift_pos in H.
+    simpl in H.
+    inversion H.
+  +
+    eapply IHp.
+  +
+    intros Hnot.
+    destruct Hnot.
+    unfold shift_pos in H.
+    simpl in H.
+    inversion H.
+    Unshelve.
+    eauto.
+    exact xH.
+Qed.
+
+
+Lemma Is_Pos_Pow_Shift_inv': forall n, Is_Pos_Power2 (shift_nat (S n) 1) = Some (Pos.of_nat (S n)).
+Proof.
+  induction n.
+  simpl.
+  auto.
+  {
+    simpl in *.
+    rewrite IHn.
+    auto.
+  }
+Qed.
+  
+Lemma Is_Pow_Pow_Shift_inv : forall p, Is_Pos_Power2 (shift_pos p 1) = Some p.
+Proof.
+  intros.
+  rewrite shift_pos_nat.
+  destruct (Pos2Nat.is_succ p).
+  rewrite H.
+  rewrite Is_Pos_Pow_Shift_inv'.
+  f_equal.
+  rewrite <- H.
+  apply Pos2Nat.id.
+Qed.
+
+Lemma Is_Pow_eq_spec : forall p1 p2, 
+    Is_Pos_Power2 p1~0 = Is_Pos_Power2 p2~0 ->
+    Is_Pos_Power2 p1 = Is_Pos_Power2 p2.
+Proof.
+  intros.
+  simpl in *.
+  destruct p1, p2; auto.
+  destruct (Is_Pos_Power2 p1~1) eqn:H1; auto; try inversion H1.
+  {
+    destruct (Is_Pos_Power2 p2~0); auto.
+    inversion H.
+  }
+  {
+    destruct (Is_Pos_Power2 p1~0) eqn:H1; auto.
+    destruct (Is_Pos_Power2 p2~1) eqn:H2; [inversion H2 | inversion H].
+  }
+  {
+    destruct (Is_Pos_Power2 p1~0) eqn:H1; auto.
+    {
+      destruct (Is_Pos_Power2 p2~0); [ inversion H; f_equal; lia | inversion H].
+    }
+    destruct (Is_Pos_Power2 p2~0); [inversion H | auto].
+  }
+  {
+    destruct (Is_Pos_Power2 p1~0) eqn:H1; auto.
+    inversion H.
+    exfalso.
+    lia.
+  }
+  {
+    destruct (Is_Pos_Power2 p2~0) eqn:H1; auto.
+    inversion H.
+    exfalso.
+    lia.
+  }
+Qed.
+
+Lemma Is_Pow_None_spec : forall p1,
+    Is_Pos_Power2 p1 = None ->
+    Is_Pos_Power2 p1~0 = None \/ p1 = xH.
+Proof.
+  intros.
+  induction p1; auto.
+  {
+    simpl in *.
+    destruct p1.
+    {
+      simpl in *; auto.
+    }
+    {
+      destruct (Is_Pos_Power2 p1~0) eqn:H1; auto.
+      inversion H.
+    }
+    {
+      inversion H.
+    }
+  }
+Qed.
+
+
+Lemma Is_Pow_eq : forall p1 p2,
+    Is_Pos_Power2 p1 = Is_Pos_Power2 p2 ->
+    p1 = p2 \/ Is_Pos_Power2 p1 = None.
+Proof.
+  induction p1,p2; auto.
+  intros.
+  pose proof H.
+  apply Is_Pow_eq_spec in H.
+  apply IHp1 in H.
+  destruct H; auto.
+  {
+    lia.
+  }
+  {
+    apply Is_Pow_None_spec in H.
+    destruct H; subst; auto.
+    simpl in *.
+    destruct p2; auto.
+    destruct (Is_Pos_Power2 p2~0) eqn:H1; auto.
+    {
+      exfalso.
+      inversion H0.
+      lia.
+    }
+  }
+Qed.
+
+Lemma Try_Q_to_D_num : forall q d, Try_Q_to_D (Qred q) = Some d ->
+       num d = Qnum (Qred q) \/ (num d = (2 * (Qnum (Qred q)))%Z) /\ den d = 1%positive.                    
+Proof.
+  intros q d H1.
+  unfold Try_Q_to_D in H1.
+  destruct (Is_Pos_Power2 (Qden (Qred q))).
+  {
+    inversion H1.
+    auto.
+  }
+  {
+    destruct ((Qden (Qred q) =? 1)%positive); auto.
+    {
+      right.
+      split.
+      +
+        inversion H1.
+        simpl in *.
+        destruct (Qnum (Qred q)); auto.
+      +
+        inversion H1; subst; auto.
+    }
+    {
+      inversion H1.
+    }
+  }
+Qed.
+
+Hint Immediate Qred_correct.
+Lemma Dred_correct d : D_to_Q (Dred d) == D_to_Q d.
+Proof.
+  destruct d.
+  {
+    simpl.
+    apply DOred_correct.
+  }
+  {
+    simpl.
+    assert (Qred q == q).
+    {
+      apply Qred_correct.
+    }
+    destruct (Try_Q_to_D (Qred q)) eqn:H1; auto.
+    {
+      simpl.
+      rewrite <-H.
+      unfold DO_to_Q.
+      assert (H0 : num d = Qnum (Qred q) \/ (num d = (2 * (Qnum (Qred q)))%Z) /\ den d = 1%positive)
+      by (apply Try_Q_to_D_num; auto).
+      {
+        unfold Try_Q_to_D in H1.
+        destruct (Is_Pos_Power2 (Qden (Qred q))) eqn:H2; auto.
+        {
+          assert (Is_Pos_Power2 (shift_pos (den d) 1) = Some (den d)) by
+              (apply Is_Pow_Pow_Shift_inv).
+          assert (shift_pos p 1 = (Qden (Qred q))).
+          {
+            inversion H1.
+            subst.
+            simpl in *.
+            pose proof H3. 
+            rewrite <- H2 in H3.
+            apply Is_Pow_eq in H3.
+            destruct H3; auto.
+            rewrite H4 in H3; inversion H3.
+          }
+          destruct H0.
+          {
+            inversion H1.
+            subst.
+            simpl in *.
+            unfold Qeq.
+            simpl.
+            rewrite H4.
+            auto.
+          }
+          {
+            destruct H0.
+            inversion H1; subst.
+            simpl in *.
+            unfold Qeq; subst.
+            simpl.
+            rewrite <- H4.
+            simpl.
+            auto.
+          }
+        }
+        {
+          destruct ((Qden (Qred q) =? 1)%positive) eqn:H3.
+          {
+            apply Pos.eqb_eq in H3.
+            destruct H0; simpl in *;
+            subst.
+            {
+              inversion H1; simpl in *; subst.
+              clear H1.
+              inversion H0.
+              destruct Qnum eqn:H5; try lia.
+              {
+
+                simpl in *.
+                unfold Qeq.
+                rewrite H5.
+                auto.
+              }
+            }
+            {
+              destruct H0.
+              destruct (Qnum (Qred q)) eqn:H5; subst.
+              {
+                unfold Qeq.
+                simpl in *.
+                rewrite H0.
+                rewrite H5.
+                lia.
+              }
+              {
+                unfold Qeq.
+                simpl.
+                rewrite H0.
+                rewrite H5.
+                simpl.
+                rewrite H4.
+                simpl in *.
+                rewrite H3.
+                lia.
+              }
+              {
+                unfold Qeq.
+                simpl.
+                rewrite H0.
+                rewrite H5.
+                simpl.
+                rewrite H4.
+                simpl in *.
+                rewrite H3.
+                lia.
+              }
+            }
+          }
+          {
+            inversion H1.
+          }
+        }
+      }
+    }
+  }
+Qed.
+
+Instance : Proper (Qeq ==> eq) Qred.
+Proof.
+  unfold Proper.
+  unfold respectful.
+  intros.
+  apply Qred_complete; auto.
+Qed.
+
+Lemma bin_ind : 
+  forall P : nat -> Prop,
+  P 0%nat ->
+  (forall n : nat, P n -> P (2* n)%nat) ->
+  (forall n : nat, P n -> P (S (2 * n))) -> forall n : nat, P n.
+Proof.
+  pose proof N.binary_ind.
+  intros.
+  specialize (H (fun n => P (N.to_nat n))).
+  Admitted.
+
+Open Scope nat_scope.
+Theorem strong_induction : forall P : nat -> Prop,
+  (forall m : nat, (forall n : nat, n < m -> P n) -> P m) ->
+  forall n : nat, P n.
+Proof.
+  induction n using (well_founded_ind (well_founded_ltof nat id)); auto.
+Qed.
+
+Lemma Is_Pow2_eq1' : 
+  forall p : positive, Is_Pos_Power2 (Pos.succ p) = Some (Pos.of_nat 1) -> 1%positive = p.
+Proof.
+    destruct p; intros; auto.
+    {
+      inversion H.
+      simpl in H.
+      destruct (Pos.eq_dec p 1); subst; auto.
+      {
+        simpl in *.
+        inversion H.
+      }
+      {
+        assert ((match Pos.succ p with
+                 | 1%positive => Some 1%positive
+                 | _ => match Is_Pos_Power2 (Pos.succ p) with
+                        | Some pow2 => Some (Pos.succ pow2)
+                        | None => None
+                        end
+                 end = Some 1%positive) =
+                (match Is_Pos_Power2 (Pos.succ p) with
+                 | Some pow2 => Some (Pos.succ pow2)
+                 | None => None
+                 end
+                 = Some 1%positive)).
+        {
+          destruct p; auto.
+        }
+        rewrite H0 in H.
+        clear H0.
+        clear H1.
+        destruct (Is_Pos_Power2 (Pos.succ p)) eqn:H1.
+        simpl in *.
+        inversion H.
+        lia.
+        inversion H.
+      }
+    }
+    {
+      simpl in *.
+      inversion H.
+    }
+Qed.
+
+Lemma Is_Pow2_eq1 : 
+  forall p : positive, Is_Pos_Power2 p = Some (Pos.of_nat 1) -> 2%positive = p.
+Proof.
+ destruct p; intros; inversion H; auto.
+ {
+   simpl in H.
+   destruct (Pos.eq_dec p 1); subst; auto.
+   {
+     assert ((match p with
+       | 1%positive => Some 1%positive
+       | _ => match Is_Pos_Power2 p with
+              | Some pow2 => Some (Pos.succ pow2)
+              | None => None
+              end
+             end = Some 1%positive) =
+             (match Is_Pos_Power2 p with
+              | Some pow2 => Some (Pos.succ pow2)
+              | None => None
+              end
+             = Some 1%positive)).
+     {
+       destruct p; auto.
+       lia.
+     }
+     rewrite H0 in H.
+     clear H0.
+     clear H1.
+     destruct (Is_Pos_Power2 p) eqn:H1.
+     simpl in *.
+     inversion H.
+     lia.
+     inversion H.
+   }
+ }
+Qed.
+
+Lemma Pow2_xO : forall p q : positive,
+    Is_Pos_Power2 q = Some p ->
+    exists q', xO q' = q.
+Proof.
+  induction q; intros; 
+  simpl in *;
+  eauto.
+  inversion H.
+  inversion H.
+Qed.
+
+Lemma Pos_of_nat_Div2_spec : forall n, Pos.of_nat (Nat.div2 n) =
+                      Pos.div2 (Pos.of_nat n).
+Proof.
+  induction n; auto.
+  simpl Pos.div2.
+  Admitted.
+
+Lemma Pos_Pow2_xO_spec : forall x p,
+    (x <> 1)%positive -> 
+    Is_Pos_Power2 x~0 = Some (Pos.of_nat (S p)) ->
+    Is_Pos_Power2 x = Some (Pos.of_nat (p)).
+Proof.
+  intros.
+  simpl in H0.
+  destruct x.
+  {
+    simpl in *.
+    inversion H0.
+  }
+  {
+    destruct (Is_Pos_Power2 (xO x)) eqn:Hi.
+    {
+      inversion H0.
+      destruct p eqn:Hp in H2.
+      subst; auto.
+      lia.
+      rewrite <- Hp in *.
+      apply Pos.succ_inj in H2.
+      rewrite <- H2.
+      subst; auto.
+    }
+    inversion H0.
+  }
+  {
+    simpl in *.
+    destruct p; auto; try lia.
+  }
+Qed.      
+
+Lemma Pow2_Div : forall p q : nat,
+    (q > 2) -> 
+    Is_Pos_Power2 (Pos.of_nat q) = Some (Pos.of_nat (S p)) -> 
+    Is_Pos_Power2 (Pos.of_nat (q/2)) = Some (Pos.of_nat p).
+Proof.
+  intros.
+  pose proof (Pow2_xO _ _ H0).
+  destruct H1.
+  rewrite <- Nat.div2_div.
+  rewrite Pos_of_nat_Div2_spec.
+  rewrite <- H1 in *.
+  destruct (Pos.eq_dec x 1).
+  {
+    subst.
+    clear -H H1.
+    exfalso.
+    assert (q = 2).
+    {
+      clear H.
+      assert (xO xH = Pos.of_nat 2).
+      auto.
+      rewrite H in *.
+      destruct q; auto.
+      simpl in H1.
+      lia.
+      apply Nat2Pos.inj in H1; auto.
+    }
+    subst.
+    lia.
+  }
+  {
+    apply Pos_Pow2_xO_spec; auto.
+  }
+Qed.
+  
+Lemma shift_nat_spec : forall p q,
+    q <> 0 -> 
+    shift_nat p 1 = Pos.of_nat q  -> 
+    shift_nat (S p) 1 = Pos.of_nat (2 * q).
+Proof.
+  intros.
+  induction p; auto.
+  simpl in *.
+  assert (q = 1).
+  {
+    assert (xH = Pos.of_nat 1).
+    auto.
+    rewrite H1 in *.
+    apply Nat2Pos.inj in H0; lia.
+  }
+  {
+    clear H0.
+    subst; auto.
+  }
+  {
+    admit.
+  }
+Admitted.
+
+Lemma Pow2_Div2_Not_0 : forall p q,
+    Is_Pos_Power2 q = Some p ->
+    (Pos.to_nat q) / 2 <> 0.
+Proof.
+  intros.
+  generalize dependent p.
+  induction q; auto.
+  {
+    intros.
+    simpl in H.
+    inversion H.
+  }
+  {
+    intros.
+    intros Hnot.
+    assert (q = 2 \/ q = 1)%positive.
+    {
+      assert ((Pos.to_nat q~0) = 0 \/ Pos.to_nat q~0 = 1).
+      {
+        generalize dependent (Pos.to_nat q~0).
+        clear.
+        induction n; auto.
+        intros.
+        rewrite <- Nat.div2_div in *.
+        simpl in Hnot.
+        destruct n.
+        auto.
+        lia.
+      }
+      destruct H0; lia.
+    }
+  {
+    destruct H0; subst; auto; 
+    simpl in Hnot; try lia.
+  }
+  }
+  {
+    intros.
+    simpl in *.
+    inversion H.
+  }
+Qed.
+
+Lemma Pow2_Mult_Div_inv : forall q p,
+    Is_Pos_Power2 (Pos.of_nat q) = Some (Pos.of_nat p) ->
+    2 * (q / 2) = q.
+Proof.
+  induction q; auto.
+  intros.
+Admitted.
+
+Lemma Shift_Is_Pos_Pow2_inv_nat' : forall p q,
+    p <> 0 -> 
+    q <> 0 -> 
+    Is_Pos_Power2 (Pos.of_nat q) = Some (Pos.of_nat p) ->
+    shift_nat p 1 = (Pos.of_nat q).
+Proof.
+  induction p; auto.
+  {
+    intros.
+    lia.
+  }
+  {
+    intros.
+    rename H into Hp.
+    rename H0 into Hq.
+    rename H1 into H.
+    destruct (Nat.eq_dec p 0).
+    {
+      subst.
+      simpl in H.
+      assert (Pos.of_nat q = 2%positive); auto.
+      {
+        simpl in H.
+        apply Is_Pow2_eq1 in H.
+        lia.
+      }
+    }
+    {
+      assert (q / 2 <> 0).
+      {
+        pose proof (Pow2_Div2_Not_0 (Pos.of_nat (S p)) (Pos.of_nat q)).
+        apply H0 in H.
+        clear -H Hq.
+        destruct q; auto.
+        rewrite Nat2Pos.id in H; lia.
+      }
+      destruct (Nat.eq_dec 2 q).
+      {
+        subst.
+        simpl in H.
+        inversion H.
+        destruct p; auto.
+        lia.
+      }
+      assert (q > 2).
+      {
+        destruct q; auto.
+        lia.
+        destruct q; auto.
+        simpl in *.
+        inversion H.
+        lia.
+      }
+      specialize (IHp ((q /2)) n H0 (Pow2_Div _ _ H1 H)).
+      specialize (shift_nat_spec p (q/2) H0).
+      intros spec.
+      apply spec in IHp.
+      rewrite Pow2_Mult_Div_inv with (p := S p) in IHp; auto.
+    }
+  }
+Qed.
+
+Open Scope positive_scope.
+
+Lemma Shift_Is_Pos_Pow2_inv' : forall p q : positive,
+    Is_Pos_Power2 q = Some p ->
+    shift_pos p 1 = q.
+Proof.
+  intros.
+  pose proof Shift_Is_Pos_Pow2_inv_nat'.
+  rewrite shift_pos_nat.
+  specialize (H0 (Pos.to_nat p) (Pos.to_nat q)).
+  rewrite Pos2Nat.id in H0.
+  apply H0; try lia.
+  rewrite Pos2Nat.id.
+  auto.
+Qed.
+
+Lemma Shift_Is_Pos_Pow2_inv : forall p q, 
+    Is_Pos_Power2 ((Qden (Qred q))) = Some p ->
+    shift_pos p 1 = (Qden (Qred q)).
+Proof.
+  intros.
+  pose proof Shift_Is_Pos_Pow2_inv'.
+  apply H0.
+  auto.
+Qed.
+
+Lemma Try_Q_to_D_Qred_spec : forall q d,
+    Try_Q_to_D (Qred q) = Some d ->
+    q == D_to_Q (DD d).
+Proof.
+  intros.
+  pose proof H as h.
+  (* assert (h0 : num d = Qnum (Qred q) \/ (num d = (2 * (Qnum (Qred q)))%Z) /\ den d = 1%positive) *)
+  (*   by (apply Try_Q_to_D_num; auto). *)
+  unfold Try_Q_to_D in H.
+  destruct (Is_Pos_Power2 (Qden (Qred q))) eqn:h1.
+  {
+    simpl.
+    unfold DO_to_Q.
+    inversion H.
+    clear H.
+    simpl.
+    rewrite <- Qred_correct with (q := q) at 1.
+    unfold Qeq.
+    simpl.
+    f_equal.
+    apply Shift_Is_Pos_Pow2_inv in h1.
+    rewrite h1.
+    auto.
+  }
+  {
+    admit.
+  }
+Admitted.
+
+Lemma Try_Q_to_D_Qred_spec1 : forall q d,
+    Try_Q_to_D (Qred q) = Some d ->
+    DOred d = d.
+Proof.
+  intros.
+  Admitted.
+
+
+Lemma Dred_complete d1 d2 :
+  D_to_Q d1 == D_to_Q d2 ->
+  Dred d1 = Dred d2.
+Proof.
+  destruct d1, d2; try (rename d into d1; rename d0 into d2).
+  {
+    simpl.
+    intros.
+    f_equal.
+    apply DOred_complete; auto.
+  }
+  intros.
+  simpl.
+  {
+    destruct (Try_Q_to_D (Qred q)) eqn:H1.
+    {
+      pose proof DOred_complete.
+      pose proof H1.
+      rewrite <- H in H1.
+      apply Try_Q_to_D_Qred_spec in H1.
+      rewrite <- Qred_correct in H1.
+      rewrite <- Qred_correct with (q := (D_to_Q (DD d0))) in H1.
+      specialize (H0 d d0).
+      (* apply DOred_complete in H. *)
+      rewrite Qred_correct in H1.
+      rewrite Qred_correct in H1.
+      pose proof H1.
+      rewrite H in H1.
+      apply H0 in H3.
+      simpl in *.
+    (* d0 is in lowest terms already so DOred of d0 should be d0 *)
+      apply Try_Q_to_D_Qred_spec1 in H2.
+      rewrite H3.
+      f_equal.
+      auto.
+    }
+    {
+      simpl in *.
+      exfalso.
+      admit.
+    }
+  }
+  {
+    intros.
+    simpl.
+    destruct (Try_Q_to_D (Qred q)) eqn:H1.
+    {
+      pose proof DOred_complete.
+      pose proof H1.
+      rewrite H in H1.
+      apply Try_Q_to_D_Qred_spec in H1.
+      rewrite <- Qred_correct in H1.
+      rewrite <- Qred_correct with (q := (D_to_Q (DD d0))) in H1.
+      specialize (H0 d d0).
+      (* apply DOred_complete in H. *)
+      rewrite Qred_correct in H1.
+      rewrite Qred_correct in H1.
+      pose proof H1.
+      rewrite <- H in H1.
+      apply H0 in H3.
+      simpl in *.
+    (* d0 is in lowest terms already so DOred of d0 should be d0 *)
+      apply Try_Q_to_D_Qred_spec1 in H2.
+      rewrite H3.
+      f_equal.
+      auto.
+    }
+    {
+      simpl in *.
+      exfalso.
+      admit.
+    }
+  }
+  {
+    intros.
+    simpl in *.
+    rewrite H.
+    destruct (Try_Q_to_D (Qred q0)) eqn:H1; auto.
+    rewrite H.
+    auto.
+  }
+Admitted.
+
 Lemma Dred'_idem x y :
   Dred' (fst (Dred' x y)) (snd (Dred' x y)) = Dred' x y.
 Proof.
@@ -1198,37 +2894,20 @@ Qed.
     
 Lemma Dred_idem d : Dred (Dred d) = Dred d.
 Proof.
-  unfold Dred.
-  destruct (Dred' _ _) eqn:H.
-  unfold D_of_Dred' in H.
-  assert (H2: (num
-           (let (x, y) :=
-              Dred' (num d) (Init.Nat.pred (Pos.to_nat (den d))) in
-            {| num := x; den := Pos.of_nat (S y) |})) =
-              fst (Dred' (num d) (Init.Nat.pred (Pos.to_nat (den d))))).
-  { destruct (Dred' _ _).
-    destruct (Dred' _ _); auto. }
-  rewrite H2 in H.
-  assert (H3: (Init.Nat.pred
-           (Pos.to_nat
-              (den
-                 (let (x, y) :=
-                    Dred' (num d) (Init.Nat.pred (Pos.to_nat (den d))) in
-                  {| num := x; den := Pos.of_nat (S y) |})))) =
-              snd (Dred' (num d) (Init.Nat.pred (Pos.to_nat (den d))))).
-  { destruct (Dred' _ _).
-    destruct (Dred' _ _); auto.
+  destruct d.
+  {
     simpl.
-    destruct n1; auto.
-    rewrite Pos2Nat.inj_succ.
-    unfold Init.Nat.pred.
-    rewrite Nat2Pos.id; auto. }
-  rewrite H3 in H.
-  rewrite Dred'_idem in H.
-  rewrite H; auto.
-Qed.  
+    f_equal.
+    apply DOred_idem.
+  }
+  {
+    admit.
+  }
+Admitted.
 
-
+Close Scope positive_scope.
+Close Scope nat_scope.
+Local Open Scope D_scope.
 Module DRed.
   Record t : Type :=
     mk { d :> D;
@@ -1243,36 +2922,36 @@ Module DRed.
   Program Definition add (d1 d2 : t) : t :=
     mk (Dred (Dadd d1.(d) d2.(d))) _.
   Next Obligation.
-    apply Dred_complete; rewrite Dred_correct; apply Qeq_refl.
+    apply Dred_idem.
   Qed.
 
 
   Program Definition sub (d1 d2 : t) : t :=
     mk (Dred (Dsub d1.(d) d2.(d))) _.
   Next Obligation.
-    apply Dred_complete; rewrite Dred_correct; apply Qeq_refl.    
+    apply Dred_idem.
   Qed.
 
   Program Definition mult (d1 d2 : t) : t := 
     mk (Dred (Dmult d1.(d) d2.(d))) _.
   Next Obligation.
-    apply Dred_complete; rewrite Dred_correct; apply Qeq_refl.        
+    apply Dred_idem.
   Qed.
 
   Program Definition opp (dx : t) : t := 
     mk (Dred (Dopp dx.(d))) _.
   Next Obligation.
-    apply Dred_complete; rewrite Dred_correct; apply Qeq_refl.            
+    apply Dred_idem.
   Qed.
 
   Program Definition lub (dx : t) : t := 
     mk (Dred (Dlub dx.(d))) _.
   Next Obligation.
-    apply Dred_complete; rewrite Dred_correct; apply Qeq_refl.            
+    apply Dred_idem.
   Qed.
 
   Program Definition of_nat (n : nat) : t :=
-    mk (Dmake (2 * (Z.of_nat n)) 1) _.
+    mk (DD (Dmake (2 * (Z.of_nat n)) 1)) _.
 
   Program Fixpoint natPow (d : t) (n : nat) : t :=
     match n with
@@ -1280,14 +2959,15 @@ Module DRed.
     | S n' => mult d (natPow d n')
     end.
 
-
   Lemma Dred_eq (d1 d2 : t) : (D_to_Q (d d1) == D_to_Q (d d2))%Q -> d1 = d2.
   Proof.
     destruct d1 as [x1 pf1]; destruct d2 as [x2 pf2]; simpl.
     intros H; assert (H2: x1 = x2).
-    { rewrite <-pf1, <-pf2; apply Dred_complete; auto. }
+    {
+      
+      rewrite <-pf1, <-pf2; apply Dred_complete; auto. }
     generalize pf1 pf2; rewrite H2; intros; f_equal; apply proof_irrelevance.
-  Qed.    
+  Qed.
   
   Lemma addP d1 d2 :
     D_to_Q (d (add d1 d2)) == (D_to_Q (d d1) + D_to_Q (d d2))%Q.
@@ -1535,7 +3215,7 @@ Module DRed.
       apply Zmult_le_0_compat.
       {
         unfold Qle in H.
-        simpl in *.
+        simpl in *. 
         rewrite Z.mul_1_r in H.
         auto.
       }
@@ -1570,11 +3250,9 @@ Module DRed.
       apply Zmult_lt_compat_l; auto.
       repeat rewrite Pos2Z.inj_mul.
       repeat rewrite Z.mul_assoc.
-      rewrite Z.mul_comm with (num r1) (Z.pos (shift_pos (den r) 1)).
-      rewrite Z.mul_comm with (num r2) (Z.pos (shift_pos (den r) 1)).
-      repeat rewrite <- Z.mul_assoc.
-      apply Zmult_lt_compat_l; auto.
-      apply Pos2Z.pos_is_pos.
+      rewrite Z.mul_comm with (Qnum (D_to_Q r1)) (QDen (D_to_Q r)).
+      rewrite Z.mul_comm with (Qnum (D_to_Q r2)) (QDen (D_to_Q r)).
+      apply Zmult_lt_compat_l with (p := (QDen (D_to_Q r))) in H0; lia.
     }
     repeat rewrite multP in H0.
     unfold Qlt in *.
@@ -1583,20 +3261,24 @@ Module DRed.
     2 :{  unfold Z.lt. auto. }
     repeat rewrite <- Z.mul_assoc in H0.
     rewrite Z.mul_comm in H0.
-    rewrite Z.mul_comm with (num r) (num r2 * Z.pos (shift_pos (den r) 1 * shift_pos (den r1) 1))%Z in H0.
+    rewrite Z.mul_comm with (Qnum (D_to_Q r)) 
+                            ((Qnum (D_to_Q r2) * Z.pos (Qden (D_to_Q r) * Qden (D_to_Q r1)))%Z) in
+        H0.
     apply Zmult_gt_0_lt_reg_r in H0.
     2: { apply Z.lt_gt. auto. }
     rewrite Z.mul_comm in H0.
-    rewrite Z.mul_comm with (num r2) ( Z.pos (shift_pos (den r) 1 * shift_pos (den r1) 1 )) in H0.
+    rewrite Z.mul_comm with (Qnum (D_to_Q r2))
+                            (Z.pos (Qden (D_to_Q r) * Qden (D_to_Q r1)))%Z
+      in H0.
     repeat rewrite Pos2Z.inj_mul in H0.
     repeat rewrite <- Z.mul_assoc in H0.
     rewrite Z.mul_comm in H0.
-    rewrite Z.mul_comm with (Z.pos (shift_pos (den r) 1)) ((Z.pos (shift_pos (den r1) 1) * num r2))%Z in H0.
-    apply Zmult_gt_0_lt_reg_r in H0.
-    { rewrite Z.mul_comm. rewrite -> Z.mul_comm with (num r2) (Z.pos (shift_pos (den r1) 1)). auto. }
-    apply Zgt_pos_0.
+    rewrite Z.mul_comm with 
+        (QDen (D_to_Q r))
+        (QDen (D_to_Q r1) * Qnum (D_to_Q r2))%Z in
+        H0.
+    apply Zmult_gt_0_lt_reg_r in H0; lia.
   Qed.
-
 
   Lemma of_natO: of_nat O = t0.
   Proof. auto. Qed.
@@ -1711,7 +3393,6 @@ Module DRed.
     apply Dred_eq.
     auto.
   Qed.
-
   (* TODO: More lemmas here! *)
 End DRed.      
 
@@ -1737,11 +3418,7 @@ Notation "'0'" := DRed.t0 : DRed_scope.
 Notation "'1'" := DRed.t1 : DRed_scope.
 
 
-  
-  
-  
 
-  
   
     
                          
