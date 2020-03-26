@@ -686,7 +686,13 @@ Section chernoff_twosided.
     case: (Rle_lt_dec p_exp (p_hat x)); last first => Hle2.
     { (*Case 1: p_hat < p*)
       have Hle3: eps <= p_exp - p_hat x.
-      { move: Hle; rewrite Rabs_minus_sym /Rabs; case: (Rcase_abs _) => //= Hx Hy; lra. }
+      { move: Hle; rewrite Rabs_minus_sym /Rabs; case: (Rcase_abs _) => //= Hx Hy. lra. 
+        apply Rplus_ge_compat_r with p_exp _ _ in Hx.
+        rewrite Rplus_0_l in Hx. rewrite Rplus_assoc in Hx.
+        rewrite Rplus_opp_l in Hx. rewrite Rplus_0_r in Hx.
+        exfalso. 
+        eapply Rlt_not_ge . apply Hle2. apply Hx.
+      }
       have Hle4: p_hat x + eps <= p_exp by lra.
       case: (Rle_lt_dec (p _ _ f + _) _) => Hle5 /=.
       { rewrite -{1}[dP x]Rplus_0_l; apply: Rplus_le_compat; first by apply: prodR_nonneg.
@@ -712,7 +718,13 @@ Section chernoff_twosided.
       lra. }
     (*Case 2: p_hat >= p*)
     { have Hle3: eps <= p_hat x - p_exp.
-      { move: Hle; rewrite Rabs_minus_sym /Rabs; case: (Rcase_abs _) => //= Hx Hy; lra. }
+      { move: Hle; rewrite Rabs_minus_sym /Rabs; case: (Rcase_abs _) => //= Hx Hy.
+      apply Rplus_gt_compat_r with p_exp _ _ in Hx.
+        rewrite Rplus_0_l in Hx. rewrite Rplus_assoc in Hx.
+        rewrite Rplus_opp_l in Hx. rewrite Rplus_0_r in Hx.
+        exfalso. 
+        apply Rgt_not_le with p_exp (p_hat x); auto.
+      }
       have Hle4: p_exp + eps <= p_hat x by lra.
       case: (Rle_lt_dec (p _ _ f + _) _) => Hle5 /=.
       { rewrite -{1}[dP x]Rplus_0_r; apply: Rplus_le_compat_l.

@@ -618,7 +618,7 @@ Proof.
   omega.
 Qed.  
 
-Lemma Pos2Nat_inj_2 : Pos.to_nat 2 = 2.
+Lemma Pos2Nat_inj_2 : Pos.to_nat 2 = 2%nat.
 Proof. unfold Pos.to_nat; simpl; auto. Qed.
 
 Lemma Pos_le_2_add_sub x : 
@@ -666,7 +666,7 @@ Proof.
     rewrite Pos2Nat.inj_le in H, H0.
     rewrite Pos2Nat.inj_1 in H.
     rewrite Pos2Nat_inj_2 in H0|-*.
-    assert (H1: Pos.to_nat x <> 2).
+    assert (H1: Pos.to_nat x <> 2%nat).
     { intros Hx.
       rewrite <-Pos2Nat.inj_iff, Hx in n0.
       auto. }

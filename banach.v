@@ -18,7 +18,27 @@ Require Import Reals.Rcomplete.
 Require Import Psatz.
 
 From mathcomp Require Import all_ssreflect.
+Require Import JMeq.
+Definition JMeqfun {T1 T2 T3: Type} (f1 : T1 -> T3) (f2 : T2 -> T3) :=
+    forall (a : T1) (b : T2), JMeq a b -> f1 a = f2 b.
 
+
+
+Lemma JMeq_exists_convert: forall {T1 T2 : Type}, (exists x : T1, exists y : T2, JMeq x y) -> exists f : T1 -> T2, (forall (a : T1) (b : T2), JMeq a b <-> f a = b).
+Proof.
+  intros.
+  destruct H.
+  destruct H.
+  inversion H.
+  rewrite H0 in x H H3.
+  exists id.
+  intros.
+  split; intros.
+    apply JMeq_eq. auto.
+  rewrite H1. auto.
+Qed.
+    
+  
 
 Delimit Scope Numeric_scope with Num.
 Delimit Scope R_scope with R.
@@ -105,7 +125,7 @@ Module banach.
   Qed.
 
   Section banach_Numeric.
-    Context {Nt:Type} `{Numerics.Numeric Nt}.
+    Context {Nt:Type} `{Numerics.Numeric_Props Nt}.
     Variable contraction : contraction_func.
 
     Local Notation step_f := (step contraction).
@@ -142,7 +162,7 @@ Module banach.
     Proof.
       unfold dist.
       intros.
-      apply mapmax_ne_eq_const.
+      apply mapmax_ne_eq_const. auto.
       split.
       { intros. rewrite H0; auto. rewrite plus_neg_r. right. apply abs_0. }
       exists (contraction_exists_T contraction).
@@ -155,7 +175,7 @@ Module banach.
 
     Lemma dist_ge_0: forall (f g : T->Nt), 0 <= dist f g.
     Proof.
-      intros. unfold dist. apply mapmax_ne_ge_const.
+      intros. unfold dist. apply mapmax_ne_ge_const. auto.
       exists (contraction_exists_T contraction).
       split. 
         apply all_T_in.
@@ -212,25 +232,25 @@ Module banach.
       apply (is_contr contraction).
     Qed.
 
-    Lemma dist_ub: forall {Nt' : Type} `{Numeric Nt'} (f g : T -> Nt') (x : T), abs (f x + - g x) <= dist f g.
+    Lemma dist_ub: forall {Nt' : Type} `{Numeric_Props Nt'} (f g : T -> Nt') (x : T), abs (f x + - g x) <= dist f g.
     Proof. 
       intros.
       unfold dist.
-      apply mapmax_ne_ge_const.
+      apply mapmax_ne_ge_const. auto.
       exists x.
       split. 
         apply all_T_in.
       apply le_refl.
     Qed.
 
-    Lemma dist_triangle: forall {Nt' : Type} `{Numeric Nt'} (f1 f2 f3 : T -> Nt'), dist f1 f2 <= dist f1 f3 + dist f3 f2.
+    Lemma dist_triangle: forall {Nt' : Type} `{Numeric_Props Nt'} (f1 f2 f3 : T -> Nt'), dist f1 f2 <= dist f1 f3 + dist f3 f2.
     Proof. 
       intros.
       unfold dist.
       apply mapmax_ne_dist_triangle.
     Qed.
 
-    Lemma dist_comm: forall  {Nt' : Type} `{Numeric Nt'} (f g : T -> Nt'), dist f g = dist g f.
+    Lemma dist_comm: forall  {Nt' : Type} `{Numeric_Props Nt'} (f g : T -> Nt'), dist f g = dist g f.
     Proof.
       intros.
       unfold dist.
@@ -354,7 +374,7 @@ Module banach.
       apply le_trans with ((1 + - q) * big_sum (List.seq 0 m) (fun x => pow_nat q x *  (dist f (step_f f) ))).
       {
         apply mult_le_compat_l; auto.
-        apply big_sum_le.
+        apply big_sum_le. auto.
         intros.
         simpl. 
         rewrite <- rec_step_reverse.
@@ -427,7 +447,9 @@ Module banach.
         exists O. intros.
         rewrite <- R_dist_same.
         apply Rle_lt_trans with (dist (rec_f  step_f f n) (rec_f  step_f f m)).
-        { rewrite R_abs_same. rewrite <- R_le_same. rewrite <- R_abs_same. apply dist_ub. }
+        { rewrite R_abs_same. rewrite <- R_le_same. rewrite <- R_abs_same. apply dist_ub.
+          apply Numeric_Props_R.
+        }
         rewrite step0_rec_nm; auto.
       }
       destruct exists_pow_lt with q (Rdiv eps 2 * to_R (1 + - q) * Rinv ((dist f (step_f f)))).
@@ -443,8 +465,8 @@ Module banach.
       intros.
       rewrite <- R_dist_same.
       apply Rle_lt_trans with (dist (rec_f  step_f f n) (rec_f  step_f f m)).
-        rewrite <- R_le_same. apply dist_ub. 
-      unfold ge in *.
+        rewrite <- R_le_same. apply dist_ub. apply Numeric_Props_R.
+
       destruct Nat_le_exists_diff with x0 n; auto.
       destruct Nat_le_exists_diff with x0 m; auto.
       rewrite <- H4. rewrite <- H3.
@@ -452,12 +474,14 @@ Module banach.
       2:{ simpl. lra. }
       simpl.
       apply Rle_lt_trans with (dist (rec_f  step_f f (addn x0 x1)) (rec_f  step_f f x0) + dist (rec_f  step_f f x0) (rec_f  step_f f (addn x0 x2))).
-        rewrite <- R_le_same. apply dist_triangle.
+        rewrite <- R_le_same. apply dist_triangle. 
+        apply Numeric_Props_R.
       rewrite -> dist_comm with _ _ _ _ (rec_f _ f x0).
       apply Rplus_lt_compat;
         apply contraction_cauchy_crit_aux; auto;
         try(simpl; lra);
         rewrite to_R_pow_nat; auto.
+        apply Numeric_Props_R.
     Qed.
 
     Lemma func_converge: forall (f g : T -> R) (eps : R) (x : T),
@@ -472,7 +496,8 @@ Module banach.
         intros.
         rewrite <- R_dist_same.
         apply le_lt_trans with (dist (rec_f  step_f f n) (rec_f  step_f g n)).
-          apply dist_ub.
+          apply dist_ub. 
+          apply Numeric_Props_R.
         rewrite eq_dist_0.
           auto. 
         intros.
@@ -491,6 +516,7 @@ Module banach.
         rewrite <- R_dist_same.
         apply le_lt_trans with (dist (rec_f  step_f f n) (rec_f  step_f g n)).
           apply dist_ub.
+          apply Numeric_Props_R.
         destruct n.
           inversion H0.
         rewrite q0_rec0; auto.
@@ -504,6 +530,7 @@ Module banach.
       rewrite <- R_dist_same.
       apply le_lt_trans with (dist (rec_f  step_f f n) (rec_f  step_f g n)).
         apply dist_ub.
+        apply Numeric_Props_R.
       apply le_lt_trans with (pow_nat q n * dist f g).
         apply rec_dist.
       apply Rmult_lt_reg_r with (Rinv (dist f g)).
@@ -590,6 +617,7 @@ Module banach.
             (rec_f  step_f (step_f converge_func) (S n))
             (step_f converge_func)).
             simpl. rewrite <- R_le_same. rewrite rec_step_reverse. apply dist_ub.
+            apply Numeric_Props_R.
           apply Rle_lt_trans with 0; auto.
           right.
           apply  eq_dist_0.
@@ -606,6 +634,7 @@ Module banach.
         rewrite <- R_lt_same.
         apply le_lt_trans with (dist (rec_f  step_f converge_func (S n))  (step_f converge_func)).
           apply dist_ub.
+          apply Numeric_Props_R.
         simpl (rec_f  step_f converge_func n.+1).
         apply le_lt_trans with ( q * dist (rec_f  step_f converge_func n) (converge_func)).
           apply (is_contr contraction).
@@ -707,6 +736,7 @@ Module banach.
       rewrite <- R_dist_same.
       apply le_trans with (dist (rec_f  step_f f n) f).
         apply dist_ub.
+        apply Numeric_Props_R.
       right.
       rewrite dist_comm.
       apply step0_rec_n.
@@ -727,6 +757,29 @@ Module banach.
 
   End banach_R.
 
+
+  Lemma contraction_fixpoint_ext: forall (c1 c2 : @contraction_func R _), 
+      (forall (f1 : x_t c1 -> R ) (f2 : x_t c2 -> R), JMeqfun f1 f2 -> JMeqfun ( step c1 f1 ) (step c2 f2)) ->
+      JMeqfun (converge_func c1) (converge_func c2).
+  Proof.
+    unfold JMeqfun.
+    intros.
+    edestruct (JMeq_exists_convert (T1:=x_t c1) (T2 := x_t c2) ) as [f1_2]. eauto.    
+    edestruct (JMeq_exists_convert (T1:=x_t c2) (T2 := x_t c1) ) as [f2_1]. eauto.    
+    destruct (H1 a b). destruct (H2 b a).    
+    rewrite <- (@fixpoint_unique c1 (fun x : x_t c1 => converge_func c2 (f1_2 x)) ).
+      rewrite H3; auto. 
+    intros.
+    erewrite -> (H _ (converge_func c2 ) _ x (f1_2 x) ).
+    2: { rewrite H1; auto. }
+    apply rec_fixpoint.
+    Unshelve.
+      intros.
+      simpl.
+      f_equal.
+      apply H1. auto.
+  Qed.    
+    
 
 
   Record R_Nt_relation {Nt : Type} `{Numerics.Numeric Nt} : Type :=

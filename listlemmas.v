@@ -142,7 +142,7 @@ Proof.
   - apply IHperm.
     + simpl. case (f x); case (f y); try solve [by constructor].
   - apply Permutation_refl.
-    + apply (perm_trans IHperm1 IHperm2).
+    + apply (Permutation.perm_trans IHperm1 IHperm2).
 Qed.
 
 Lemma mapPreservesPerm :
@@ -152,7 +152,7 @@ Lemma mapPreservesPerm :
 Proof.
   move => A B l1 l2 f perm.
   induction perm; try solve [by constructor].
-  apply (perm_trans IHperm1 IHperm2).
+  apply (Permutation.perm_trans IHperm1 IHperm2).
 Qed.
 
 (********************)
