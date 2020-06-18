@@ -1891,7 +1891,7 @@ Module num_Extrema.
   End use_Numerics.
   Section use_Numerics2.
 
-  Context (Nt:Type) `{Numeric_Props Nt}.
+  Context (Nt:Type) `{Numeric_Props Nt} `{Nt_R_inj : @Numeric_R_inj Nt numeric_t}.
 
   
    

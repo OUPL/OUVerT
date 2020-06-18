@@ -1639,42 +1639,91 @@ Module DORed.
   Lemma natPowRec: forall (d : t) (n : nat), natPow d (S n) = mult d (natPow d n).
   Proof. auto. Qed.
 
+
+  (* Lemma lt_Qeq: forall d1 d2 d3 d4 : DO, DO_to_Q d1 == DO_to_Q d3 -> DO_to_Q d2 == DO_to_Q d4 -> (d1 < d2 <-> d3 < d4).
+  Proof.
+    intros.
+    split; intros.
+      unfold DOlt. rewrite <-  H. lia.
+      rewrite H.
+ *)
+  Lemma num_neg_iff: forall d, (DO_to_Q d < 0)%Q <-> (num d < 0)%Z.
+  Proof.
+    intros.
+    split; intros;
+      unfold Qlt in *; simpl in *; lia.
+  Qed.
+
+  Lemma num_ge0_iff: forall d, (0 <= DO_to_Q d)%Q <-> (0 <= num d)%Z.
+  Proof.
+    intros.
+    split; intros;
+      unfold Qle in *; simpl in *; lia.
+  Qed.
+
   Lemma lt_le_dec: forall d1 d2, {d1 < d2} + {d2 <= d1}.
-  Proof. intros. unfold DOle. unfold DOlt. apply Qlt_le_dec. Qed.
+  Proof.
+    intros.
+    destruct (Z_lt_le_dec (num (d1 - d2)) 0).
+    {
+      left.
+      unfold DOlt.
+      setoid_replace (DO_to_Q d2) with (DO_to_Q d2 + 0)%Q using relation Qeq.
+      2:{ unfold Qeq. simpl. lia. }
+      setoid_replace (DO_to_Q d1) with (DO_to_Q d2 + (DO_to_Q d1 - DO_to_Q d2))%Q using relation Qeq.
+      2:{ unfold Qeq. simpl. lia. }
+      rewrite Qplus_lt_r.
+      apply num_neg_iff in l.
+      rewrite DOsub_ok in l.  auto.
+    }
+    right.
+    unfold DOle.
+    setoid_replace (DO_to_Q d2) with (DO_to_Q d2 + 0)%Q using relation Qeq.
+    2:{ unfold Qeq. simpl. lia. }
+    setoid_replace (DO_to_Q d1) with (DO_to_Q d2 + (DO_to_Q d1 - DO_to_Q d2))%Q using relation Qeq.
+    2:{ unfold Qeq. simpl. lia. }
+    rewrite Qplus_le_r.
+    apply num_ge0_iff in l.
+    rewrite DOsub_ok in l.  auto.
+  Qed.
 
 
   Lemma le_lt_dec: forall d1 d2,  {d1 <= d2} + {d2 < d1}.
   Proof.
     intros.
-    unfold DOle.
-    unfold DOlt.
-    destruct Qlt_le_dec with (DO_to_Q d2) (DO_to_Q d1); auto.
+    destruct (lt_le_dec d2 d1); auto.
   Qed.
 
+  Lemma num_0_iff: forall d, num d = 0%Z <-> DO_to_Q d == 0.
+  Proof.
+    intros.
+    split; intros;
+      unfold Qeq in *; simpl in *; lia.
+  Qed.
 
   Lemma eq_dec: forall d1 d2 : t, {d1 = d2} + {d1 <> d2}.
   Proof.
     intros.
-    destruct DOeq_dec with (d d1) (d d2).
-    { 
-      left. 
-      destruct d1,d2.
-      simpl in e.
-      generalize pf0 pf1.
-      rewrite e.
-      intros.
-      f_equal.
-      apply proof_irrelevance.
+    destruct (Z.eq_dec (num (d d1 - d d2)) 0).
+    {
+      left.
+      rewrite num_0_iff in e.
+      apply DOred_eq.
+      rewrite DOsub_ok in e.
+      unfold Qeq in *. simpl in *.
+      lia.
     }
     right.
-    destruct d1,d2.
-    simpl in n.
-    unfold not in *.
-    intros.
+    unfold not in *. intros.
     apply n.
-    inversion H.
-    auto.
-  Qed.
+    subst.
+    rewrite num_0_iff.
+    setoid_replace 0%Q with (DO_to_Q DO0) using relation Qeq.
+    2:{ unfold DO_to_Q. unfold Qeq. auto. }
+    rewrite DOsub_ok.
+    unfold Qminus. rewrite Qplus_opp_r.
+    unfold Qeq. simpl. auto.
+  Qed. 
 
   Lemma le_not_lt: forall d1 d2 : t, (d1 <= d2)-> ~ (d2 < d1).
   Proof.
@@ -1705,14 +1754,17 @@ Module DORed.
   Lemma total_order_T : forall d1 d2 : t, {DOlt d1 d2} + {d1 = d2} + {DOlt d2 d1}.
   Proof.
     intros.
-    unfold DOlt.
-    destruct Q_dec with (DO_to_Q d1) (DO_to_Q d2).
-      destruct s; auto.
-    left.
+    destruct (lt_le_dec d1 d2); auto.
+    destruct (eq_dec d1 d2); auto.
     right.
-    apply DOred_eq.
-    auto.
-  Qed.
+    unfold DOlt.
+    unfold DOle in *.
+    apply Qle_lt_or_eq in d0.
+    destruct d0; auto.
+    exfalso. apply n.
+    symmetry.
+    apply DOred_eq. auto.
+  Qed. 
 
   (* TODO: More lemmas here! *)
 End DORed.      
@@ -3567,17 +3619,18 @@ Module DRed.
   Proof. auto. Qed.
 
   Lemma lt_le_dec: forall d1 d2, {d1 < d2} + {d2 <= d1}.
-  Proof. intros. unfold Dle. unfold Dlt. apply Qlt_le_dec. Qed.
-
+  Proof.
+    destruct d1; destruct d2.
+      exact (DORed.lt_le_dec d0 d1) .
+      exact (Qlt_le_dec (DO_to_Q d0) q).
+      exact (Qlt_le_dec q (DO_to_Q d0)).
+      exact (Qlt_le_dec q q0).
+  Defined.
 
   Lemma le_lt_dec: forall d1 d2,  {d1 <= d2} + {d2 < d1}.
-  Proof.
-    intros.
-    unfold Dle.
-    unfold Dlt.
-    destruct Qlt_le_dec with (D_to_Q d2) (D_to_Q d1); auto.
-  Qed.
-
+  Proof. intros.
+    destruct (lt_le_dec d2 d1); auto.
+  Defined.
 
   Lemma eq_dec: forall d1 d2 : t, {d1 = d2} + {d1 <> d2}.
   Proof.

@@ -52,7 +52,7 @@ Module Numerics.
         neg : T->T where "- n" := (neg n) : Num;
         mult: T -> T -> T where "n * m" := (mult n m) : Num;
         pow_nat: T -> nat -> T;
-        to_R : T -> R;
+        
 
         of_nat: nat -> T;
         plus_id: T;
@@ -98,11 +98,7 @@ Module Numerics.
         pow_natO: forall t, pow_nat t O = mult_id;
         pow_nat_rec: forall t n, pow_nat t (S n) = t * pow_nat t n;
 
-        to_R_plus: forall t1 t2 : T, Rplus (to_R t1) (to_R t2) = to_R (t1 + t2);
-        to_R_mult: forall t1 t2 : T, Rmult (to_R t1) (to_R t2) = to_R (t1 * t2);
-        to_R_lt: forall t1 t2 : T, t1 < t2 <-> Rlt (to_R t1) (to_R t2);
-        to_R_neg: forall t : T, Ropp (to_R t) = to_R (- t);
-        to_R_inj: forall n m : T, to_R n = to_R m -> n = m;
+        
       
         total_order_T : forall r1 r2, {r1 < r2} + {r1 = r2} + {r2 < r1};
 
@@ -110,7 +106,18 @@ Module Numerics.
         ltb_true_iff: forall n m, ltb n m <-> n < m;
 
       }.
-      Ltac to_R_distr := 
+  Class Numeric_R_inj (T : Type) `{numeric_t : Numeric T} :=
+  mkNumericRInj {
+    to_R : T -> R;
+    to_R_plus: forall t1 t2 : T, Rplus (to_R t1) (to_R t2) = to_R (t1 + t2);
+    to_R_mult: forall t1 t2 : T, Rmult (to_R t1) (to_R t2) = to_R (t1 * t2);
+    to_R_lt: forall t1 t2 : T, t1 < t2 <-> Rlt (to_R t1) (to_R t2);
+    to_R_neg: forall t : T, Ropp (to_R t) = to_R (- t);
+    to_R_inj: forall n m : T, to_R n = to_R m -> n = m;
+  }.
+
+
+  Ltac to_R_distr := 
     repeat (
       try (rewrite <- to_R_mult);
       try (rewrite <- to_R_plus);
@@ -138,7 +145,6 @@ Module Numerics.
 
     Definition minus (n m : Nt) := n + - m.
 
-
     Context  `{NtProps : Numeric_Props (numeric_t := H) Nt}.
 
     Lemma eqb_false_iff: forall n m, eqb n m = false <-> n <> m.
@@ -154,6 +160,7 @@ Module Numerics.
       exfalso.
       by apply eqb_true_iff in e.
     Qed.
+
       
 
     Lemma ltb_false_iff: forall n m, ltb n m = false <-> ~ n < m.
@@ -189,6 +196,7 @@ Module Numerics.
       auto.
     Qed.
 
+
     Program Definition numeric_ring :=  @mk_rt Nt plus_id mult_id plus mult minus neg eq plus_id_l 
       plus_comm plus_assoc mult_id_l mult_comm mult_assoc _ _ plus_neg_r.
     Next Obligation.
@@ -206,7 +214,6 @@ Module Numerics.
       apply H1. auto.
     Qed.
 
-
     Lemma plus_assoc_reverse : forall r1 r2 r3, r1 + r2 + r3 = r1 + (r2 + r3).
     Proof. intros. rewrite plus_assoc. auto. Qed.
 
@@ -221,6 +228,7 @@ Module Numerics.
       apply lt_irrefl in H0.
       auto.
     Qed.
+
 
     Lemma eq_dec: forall t1 t2 : Nt, {t1 = t2} + {t1 <> t2}.
     Proof.
@@ -1118,25 +1126,6 @@ Module Numerics.
     auto.
   Qed.
 
-  Lemma to_R_plus_id: to_R 0 = IZR Z0.
-  Proof.
-    rewrite <- Rplus_opp_r with (to_R 0).
-    rewrite to_R_neg.
-    rewrite to_R_plus.
-    rewrite plus_id_l.
-    rewrite neg_plus_id.
-    auto.
-  Qed.
-
-  Lemma to_R_neq: forall n m : Nt, n <> m <-> to_R n <> to_R m.
-  Proof.
-    intros.
-    split; unfold not; intros.
-      apply H0. apply to_R_inj. auto.
-    apply H0.
-    rewrite H1.
-    auto.
-  Qed.    
       
 
   Lemma plus_id_neq_mult_id: 0 <> 1.
@@ -1159,6 +1148,144 @@ Module Numerics.
     rewrite H0.
     auto.
   Qed.
+
+  Lemma leb_ltb_or_eqb: forall t1 t2 : Nt, leb t1 t2 = ltb t1 t2 || eqb t1 t2.
+  Proof.
+    intros.
+    destruct (leb t1 t2) eqn:e.
+    {
+      apply leb_true_iff in e.
+      destruct e.
+      { apply ltb_true_iff in H0. rewrite H0. auto. }
+      rewrite H0.
+      rewrite eqb_refl.      
+      rewrite orb_true_r.
+      auto.
+    }
+    apply leb_false_iff in e.
+    assert (ltb t1 t2 = false).
+      apply ltb_false_iff. unfold not. intros. apply le_lt_weak in H0. auto.
+    rewrite H0.
+    apply not_le_lt in e.
+    apply lt_not_eq in e.
+    apply eqb_false_iff in e.
+    rewrite eqb_symm.
+    rewrite e.
+    auto.
+  Qed.
+
+  
+  Lemma pow_nat_ge1_le: forall x n m,  1 <= x -> Nat.le n m -> pow_nat x n <= pow_nat x m.
+  Proof. 
+    intros.
+    assert(forall m', pow_nat x n <=  pow_nat x (n+m')).
+    { 
+      intros. induction m'. rewrite addn0. auto.
+      rewrite addnS.
+      rewrite <- mult_id_l with (pow_nat x n).
+      rewrite pow_nat_rec.
+      apply mult_le_compat; auto.
+        apply le_lt_weak. apply plus_id_lt_mult_id.
+      apply pow_ge_0.
+      apply le_trans with 1; auto.
+      apply le_lt_weak. apply plus_id_lt_mult_id.
+    }
+    destruct Nat_le_exists_diff with n m; auto.
+    rewrite <- H3.
+    apply H2.
+  Qed.
+
+  Lemma pow_nat_le1_le: forall x n m, 0 < x -> x <= 1 -> Nat.le n m -> pow_nat x m <= pow_nat x n.
+  Proof. 
+    intros.
+    assert(forall m', pow_nat x (n+m') <=  pow_nat x n).
+    { 
+      intros. induction m'. rewrite addn0. auto.
+      rewrite addnS.
+      rewrite <- mult_id_l with (pow_nat x n).
+      rewrite pow_nat_rec.
+      apply mult_le_compat; auto.
+      apply pow_ge_0. auto.
+    }
+    destruct Nat_le_exists_diff with n m; auto.
+    rewrite <- H4.
+    apply H3.
+  Qed.
+
+  Lemma lt_diff_pos: forall x y : Nt, x < y -> 0 < (y + - x).
+  Proof. 
+    intros.
+    rewrite <- plus_neg_r with x.
+    apply plus_lt_compat_r. auto.
+  Qed. 
+
+  Lemma min_comm: forall x y : Nt, min x y = min y x.
+  Proof. 
+    intros. unfold min.
+    destruct (total_order_T x y).
+    {
+      destruct s.
+      2: { rewrite e. auto. }
+      assert(leb y x = false).
+        apply leb_false_iff. apply lt_not_le. auto.
+      rewrite H0.
+      apply le_lt_weak in l.
+      apply leb_true_iff in l. rewrite l. auto.
+    }
+    assert(leb x y = false).
+    { apply leb_false_iff. apply lt_not_le. auto. }
+    rewrite H0. apply le_lt_weak in l. apply leb_true_iff in l. rewrite l. auto.
+  Qed.
+
+  Lemma ge_min_l: forall x y : Nt, min x y <= x.
+  Proof. 
+    intros.
+    unfold min. 
+    destruct (total_order_T x y).
+    {
+      destruct s.
+      2:{  rewrite e. destruct (leb y y); auto. }
+      apply le_lt_weak in l.
+      apply leb_true_iff in l. rewrite l. auto.
+    }
+    apply le_lt_weak.
+    apply le_lt_trans with y; auto.
+    apply lt_not_le in l. apply leb_false_iff in l.
+    rewrite l. auto.
+  Qed.
+
+  Lemma ge_min_r: forall x y : Nt, min x y <= y.
+  Proof. intros. rewrite min_comm. apply ge_min_l. Qed.
+
+  Lemma min_id: forall x : Nt, min x x = x.
+  Proof. intros. unfold min. destruct (leb x x); auto. Qed.
+
+  Lemma min_cases: forall x y : Nt, min x y = x \/ min x y = y.
+  Proof. intros. unfold min. destruct (leb x y); auto. Qed.
+
+  Section use_numeric_R_inj.
+    Context {NtRInj : @Numeric_R_inj Nt H}.
+
+  Lemma to_R_plus_id: to_R 0 = IZR Z0.
+  Proof.
+    rewrite <- Rplus_opp_r with (to_R 0).
+    rewrite to_R_neg.
+    rewrite to_R_plus.
+    rewrite plus_id_l.
+    rewrite neg_plus_id.
+    auto.
+  Qed.
+
+  Lemma to_R_neq: forall n m : Nt, n <> m <-> to_R n <> to_R m.
+  Proof.
+    intros.
+    split; unfold not; intros.
+      apply H0. apply to_R_inj. auto.
+    apply H0.
+    rewrite H1.
+    auto.
+  Qed.    
+
 
   Lemma to_R_mult_id: to_R 1 = IZR (Zpos xH).
   Proof.
@@ -1456,33 +1583,6 @@ Module Numerics.
       unfold not; intros; apply H0; apply to_R_le; auto.
   Qed.
 
-  
-
-  Lemma leb_ltb_or_eqb: forall t1 t2 : Nt, leb t1 t2 = ltb t1 t2 || eqb t1 t2.
-  Proof.
-    intros.
-    destruct (leb t1 t2) eqn:e.
-    {
-      apply leb_true_iff in e.
-      destruct e.
-      { apply ltb_true_iff in H0. rewrite H0. auto. }
-      rewrite H0.
-      rewrite eqb_refl.      
-      rewrite orb_true_r.
-      auto.
-    }
-    apply leb_false_iff in e.
-    assert (ltb t1 t2 = false).
-      apply ltb_false_iff. unfold not. intros. apply le_lt_weak in H0. auto.
-    rewrite H0.
-    apply not_le_lt in e.
-    apply lt_not_eq in e.
-    apply eqb_false_iff in e.
-    rewrite eqb_symm.
-    rewrite e.
-    auto.
-  Qed.
-
   Lemma to_R_abs: forall n : Nt, to_R (abs n) = Rabs (to_R n).
   Proof.
     intros.
@@ -1518,99 +1618,26 @@ Module Numerics.
     rewrite IHn.
     auto.
   Qed.
+  End use_numeric_R_inj.
 
-  Lemma pow_nat_ge1_le: forall x n m,  1 <= x -> Nat.le n m -> pow_nat x n <= pow_nat x m.
-  Proof. 
-    intros.
-    assert(forall m', pow_nat x n <=  pow_nat x (n+m')).
-    { 
-      intros. induction m'. rewrite addn0. auto.
-      rewrite addnS.
-      rewrite <- mult_id_l with (pow_nat x n).
-      rewrite pow_nat_rec.
-      apply mult_le_compat; auto.
-        apply le_lt_weak. apply plus_id_lt_mult_id.
-      apply pow_ge_0.
-      apply le_trans with 1; auto.
-      apply le_lt_weak. apply plus_id_lt_mult_id.
-    }
-    destruct Nat_le_exists_diff with n m; auto.
-    rewrite <- H3.
-    apply H2.
-  Qed.
-
-  Lemma pow_nat_le1_le: forall x n m, 0 < x -> x <= 1 -> Nat.le n m -> pow_nat x m <= pow_nat x n.
-  Proof. 
-    intros.
-    assert(forall m', pow_nat x (n+m') <=  pow_nat x n).
-    { 
-      intros. induction m'. rewrite addn0. auto.
-      rewrite addnS.
-      rewrite <- mult_id_l with (pow_nat x n).
-      rewrite pow_nat_rec.
-      apply mult_le_compat; auto.
-      apply pow_ge_0. auto.
-    }
-    destruct Nat_le_exists_diff with n m; auto.
-    rewrite <- H4.
-    apply H3.
-  Qed.
-
-  Lemma lt_diff_pos: forall x y : Nt, x < y -> 0 < (y + - x).
-  Proof. 
-    intros.
-    rewrite <- plus_neg_r with x.
-    apply plus_lt_compat_r. auto.
-  Qed. 
-
-  Lemma min_comm: forall x y : Nt, min x y = min y x.
-  Proof. 
-    intros. unfold min.
-    destruct (total_order_T x y).
-    {
-      destruct s.
-      2: { rewrite e. auto. }
-      assert(leb y x = false).
-        apply leb_false_iff. apply lt_not_le. auto.
-      rewrite H0.
-      apply le_lt_weak in l.
-      apply leb_true_iff in l. rewrite l. auto.
-    }
-    assert(leb x y = false).
-    { apply leb_false_iff. apply lt_not_le. auto. }
-    rewrite H0. apply le_lt_weak in l. apply leb_true_iff in l. rewrite l. auto.
-  Qed.
-
-  Lemma ge_min_l: forall x y : Nt, min x y <= x.
-  Proof. 
-    intros.
-    unfold min. 
-    destruct (total_order_T x y).
-    {
-      destruct s.
-      2:{  rewrite e. destruct (leb y y); auto. }
-      apply le_lt_weak in l.
-      apply leb_true_iff in l. rewrite l. auto.
-    }
-    apply le_lt_weak.
-    apply le_lt_trans with y; auto.
-    apply lt_not_le in l. apply leb_false_iff in l.
-    rewrite l. auto.
-  Qed.
-
-  Lemma ge_min_r: forall x y : Nt, min x y <= y.
-  Proof. intros. rewrite min_comm. apply ge_min_l. Qed.
-
-  Lemma min_id: forall x : Nt, min x x = x.
-  Proof. intros. unfold min. destruct (leb x x); auto. Qed.
-
-  Lemma min_cases: forall x y : Nt, min x y = x \/ min x y = y.
-  Proof. intros. unfold min. destruct (leb x y); auto. Qed.
-
+ 
   End use_Numeric.
-
-
-
+(* 
+Instance Numeric_nat: Numerics.Numeric nat :=
+  @Numerics.mkNumeric
+    nat
+    Nat.add
+    (fun _ => O)
+    Nat.mul
+    Nat.pow
+    INR
+    id
+    O
+    (S O)
+    Nat.lt
+    le_gt_dec
+    Nat.eq_dec.
+ *)
 
 (**Req_EM_T**)
 Program Instance Numeric_D: Numerics.Numeric (DRed.t) :=
@@ -1620,7 +1647,6 @@ Program Instance Numeric_D: Numerics.Numeric (DRed.t) :=
     DRed.opp
     DRed.mult
     DRed.natPow
-    (fun x => Q2R (D_to_Q x))
     DRed.of_nat
     DRed.t0
     DRed.t1
@@ -1628,6 +1654,21 @@ Program Instance Numeric_D: Numerics.Numeric (DRed.t) :=
     DRed.lt_le_dec
     DRed.eq_dec
 .
+Program Instance Numeric_DO: Numerics.Numeric (DORed.t) :=
+  @Numerics.mkNumeric
+    DORed.t
+    DORed.add
+    DORed.opp
+    DORed.mult
+    DORed.natPow
+    DORed.of_nat
+    DORed.t0
+    DORed.t1
+    DOlt
+    DORed.lt_le_dec
+    DORed.eq_dec.
+
+
 
 Program Instance Numeric_Props_D: @Numerics.Numeric_Props DRed.t Numeric_D:=
     @Numerics.mkNumericProps
@@ -1636,9 +1677,7 @@ Program Instance Numeric_Props_D: @Numerics.Numeric_Props DRed.t Numeric_D:=
     DRed.lt_t0_t1
     DRed.mult0L
     DRed.of_natO
-    DRed.of_nat_succ_l
-
-    
+    DRed.of_nat_succ_l    
     DRed.addC
     DRed.addA
     _
@@ -1653,27 +1692,11 @@ Program Instance Numeric_Props_D: @Numerics.Numeric_Props DRed.t Numeric_D:=
     DRed.mult_lt_compat_l
     DRed.natPowO
     DRed.natPowRec
-    _
-    _
-    _
-    _
-    _
     DRed.total_order_T
     _
-    _
-.
+    _.
 Next Obligation.
   intros. rewrite DRed.addC. apply DRed.addOppL. Qed.
-Next Obligation.
-  intros;rewrite <- Q2R_plus;apply Qeq_eqR; rewrite DRed.addP; apply Qeq_refl. Qed.
-Next Obligation.
-  intros; rewrite <- Q2R_mult; apply Qeq_eqR; rewrite DRed.multP; apply Qeq_refl. Qed.
-Next Obligation.
-  intros. split;intros. apply Qlt_Rlt. auto. apply Rlt_Qlt. auto. Qed.
-Next Obligation.
-  intros. rewrite <- Q2R_opp. apply Qeq_eqR. rewrite DRed.oppP. apply Qeq_refl. Qed.
-Next Obligation.
-  intros. apply eqR_Qeq in H. apply DRed.Dred_eq; auto. Qed.
 Next Obligation.
   split; intros.
   { 
@@ -1694,11 +1717,78 @@ Next Obligation.
   by apply DRed.le_not_lt in H.
 Qed.
 
+Program Instance Numeric_Props_DO: @Numerics.Numeric_Props DORed.t Numeric_DO:=
+    @Numerics.mkNumericProps
+    DORed.t
+    Numeric_DO
+    DORed.lt_t0_t1
+    DORed.mult0L
+    DORed.of_natO
+    DORed.of_nat_succ_l
+    DORed.addC
+    DORed.addA
+    _
+    DORed.add0l
+    DORed.multC
+    DORed.multA
+    DORed.mult1L
+    DORed.multDistrL
+    DORed.lt_asym
+    DORed.lt_trans
+    DORed.plus_lt_compat_l
+    DORed.mult_lt_compat_l
+    DORed.natPowO
+    DORed.natPowRec
+    DORed.total_order_T
+    _
+    _.
+Next Obligation.
+  intros. rewrite DORed.addC. apply DORed.addOppL. Qed.
+Next Obligation.
+  split; intros.
+  { 
+    destruct (DORed.eq_dec n m); auto.
+    by exfalso.
+  }
+  rewrite H.
+  destruct (DORed.eq_dec m m); auto.
+Qed.
+Next Obligation.
+  split; intros.
+  {
+    destruct (DORed.lt_le_dec n m); auto.
+    by exfalso.
+  }
+  destruct (DORed.lt_le_dec n m); auto.
+  exfalso.
+  by apply DORed.le_not_lt in H.
+Qed.
 
+Program Instance Numeric_R_Inj_DO: @Numerics.Numeric_R_inj DORed.t Numeric_DO:=
+  @mkNumericRInj _ _ (fun x => Q2R (DO_to_Q x)) _ _ _ _ _.
+Next Obligation.
+  intros;rewrite <- Q2R_plus;apply Qeq_eqR; rewrite DORed.addP; apply Qeq_refl. Qed.
+Next Obligation.
+  intros; rewrite <- Q2R_mult; apply Qeq_eqR; rewrite DORed.multP; apply Qeq_refl. Qed.
+Next Obligation.
+  intros. split;intros. apply Qlt_Rlt. auto. apply Rlt_Qlt. auto. Qed.
+Next Obligation.
+  intros. rewrite <- Q2R_opp. apply Qeq_eqR. rewrite DORed.oppP. apply Qeq_refl. Qed.
+Next Obligation.
+  intros. apply eqR_Qeq in H. apply DORed.DOred_eq; auto. Qed.
 
-Delimit Scope R_scope with R_s.
-Local Open Scope R_scope.
-
+Program Instance Numeric_R_Inj_D: @Numerics.Numeric_R_inj DRed.t Numeric_D :=
+  @mkNumericRInj _ _ (fun x => Q2R (D_to_Q x)) _ _ _ _ _.
+Next Obligation.
+  intros;rewrite <- Q2R_plus;apply Qeq_eqR; rewrite DRed.addP; apply Qeq_refl. Qed.
+Next Obligation.
+  intros; rewrite <- Q2R_mult; apply Qeq_eqR; rewrite DRed.multP; apply Qeq_refl. Qed.
+Next Obligation.
+  intros. split;intros. apply Qlt_Rlt. auto. apply Rlt_Qlt. auto. Qed.
+Next Obligation.
+  intros. rewrite <- Q2R_opp. apply Qeq_eqR. rewrite DRed.oppP. apply Qeq_refl. Qed.
+Next Obligation.
+  intros. apply eqR_Qeq in H. apply DRed.Dred_eq; auto. Qed.
 
 Program Instance Numeric_R: Numeric R :=
   @Numerics.mkNumeric
@@ -1707,7 +1797,6 @@ Program Instance Numeric_R: Numeric R :=
     Ropp
     Rmult
     pow
-    (fun x => x)
     INR
     (IZR Z0)
     (IZR (Zpos xH))
@@ -1752,22 +1841,11 @@ Program Instance Numeric_Props_R: @Numerics.Numeric_Props R Numeric_R:=
     _
     _
     _
-
-    _
-    _
-    _
-    _
-    _
     Raxioms.total_order_T
     _
-    _
-.
+    _.
 Next Obligation. lra. Qed.
-Next Obligation.
-  rewrite -> Rplus_comm with 1 _.
-  destruct n; auto.
-  simpl. rewrite Rplus_0_l. auto.
-Qed.
+Next Obligation. induction n; simpl; lra. Qed.
 Next Obligation. lra. Qed.
 Next Obligation. lra. Qed. 
 Next Obligation. 
@@ -1783,7 +1861,6 @@ Next Obligation.
   repeat rewrite -> Rmult_comm with _ r.
   auto.
 Qed.
-Next Obligation. lra. Qed.
 Next Obligation. 
   unfold Numeric_R_obligation_2.
   destruct (Raxioms.total_order_T n m).
@@ -1822,6 +1899,10 @@ Next Obligation.
   by left.
 Qed.
 
+Program Instance Numeric_R_Inj_R: @Numerics.Numeric_R_inj R Numeric_R:=
+  @mkNumericRInj _ _ id _ _ _ _ _.
+Next Obligation. lra. Qed.
+
 Lemma to_R_R: forall x : R, to_R x = x.
 Proof. intros. simpl. auto. Qed.
 
@@ -1839,11 +1920,9 @@ Program Instance Numeric_z : Numerics.Numeric Z :=
     Z.opp
     Z.mul
     Zpower_nat
-    IZR
     Z.of_nat
     Z0
     (Zpos (1)%positive)
-
     Z.lt
     Z.ltb
     Z.eqb.
@@ -1872,16 +1951,9 @@ Program Instance Numeric_Props_z : @Numerics.Numeric_Props Z Numeric_z :=
     _
     _
     _
-
     _
     _
-    _
-    _
-    eq_IZR
-    _
-    Z.eqb_eq
-    Z.ltb_lt
-.
+    _.
 Next Obligation. lia. Qed.
 Next Obligation. 
   fold (Z.of_nat n.+1).
@@ -1899,6 +1971,19 @@ Next Obligation.
   repeat rewrite -> Zmult_comm with _ r.
   auto.
 Qed.
+Next Obligation.
+  destruct Z_dec' with r1 r2; auto.
+  destruct s; auto.
+Qed.
+Next Obligation. 
+  split; intros; apply Z.eqb_eq; auto.
+Qed.
+Next Obligation.
+  split; intros; apply Z.ltb_lt; auto.
+Qed.
+
+Program Instance Numeric_R_Inj_z: @Numerics.Numeric_R_inj Z Numeric_z :=
+  @mkNumericRInj _ _ IZR _ _ _ _ _.
 Next Obligation. rewrite plus_IZR. auto. Qed.
 Next Obligation. rewrite mult_IZR. auto. Qed. 
 Next Obligation. 
@@ -1907,13 +1992,7 @@ Next Obligation.
   apply lt_IZR.
 Qed.
 Next Obligation. rewrite opp_IZR. auto. Qed.
-Next Obligation.
-  destruct Z_dec' with r1 r2; auto.
-  destruct s; auto.
-Qed.
-    
-    
- 
+Next Obligation. apply eq_IZR. auto. Qed.
 
   Delimit Scope R_scope with R_s.
 
@@ -1928,7 +2007,7 @@ Qed.
   Local Open Scope Numeric_scope.
 
   Section use_Numeric2.
-  Context {Nt:Type} {H : Numeric Nt} `{NtProps : Numeric_Props (numeric_t := H) Nt}.
+  Context {Nt:Type} {H : Numeric Nt} `{NtProps : Numeric_Props (numeric_t := H) Nt} {Nt_R_inj : @Numeric_R_inj Nt H}.
 
   Lemma to_R_eqb: forall (n m : Nt), eqb n m = eqb (to_R n) (to_R m).
   Proof.
@@ -2017,6 +2096,8 @@ Qed.
 
 
 End use_Numeric2.
+
+
 
 Definition log (x y : R) := Rdiv (ln y) (ln x).
     
@@ -2253,13 +2334,13 @@ Qed.
 
 
   Section use_Numeric3.
-  Context {Nt : Type } `{Numeric_Props Nt}.
+  Context {Nt : Type } `{Numeric_Props Nt} `{Nt_to_R : @Numeric_R_inj Nt numeric_t }.
 
   Lemma exists_pow_nat_le: forall x y : Nt, 0 < x -> x < 1 -> 0 < y -> exists n, Numerics.pow_nat x n <= y.
   Proof.
     intros.
     destruct exists_pow_le with (to_R x) (to_R y); auto.
-    { simpl; rewrite <- to_R_plus_id; apply to_R_lt; auto. }
+    { simpl; rewrite <- to_R_plus_id; rewrite <- to_R_lt; auto. }
     { simpl; rewrite <- to_R_mult_id; apply to_R_lt; auto. }
     { simpl; rewrite <- to_R_plus_id; apply to_R_lt; auto. }
     exists x0.
