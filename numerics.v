@@ -98,8 +98,6 @@ Module Numerics.
         pow_natO: forall t, pow_nat t O = mult_id;
         pow_nat_rec: forall t n, pow_nat t (S n) = t * pow_nat t n;
 
-        
-      
         total_order_T : forall r1 r2, {r1 < r2} + {r1 = r2} + {r2 < r1};
 
         eqb_true_iff: forall n m, eqb n m <-> n = m;
@@ -1651,8 +1649,8 @@ Program Instance Numeric_D: Numerics.Numeric (DRed.t) :=
     DRed.t0
     DRed.t1
     Dlt
-    DRed.lt_le_dec
-    DRed.eq_dec
+    Dlt_bool
+    DRed.eq_bool
 .
 Program Instance Numeric_DO: Numerics.Numeric (DORed.t) :=
   @Numerics.mkNumeric
@@ -1665,10 +1663,8 @@ Program Instance Numeric_DO: Numerics.Numeric (DORed.t) :=
     DORed.t0
     DORed.t1
     DOlt
-    DORed.lt_le_dec
-    DORed.eq_dec.
-
-
+    DOlt_bool
+    DORed.eq_bool.
 
 Program Instance Numeric_Props_D: @Numerics.Numeric_Props DRed.t Numeric_D:=
     @Numerics.mkNumericProps
@@ -1698,23 +1694,12 @@ Program Instance Numeric_Props_D: @Numerics.Numeric_Props DRed.t Numeric_D:=
 Next Obligation.
   intros. rewrite DRed.addC. apply DRed.addOppL. Qed.
 Next Obligation.
-  split; intros.
-  { 
-    destruct (DRed.eq_dec n m); auto.
-    by exfalso.
-  }
-  rewrite H.
-  destruct (DRed.eq_dec m m); auto.
+  rewrite <- DRed.eq_bool_iff.
+  split; auto.
 Qed.
 Next Obligation.
-  split; intros.
-  {
-    destruct (DRed.lt_le_dec n m); auto.
-    by exfalso.
-  }
-  destruct (DRed.lt_le_dec n m); auto.
-  exfalso.
-  by apply DRed.le_not_lt in H.
+  rewrite <- Dlt_bool_iff.
+  split; auto.
 Qed.
 
 Program Instance Numeric_Props_DO: @Numerics.Numeric_Props DORed.t Numeric_DO:=
@@ -1745,23 +1730,10 @@ Program Instance Numeric_Props_DO: @Numerics.Numeric_Props DORed.t Numeric_DO:=
 Next Obligation.
   intros. rewrite DORed.addC. apply DORed.addOppL. Qed.
 Next Obligation.
-  split; intros.
-  { 
-    destruct (DORed.eq_dec n m); auto.
-    by exfalso.
-  }
-  rewrite H.
-  destruct (DORed.eq_dec m m); auto.
+  rewrite <- DORed.eq_bool_iff. split; auto.
 Qed.
-Next Obligation.
-  split; intros.
-  {
-    destruct (DORed.lt_le_dec n m); auto.
-    by exfalso.
-  }
-  destruct (DORed.lt_le_dec n m); auto.
-  exfalso.
-  by apply DORed.le_not_lt in H.
+Next Obligation. 
+  rewrite <- DOlt_bool_iff. split; auto.
 Qed.
 
 Program Instance Numeric_R_Inj_DO: @Numerics.Numeric_R_inj DORed.t Numeric_DO:=
