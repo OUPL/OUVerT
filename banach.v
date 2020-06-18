@@ -753,7 +753,31 @@ Module banach.
       apply converge_func_correct.
     Qed.
 
-    
+    Lemma dist_converge_func_step_r : forall (f : T->R), dist f (step_f converge_func) = dist f converge_func.
+    Proof.
+      intros.
+      unfold max_dist.
+      apply mapmax_ne_ext. intros.
+      rewrite rec_fixpoint. auto.
+    Qed.
+
+    Lemma dist_fixpoint_step_ub: forall (f : T->R),
+        ((1+ - q) * dist f converge_func <= dist f (step_f f)).
+    Proof.
+      intros.
+      rewrite plus_mult_distr_r.
+      enough(dist f converge_func  <=  dist f (step_f f) + q * dist f converge_func).
+      { 
+        replace(_ <= _) with (1 * dist f converge_func + - q * dist f converge_func <= dist f (step_f f))%R; auto.
+        replace(_ <= _) with (dist f converge_func <= dist f (step_f f) + q * dist f converge_func)%R in H; auto.
+        lra.
+      }
+      apply le_trans with (dist f (step_f f) + dist (step_f f) converge_func).
+        apply dist_triangle. apply Numeric_Props_R. 
+      apply plus_le_compat_l.
+      rewrite <- dist_converge_func_step_r.
+      apply is_contr.
+    Qed.
 
   End banach_R.
 
@@ -780,9 +804,9 @@ Module banach.
       apply H1. auto.
   Qed.    
     
+  
 
-
-  Record R_Nt_relation {Nt : Type} `{Numerics.Numeric Nt} : Type :=
+  Record R_Nt_relation {Nt : Type} `{numeric_t : Numerics.Numeric Nt} `{@Numerics.Numeric_R_inj Nt numeric_t} : Type :=
     R_Nt_relation_mk {
       relation_contr : @contraction_func R _;  
       Nt_step : ((x_t relation_contr) -> Nt) -> ((x_t relation_contr) -> Nt);
@@ -791,7 +815,7 @@ Module banach.
     }.
 
   Section banach_Nt_R.
-    Context {Nt:Type} `{Numerics.Numeric Nt}.
+    Context {Nt:Type} `{Numerics.Numeric Nt} `{Nt_R_inj : @Numerics.Numeric_R_inj Nt H}.
     Variable relation : R_Nt_relation.
 
 

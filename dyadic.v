@@ -429,32 +429,79 @@ Qed.
 Definition DOle (d1 d2 : DO) : Prop :=
   Qle (DO_to_Q d1) (DO_to_Q d2).  
 
-(*TODO: There's probably a more efficient way to implement the following:*)
 Definition DOle_bool (d1 d2 : DO) : bool :=
-  Qle_bool (DO_to_Q d1) (DO_to_Q d2).
+  Z.leb (num (DOsub d1 d2)) 0 .
+
+Lemma DO_num_neg_iff: forall d, (DO_to_Q d < 0)%Q <-> (num d < 0)%Z.
+Proof.
+    intros.
+    split; intros;
+      unfold Qlt in *; simpl in *; lia.
+Qed.
+
+Lemma DO_num_leq_0_iff: forall d, (DO_to_Q d <= 0)%Q <-> (num d <= 0)%Z.
+Proof.
+    intros.
+    split; intros;
+      unfold Qle in *; simpl in *; lia.
+Qed.
+
 
 Lemma DOle_bool_iff d1 d2 : (DOle_bool d1 d2 = true) <-> DOle d1 d2.
 Proof.
   unfold DOle_bool, DOle.
-  apply Qle_bool_iff.
+  split; intros.
+  {
+    setoid_replace (DO_to_Q d2) with (DO_to_Q d2 + 0)%Q using relation Qeq.
+    2: unfold Qeq; simpl; lia.
+    setoid_replace (DO_to_Q d1) with (DO_to_Q d2 + (DO_to_Q d1 - DO_to_Q d2))%Q using relation Qeq.
+    2: unfold Qeq; simpl; lia.
+    rewrite Qplus_le_r.
+    rewrite <- DOsub_ok.
+    apply DO_num_leq_0_iff.
+    apply Z.leb_le.
+    auto.
+  }
+  setoid_replace (DO_to_Q d2) with (DO_to_Q d2 + 0)%Q using relation Qeq in H.
+  2: unfold Qeq; simpl; lia.
+  setoid_replace (DO_to_Q d1) with (DO_to_Q d2 + (DO_to_Q d1 - DO_to_Q d2))%Q using relation Qeq in H.
+  2: unfold Qeq; simpl; lia.
+  rewrite Qplus_le_r in H.
+  rewrite <- DOsub_ok in H.
+  apply DO_num_leq_0_iff in H.
+  apply Z.leb_le in H.
+  auto.
 Qed.
 
 Definition DOlt (d1 d2 : DO) : Prop :=
   Qlt (DO_to_Q d1) (DO_to_Q d2).  
 
 Definition DOlt_bool (d1 d2 : DO) : bool :=
-  match DO_to_Q d1 ?= DO_to_Q d2 with
-  | Lt => true
-  | _ => false
-  end.
+  Z.ltb (num (DOsub d1 d2)) 0 .
 
 Lemma DOlt_bool_iff d1 d2 : (DOlt_bool d1 d2 = true) <-> DOlt d1 d2.
 Proof.
-  unfold DOlt_bool; split.
-  destruct (Qcompare_spec (DO_to_Q d1) (DO_to_Q d2));
-    try solve[inversion 1|auto].
-  unfold DOlt; rewrite Qlt_alt; intros ->; auto.
+  unfold DOlt_bool; unfold DOlt; split; intros.
+  {
+    setoid_replace (DO_to_Q d2) with (DO_to_Q d2 + 0)%Q using relation Qeq.
+    2: unfold Qeq; simpl; lia.
+    setoid_replace (DO_to_Q d1) with (DO_to_Q d2 + (DO_to_Q d1 - DO_to_Q d2))%Q using relation Qeq.
+    2: unfold Qeq; simpl; lia.
+    rewrite Qplus_lt_r.
+    rewrite <- DOsub_ok.
+    apply DO_num_neg_iff.
+    apply Z.ltb_lt. auto.
+  }
+  setoid_replace (DO_to_Q d2) with (DO_to_Q d2 + 0)%Q using relation Qeq in H.
+  2: unfold Qeq; simpl; lia.
+  setoid_replace (DO_to_Q d1) with (DO_to_Q d2 + (DO_to_Q d1 - DO_to_Q d2))%Q using relation Qeq in H.
+  2: unfold Qeq; simpl; lia.
+  rewrite Qplus_lt_r in H.
+  rewrite <- DOsub_ok in H.
+  apply DO_num_neg_iff in H.
+  apply Z.ltb_lt. auto.
 Qed.  
+
 
 Lemma DOeq_dec (d1 d2 : DO) : {d1=d2} + {d1<>d2}.
 Proof.
@@ -1198,6 +1245,7 @@ Proof.
     apply Zodd_not_Zeven in H; contradiction. }
   destruct (DOred' x y); simpl in H|-*; rewrite H; auto.
 Qed.  
+
     
 Lemma DOred_idem d : DOred (DOred d) = DOred d.
 Proof.
@@ -1232,6 +1280,26 @@ Proof.
 Qed.  
 
 
+Lemma DOred_complete_converse d1 d2 :
+  DOred d1 = DOred d2 ->
+  DO_to_Q d1 == DO_to_Q d2.
+Proof.
+  intros.
+  rewrite <- DOred_correct.
+  rewrite <- (@DOred_correct d2).
+  rewrite H.
+  apply Qeq_refl.
+Qed.
+
+Lemma DO_lt_le_dec: forall d1 d2, {d1 < d2} + {d2 <= d1}.
+Proof.
+  intros.  
+  unfold DOlt.
+  unfold DOle.
+  apply Qlt_le_dec.
+Qed.
+
+
 Module DORed.
   Record t : Type :=
     mk { d :> DO;
@@ -1242,7 +1310,7 @@ Module DORed.
   Program Definition t0 := mk 0 _.
 
   Program Definition t1 := mk 1 _.
-  
+
   Program Definition add (d1 d2 : t) : t :=
     mk (DOred (DOadd d1.(d) d2.(d))) _.
   Next Obligation.
@@ -1289,7 +1357,18 @@ Module DORed.
     intros H; assert (H2: x1 = x2).
     { rewrite <-pf1, <-pf2; apply DOred_complete; auto. }
     generalize pf1 pf2; rewrite H2; intros; f_equal; apply proof_irrelevance.
-  Qed.    
+  Qed.
+
+  Lemma DOred_eq_weak: forall (d1 d2 : t), (d d1 = d d2) -> d1 = d2.
+  Proof.
+    intros.
+    apply DOred_eq.
+    destruct d1. destruct d2.
+    simpl.
+    simpl in H.
+    rewrite H.
+    apply Qeq_refl.
+  Qed.
   
   Lemma addP d1 d2 :
     DO_to_Q (d (add d1 d2)) == (DO_to_Q (d d1) + DO_to_Q (d d2))%Q.
@@ -1639,42 +1718,59 @@ Module DORed.
   Lemma natPowRec: forall (d : t) (n : nat), natPow d (S n) = mult d (natPow d n).
   Proof. auto. Qed.
 
-  Lemma lt_le_dec: forall d1 d2, {d1 < d2} + {d2 <= d1}.
-  Proof. intros. unfold DOle. unfold DOlt. apply Qlt_le_dec. Qed.
 
+  (* Lemma lt_Qeq: forall d1 d2 d3 d4 : DO, DO_to_Q d1 == DO_to_Q d3 -> DO_to_Q d2 == DO_to_Q d4 -> (d1 < d2 <-> d3 < d4).
+  Proof.
+    intros.
+    split; intros.
+      unfold DOlt. rewrite <-  H. lia.
+      rewrite H.
+ *)
+  
+
+  Lemma num_ge0_iff: forall d, (0 <= DO_to_Q d)%Q <-> (0 <= num d)%Z.
+  Proof.
+    intros.
+    split; intros;
+      unfold Qle in *; simpl in *; lia.
+  Qed.
 
   Lemma le_lt_dec: forall d1 d2,  {d1 <= d2} + {d2 < d1}.
   Proof.
     intros.
-    unfold DOle.
-    unfold DOlt.
-    destruct Qlt_le_dec with (DO_to_Q d2) (DO_to_Q d1); auto.
+    destruct (DO_lt_le_dec d2 d1); auto.
   Qed.
 
+  Lemma num_0_iff: forall d, num d = 0%Z <-> DO_to_Q d == 0.
+  Proof.
+    intros.
+    split; intros;
+      unfold Qeq in *; simpl in *; lia.
+  Qed.
 
   Lemma eq_dec: forall d1 d2 : t, {d1 = d2} + {d1 <> d2}.
   Proof.
     intros.
-    destruct DOeq_dec with (d d1) (d d2).
-    { 
-      left. 
-      destruct d1,d2.
-      simpl in e.
-      generalize pf0 pf1.
-      rewrite e.
-      intros.
-      f_equal.
-      apply proof_irrelevance.
+    destruct (Z.eq_dec (num (d d1 - d d2)) 0).
+    {
+      left.
+      rewrite num_0_iff in e.
+      apply DOred_eq.
+      rewrite DOsub_ok in e.
+      unfold Qeq in *. simpl in *.
+      lia.
     }
     right.
-    destruct d1,d2.
-    simpl in n.
-    unfold not in *.
-    intros.
+    unfold not in *. intros.
     apply n.
-    inversion H.
-    auto.
-  Qed.
+    subst.
+    rewrite num_0_iff.
+    setoid_replace 0%Q with (DO_to_Q DO0) using relation Qeq.
+    2:{ unfold DO_to_Q. unfold Qeq. auto. }
+    rewrite DOsub_ok.
+    unfold Qminus. rewrite Qplus_opp_r.
+    unfold Qeq. simpl. auto.
+  Qed. 
 
   Lemma le_not_lt: forall d1 d2 : t, (d1 <= d2)-> ~ (d2 < d1).
   Proof.
@@ -1705,13 +1801,48 @@ Module DORed.
   Lemma total_order_T : forall d1 d2 : t, {DOlt d1 d2} + {d1 = d2} + {DOlt d2 d1}.
   Proof.
     intros.
-    unfold DOlt.
-    destruct Q_dec with (DO_to_Q d1) (DO_to_Q d2).
-      destruct s; auto.
-    left.
+    destruct (DO_lt_le_dec d1 d2); auto.
+    destruct (eq_dec d1 d2); auto.
     right.
-    apply DOred_eq.
+    unfold DOlt.
+    unfold DOle in *.
+    apply Qle_lt_or_eq in d0.
+    destruct d0; auto.
+    exfalso. apply n.
+    symmetry.
+    apply DOred_eq. auto.
+  Qed. 
+
+  Lemma lt_le_dec: forall d1 d2, {d1 < d2} + {d2 <= d1}.
+  Proof. apply DO_lt_le_dec. Qed.
+
+  Definition eq_bool (d1 d2 : t) : bool := Z.eqb (num (d d1)) (num (d d2)) && Pos.eqb (den (d d1)) (den (d d2)).
+
+  Lemma eq_bool_refl: forall (d : t), eq_bool d d = true.
+  Proof.
+    intros d.
+    unfold eq_bool.
+    destruct d.  
+    simpl.
+    rewrite Z.eqb_refl.
+    rewrite Pos.eqb_refl.
     auto.
+  Qed.
+
+  Lemma eq_bool_iff: forall (d1 d2 : t), eq_bool d1 d2 = true <-> d1 = d2.
+  Proof.
+    intros.
+    split; intros.
+    2: subst; apply eq_bool_refl.
+    unfold eq_bool in H.
+    apply DOred_eq_weak.
+    destruct d1. destruct d2.
+    destruct d1. destruct d0.
+    simpl in *.
+    apply andb_prop in H.
+    destruct H.
+    apply Ndec.Peqb_complete in H0.
+    apply Z.eqb_eq in H. subst. auto.
   Qed.
 
   (* TODO: More lemmas here! *)
@@ -1829,17 +1960,22 @@ Proof.
   rewrite Dopp_ok.
   unfold Qminus; apply Qeq_refl.
 Qed.
-
 Definition Dle (d1 d2 : D) : Prop :=
   Qle (D_to_Q d1) (D_to_Q d2).  
 
-(*TODO: There's probably a more efficient way to implement the following:*)
 Definition Dle_bool (d1 d2 : D) : bool :=
-  Qle_bool (D_to_Q d1) (D_to_Q d2).
+  match d1,d2 with
+  | DD d1', DD d2' => DOle_bool d1' d2' 
+  | _,_ => Qle_bool (D_to_Q d1) (D_to_Q d2)
+  end.
 
 Lemma Dle_bool_iff d1 d2 : (Dle_bool d1 d2 = true) <-> Dle d1 d2.
 Proof.
   unfold Dle_bool, Dle.
+  destruct d1.
+  2: apply Qle_bool_iff.
+  destruct d2.
+   apply DOle_bool_iff.
   apply Qle_bool_iff.
 Qed.
 
@@ -1847,17 +1983,28 @@ Definition Dlt (d1 d2 : D) : Prop :=
   Qlt (D_to_Q d1) (D_to_Q d2).  
 
 Definition Dlt_bool (d1 d2 : D) : bool :=
+match d1,d2 with
+| DD d1', DD d2' => DOlt_bool d1' d2'
+| _,_ =>
   match D_to_Q d1 ?= D_to_Q d2 with
   | Lt => true
   | _ => false
-  end.
+  end
+end.
 
 Lemma Dlt_bool_iff d1 d2 : (Dlt_bool d1 d2 = true) <-> Dlt d1 d2.
 Proof.
-  unfold Dlt_bool; split.
-  destruct (Qcompare_spec (D_to_Q d1) (D_to_Q d2));
+  unfold Dlt_bool.
+  destruct d1.
+  destruct d2. apply DOlt_bool_iff.
+  split.
+  destruct (Qcompare_spec (D_to_Q (DD d)) (D_to_Q (DQ q)));
     try solve[inversion 1|auto].
   unfold Dlt; rewrite Qlt_alt; intros ->; auto.
+  split.
+  destruct (Qcompare_spec (D_to_Q (DQ q)) (D_to_Q d2));
+    try solve[inversion 1|auto].
+  unfold Dlt; rewrite Qlt_alt; intros ->; auto.  
 Qed.  
 
 Lemma Deq_dec (d1 d2 : D) : {d1=d2} + {d1<>d2}.
@@ -1934,9 +2081,6 @@ Definition Dlub (max : D) : D :=
   | DQ q => DQ (Qinv q)
   end.
 
-Eval compute in (D_to_Q (Dlub ((DD (Dmake 2 2))))).
-
-Eval compute in (Zsize 2).
 
 Local Open Scope D_scope.
 
@@ -3215,7 +3359,7 @@ Module DRed.
       rewrite <-pf1, <-pf2; apply Dred_complete; auto. }
     generalize pf1 pf2; rewrite H2; intros; f_equal; apply proof_irrelevance.
   Qed.
-  
+
   Lemma addP d1 d2 :
     D_to_Q (d (add d1 d2)) == (D_to_Q (d d1) + D_to_Q (d d2))%Q.
   Proof.
@@ -3567,17 +3711,18 @@ Module DRed.
   Proof. auto. Qed.
 
   Lemma lt_le_dec: forall d1 d2, {d1 < d2} + {d2 <= d1}.
-  Proof. intros. unfold Dle. unfold Dlt. apply Qlt_le_dec. Qed.
-
+  Proof.
+    destruct d1; destruct d2.
+      exact (DORed.lt_le_dec d0 d1) .
+      exact (Qlt_le_dec (DO_to_Q d0) q).
+      exact (Qlt_le_dec q (DO_to_Q d0)).
+      exact (Qlt_le_dec q q0).
+  Defined.
 
   Lemma le_lt_dec: forall d1 d2,  {d1 <= d2} + {d2 < d1}.
-  Proof.
-    intros.
-    unfold Dle.
-    unfold Dlt.
-    destruct Qlt_le_dec with (D_to_Q d2) (D_to_Q d1); auto.
-  Qed.
-
+  Proof. intros.
+    destruct (lt_le_dec d2 d1); auto.
+  Defined.
 
   Lemma eq_dec: forall d1 d2 : t, {d1 = d2} + {d1 <> d2}.
   Proof.
@@ -3640,6 +3785,43 @@ Module DRed.
     apply Dred_eq.
     auto.
   Qed.
+
+  Definition eq_bool (d1 d2 : t) : bool := 
+  match (d d1),(d d2) with
+  | (DD d1'), (DD d2') => DORed.eq_bool (DORed.build d1') (DORed.build d2')
+  | _ , _ => Qeq_bool (D_to_Q d1) (D_to_Q d2)
+  end.
+
+  Lemma eq_bool_refl: forall (d : t), eq_bool d d = true.
+  Proof.
+    intros d.
+    unfold eq_bool.
+    destruct d.  
+    simpl.
+    destruct d0.
+      apply DORed.eq_bool_refl.
+    apply Qeq_bool_refl.
+  Qed.
+
+  Lemma eq_bool_iff: forall (d1 d2 : t), eq_bool d1 d2 = true <-> d1 = d2.
+  Proof.
+    intros.
+    split; intros.
+    2: subst; apply eq_bool_refl.
+    unfold eq_bool in H.
+    destruct d1. destruct d0; simpl in *.
+    2:{ apply Qeq_bool_iff in H. apply Dred_eq. auto. }
+    destruct d2. destruct d1; simpl in *.
+    2:{ apply Qeq_bool_iff in H. apply Dred_eq. auto. }
+    apply DORed.eq_bool_iff in H.
+    unfold DORed.build in H.
+    inversion H.
+    apply Dred_eq.
+    simpl.
+    apply DOred_complete_converse.
+    auto.
+  Qed.
+
   (* TODO: More lemmas here! *)
 End DRed.      
 

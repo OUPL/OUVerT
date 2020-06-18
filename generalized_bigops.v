@@ -10,6 +10,8 @@ From mathcomp Require Import all_algebra.
 
 Require Import OUVerT.numerics.
 Require Import OUVerT.extrema.
+Require Import OUVerT.compile.
+Require Import OUVerT.enumerables.
 
 Delimit Scope R_scope with R.
 
@@ -392,7 +394,7 @@ Proof.
   auto.
 Qed.
 
-
+  
 End use_numeric_props.
 
 
@@ -677,6 +679,7 @@ Proof.
   apply: big_sum_ge0 => x; rewrite mem_filter; case/andP => Hx Hy; apply: H1 => //.
 Qed.  
 
+
 Lemma big_sum_pred (T:eqType) (cs:seq T) (f:T -> Nt) (p:pred T) :
   big_sum cs (fun t => if p t then f t else Numerics.plus_id) =
   big_sum [seq t <- cs | p t] f.
@@ -797,23 +800,7 @@ Proof.
   apply Numerics.plus_comm.
 Qed.
 
-Lemma to_R_big_sum T (cs : seq T) (f : T -> Nt): (big_sum cs (fun x => Numerics.to_R (f x))) = Numerics.to_R (big_sum cs f).
-Proof.
-  induction cs; simpl.
-    rewrite Numerics.to_R_plus_id. auto.
-  rewrite IHcs.
-  rewrite Numerics.to_R_plus.
-  auto.
-Qed.
 
-Lemma to_R_big_product T (cs : seq T) (f : T -> Nt): (big_product cs (fun x => Numerics.to_R (f x))) = Numerics.to_R (big_product cs f).
-Proof.
-  induction cs; simpl.
-    rewrite Numerics.to_R_mult_id. auto.
-  rewrite IHcs.
-  rewrite Numerics.to_R_mult.
-  auto.
-Qed.
 
 
 Lemma big_sum_filter: forall (T : Type) (cs : seq T) (f : T->Nt) (g : T->bool),
@@ -830,6 +817,26 @@ Proof.
   apply IHcs.
 Qed.
 
+  Section use_Numeric_R_inj.
+    Context `{Nt_R_inj : @Numerics.Numeric_R_inj Nt numeric_t}.
+  Lemma to_R_big_sum T (cs : seq T) (f : T -> Nt): (big_sum cs (fun x => Numerics.to_R (f x))) = Numerics.to_R (big_sum cs f).
+  Proof.
+  induction cs; simpl.
+    rewrite Numerics.to_R_plus_id. auto.
+  rewrite IHcs.
+  rewrite Numerics.to_R_plus.
+  auto.
+Qed.
+
+Lemma to_R_big_product T (cs : seq T) (f : T -> Nt): (big_product cs (fun x => Numerics.to_R (f x))) = Numerics.to_R (big_product cs f).
+Proof.
+  induction cs; simpl.
+    rewrite Numerics.to_R_mult_id. auto.
+  rewrite IHcs.
+  rewrite Numerics.to_R_mult.
+  auto.
+Qed.
+End use_Numeric_R_inj.
 
 End use_Numeric2.
 
