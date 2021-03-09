@@ -3,6 +3,7 @@ From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import all_algebra.
 
 Require Import ProofIrrelevance.
+Require Import Coq.micromega.Lia.
 Require Import String.
 Require Import QArith.
 Require Import Coq.FSets.FMapFacts.
@@ -64,7 +65,7 @@ End OrderedFinType.
 
 Module MyOrderedType_of_OrderedFinType
        (A : OrderedFinType) <: MyOrderedType.
-  Include A.                                
+  Include A.
 End MyOrderedType_of_OrderedFinType.
 
 (* We now begin defining functors for constructing
@@ -77,10 +78,10 @@ Module OrderedProd (A B : MyOrderedType) <: MyOrderedType.
   Definition t := (A.t*B.t)%type.
   Definition t0 := (A.t0, B.t0).
   Existing Instance A.enumerable.
-  Existing Instance B.enumerable.  
+  Existing Instance B.enumerable.
   Definition enumerable  : Enumerable t := _.
   Existing Instance A.showable.
-  Existing Instance B.showable.  
+  Existing Instance B.showable.
   Definition show_prod (p : A.t*B.t) : string :=
     let s1 := to_string p.1 in
     let s2 := to_string p.2 in
@@ -94,7 +95,7 @@ Module OrderedProd (A B : MyOrderedType) <: MyOrderedType.
       A.lt a1 a2 \/
       (A.eq a1 a2 /\ B.lt b1 b2)
     end.
-  
+
   Lemma lt_trans : forall x y z, lt x y -> lt y z -> lt x z.
   Proof.
     case => a b; case => c d; case => e f; rewrite /lt.
@@ -107,7 +108,7 @@ Module OrderedProd (A B : MyOrderedType) <: MyOrderedType.
     case; first by move => H3; left.
     case => H3 H4; right; split => //.
     by apply: (B.lt_trans _ _ _ H2 H4).
-  Qed.      
+  Qed.
 
   Lemma lt_not_eq : forall x y, lt x y -> ~eq x y.
   Proof.
@@ -118,7 +119,7 @@ Module OrderedProd (A B : MyOrderedType) <: MyOrderedType.
     case => H H1 []H2 H3.
     by apply: (B.lt_not_eq _ _ H1).
   Qed.
-  
+
   Lemma compare : forall x y, Compare lt eq x y.
   Proof.
     move => x y.
@@ -146,8 +147,8 @@ Module OrderedProd (A B : MyOrderedType) <: MyOrderedType.
     have H2: lt y x.
     { clear - gt_pf; move: gt_pf; case: x => a b; case: y => c d /= H.
       by left. }
-    by apply: GT H2.    
-  Qed.        
+    by apply: GT H2.
+  Qed.
 
   Lemma eq_dec : forall x y, {eq x y} + {~eq x y}.
   Proof.
@@ -175,9 +176,9 @@ Module OrderedProd (A B : MyOrderedType) <: MyOrderedType.
 End OrderedProd.
 
 Module OrderedFinProd (X Y : OrderedFinType) <: OrderedFinType.
-  Module A := OrderedProd X Y. 
+  Module A := OrderedProd X Y.
   Include A.
-  
+
   Definition xE := EqType X.t X.eq_mixin.
   Definition xC := ChoiceType xE X.choice_mixin.
   Definition xF := FinType xC X.fin_mixin.
@@ -185,7 +186,7 @@ Module OrderedFinProd (X Y : OrderedFinType) <: OrderedFinType.
   Definition yE := EqType Y.t Y.eq_mixin.
   Definition yC := ChoiceType yE Y.choice_mixin.
   Definition yF := FinType yC Y.fin_mixin.
-  
+
   Definition eq_mixin := prod_eqMixin xE yE.
   Definition choice_mixin := prod_choiceMixin xC yC.
   Definition fin_mixin := prod_finMixin xF yF.
@@ -207,7 +208,7 @@ Module MyOrdNatDep (B : BOUND) <: MyOrderedType.
     | S m' => @mk (N.of_nat m) _ :: enumerate_rec m' _
     end .
   Next Obligation. by rewrite Nat2N.id. Qed.
-  
+
   (**Program Fixpoint enumerate_rec (m : nat) (pf : (m < n)%nat) : list t :=
     (match m as x return _ = x -> list t with
      | O => fun _ => t0 :: nil
@@ -225,9 +226,9 @@ Module MyOrdNatDep (B : BOUND) <: MyOrderedType.
 
   Lemma gt0_pred_lt n : (0 < n -> n.-1 < n)%nat.
   Proof. elim: n => //. Qed.
-  
+
   Definition enumerate_t : list t :=
-    match lt_dec 0 n with 
+    match lt_dec 0 n with
     | left pfn => enumerate_rec (Nat.pred n) (gt0_pred_lt _ pfn)
     | right _ => nil
     end.
@@ -247,8 +248,8 @@ Module MyOrdNatDep (B : BOUND) <: MyOrderedType.
     f_equal.
     apply: proof_irrelevance.
   Qed.
-End MyOrdNatDep.  
-  
+End MyOrdNatDep.
+
 Module MyOrdNatDepProps (B : BOUND).
   Module M := MyOrdNatDep B. Include M.
 
@@ -278,17 +279,17 @@ Module MyOrdNatDepProps (B : BOUND).
     move: 1%nat => nx; elim: n nx => //= n IH nx; f_equal.
     have ->: (n.+1 +nx = n + nx.+1)%nat by rewrite addSnnS.
     apply: IH.
-  Qed.    
-  
+  Qed.
+
   Lemma enumerate_rec_map_erased_nat m :
     map N.to_nat (enumerate_rec_erased m) = enumerate_rec_erased_nat m.
   Proof.
     elim: m => // m IH /=; f_equal => //.
     by rewrite SuccNat2Pos.id_succ.
-  Qed.      
+  Qed.
 
   Lemma notin_gtn m n :
-    (m > n)%nat -> 
+    (m > n)%nat ->
     ~InA (fun x : nat => [eta Logic.eq x]) m (enumerate_rec_erased_nat n).
   Proof.
     elim: n m.
@@ -298,9 +299,9 @@ Module MyOrdNatDepProps (B : BOUND).
     { apply: ltn_trans; last by apply: H.
       by []. }
     inversion H2; subst => //.
-    move: (ltP H) => H3; omega.
-  Qed.    
-  
+    move: (ltP H) => H3; lia.
+  Qed.
+
   Lemma enumerate_rec_erased_nat_nodup m :
     NoDupA (fun x : nat => [eta Logic.eq x]) (enumerate_rec_erased_nat m).
   Proof.
@@ -319,7 +320,7 @@ Module MyOrdNatDepProps (B : BOUND).
     move => m IH n H; case: (Nat.eq_dec n m.+1) => [pf|pf].
     { by left; subst n. }
     right; apply: IH.
-    apply/leP; move: (leP H) => H2; omega.
+    apply/leP; move: (leP H) => H2; lia.
   Qed.
 
   Lemma enumerate_rec_erased_total n m :
@@ -337,10 +338,10 @@ Module MyOrdNatDepProps (B : BOUND).
       by move: (N2Nat.inj _ _ H) => H2; subst n. }
     rewrite enumerate_rec_map_erased_nat.
     apply: (enumerate_rec_erased_nat_total _ _ H).
-  Qed.    
+  Qed.
 
   Lemma enumerate_rec_total m (pf : (m < n)%nat) (x : t) :
-    (m.+1 = n)%nat -> 
+    (m.+1 = n)%nat ->
     In x (enumerate_rec _ pf).
   Proof.
     move => Hsucc.
@@ -370,18 +371,18 @@ Module MyOrdNatDepProps (B : BOUND).
     rewrite Nat2N.id.
     apply/leP; move: (ltP pfx) (ltP pf); move: (N.to_nat vx) => n0.
     rewrite -Hsucc => X Y.
-    omega.
-  Qed.    
-  
+    lia.
+  Qed.
+
   Lemma InA_map A B (f : A -> B) (l : list A) x :
-    InA (fun x => [eta Logic.eq x]) x l -> 
+    InA (fun x => [eta Logic.eq x]) x l ->
     InA (fun x => [eta Logic.eq x]) (f x) (map f l).
   Proof.
     elim: l; first by inversion 1.
     move => a l IH; inversion 1; subst; first by constructor.
     by apply: InA_cons_tl; apply: IH.
   Qed.
-  
+
   Lemma enumerate_rec_erased_nodup m :
     NoDupA (fun x => [eta Logic.eq x]) (enumerate_rec_erased m).
   Proof.
@@ -392,7 +393,7 @@ Module MyOrdNatDepProps (B : BOUND).
       apply: (IH H2). }
     rewrite enumerate_rec_map_erased_nat.
     apply: enumerate_rec_erased_nat_nodup.
-  Qed.      
+  Qed.
 
   Lemma enumerate_rec_nodup m pf :
     NoDupA (fun x : t => [eta Logic.eq x]) (enumerate_rec m pf).
@@ -423,7 +424,7 @@ Module MyOrdNatDepProps (B : BOUND).
     case: (lt_dec 0 n) => [pf|pf]; last first.
     { destruct x as [vx pfx].
       move: (ltP pfx) (leP pf) => X Y.
-      omega. }
+      lia. }
     have H: (n = S n.-1).
     { rewrite (ltn_predK (m:=0)) => //. }
     symmetry in H.
@@ -447,13 +448,13 @@ Module MyOrdNatDepProps (B : BOUND).
     match x with
       Ordinal n _ => N.of_nat n
     end.
-  
+
   Lemma rev_enumerate_enum :
     List.rev (List.map Ordinal_of_t enumerate_t) =
     enum 'I_n.
   Proof.
     rewrite /enumerate_t; case: (lt_dec 0 n); last first.
-    { move => a; move: (leP a) => H; move: (ltP B.n_gt0) => Hx; omega. }
+    { move => a; move: (leP a) => H; move: (ltP B.n_gt0) => Hx; lia. }
     move => pf.
     suff: (List.rev (map val (enumerate_rec n.-1 (gt0_pred_lt n pf))) =
            List.map val_of_Ordinal (enum 'I_n)).
@@ -496,7 +497,7 @@ Module MyOrdNatDepProps (B : BOUND).
         by case: a => // m i; rewrite /val_of_Ordinal Nat2N.id. }
       rewrite -val_enum_ord //. }
     have ->: (S n.-1 = n).
-    { move: (ltP pf) => Hx; omega. }
+    { move: (ltP pf) => Hx; lia. }
     by [].
   Qed.
 End MyOrdNatDepProps.

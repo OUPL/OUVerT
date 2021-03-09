@@ -10,6 +10,8 @@ Require Import QArith Reals Rpower Ranalysis Fourier Lra.
 
 Require Import bigops numerics expfacts dist chernoff.
 
+#[local] Open Scope R_scope.
+
 Section learning.
   Variables A B : finType.
 
@@ -18,21 +20,21 @@ Section learning.
   Variable d_nonneg : forall x, 0 <= d x.
 
   Variable m : nat. (*The number of training samples*)
-  Variable m_gt0 : (0 < m)%nat.  
+  Variable m_gt0 : (0 < m)%nat.
   Notation mR := (INR m).
-  Definition i0 : 'I_m := Ordinal m_gt0.  
+  Definition i0 : 'I_m := Ordinal m_gt0.
 
   (** Training sets *)
   Definition training_set : finType := [finType of {ffun 'I_m -> [finType of A*B]}].
 
   Section error_RV.
-    Variable Hyp : finType.    
+    Variable Hyp : finType.
     (** The (hypothesis-indexed) set of random variables being evaluated *)
     Variable X : Hyp -> 'I_m -> A*B -> R.
     Variable X_range : forall h i x, 0 <= X h i x <= 1.
-    
+
     (** The empirical average of h on T *)
-    Definition empVal (T : training_set) (h : Hyp) := 
+    Definition empVal (T : training_set) (h : Hyp) :=
       (big_sum (enum 'I_m) (fun i => X h i (T i))) / mR.
 
     (** The expected value in D of X h *)
@@ -41,7 +43,7 @@ Section learning.
 
     Lemma chernoff_bound_h
         (h : Hyp)
-        (Hid : identically_distributed d (X h))        
+        (Hid : identically_distributed d (X h))
         (eps : R) (eps_gt0 : 0 < eps) (Hyp_eps : eps < 1 - expVal h) :
     probOfR
       (prodR (fun _ : 'I_m => d))
@@ -51,16 +53,16 @@ Section learning.
       have ->: expVal h = p_exp d m_gt0 (X h) by [].
       set (P := probOfR _ _).
       have ->: P =
-        probOfR 
+        probOfR
          (prodR (T:=prod_finType A B) (fun _ : 'I_m => d))
          (fun T => Rle_lt_dec (p_exp (T:=prod_finType A B) d m_gt0 (X h) + eps) (p_hat (X h) T)).
       { rewrite /probOfR; apply: big_sum_ext => //=; apply eq_in_filter => /= T Hin.
         have ->: empVal T h = p_hat (X h) T by rewrite /p_hat/empVal Rmult_comm.
         by []. }
       apply: chernoff => //; by case: (expVal_nontrivial h).
-    Qed.      
+    Qed.
 
-    Definition eps_Hyp (eps : R) : finType := 
+    Definition eps_Hyp (eps : R) : finType :=
       [finType of {h : Hyp | Rlt_le_dec eps (1 - expVal h)}].
 
     Variable identical : forall h : Hyp, identically_distributed d (X h).
@@ -73,12 +75,12 @@ Section learning.
                  in Rle_lt_dec (expVal h + eps) (empVal T h)]]
       <= INR #|eps_Hyp eps| * exp (-2%R * eps^2 * mR).
     Proof.
-      set (P := fun i:'I_#|eps_Hyp eps| => 
+      set (P := fun i:'I_#|eps_Hyp eps| =>
                   [pred T : training_set |
                    let: h := projT1 (enum_val i)
                    in Rle_lt_dec (expVal h + eps) (empVal T h)]).
       change (probOfR (prodR (fun _ => d))
-                      [pred T:training_set | [exists i : 'I_#|eps_Hyp eps|, P i T]] 
+                      [pred T:training_set | [exists i : 'I_#|eps_Hyp eps|, P i T]]
               <= INR #|eps_Hyp eps| * exp (-2%R * eps^2 * mR)).
       apply: Rle_trans; [apply: union_bound|].
       { by apply: prodR_nonneg. }
@@ -95,7 +97,7 @@ Section learning.
       { rewrite !Rmult_0_l; apply: Rle_refl. }
       move => n H; rewrite iterS.
       have ->:
-        INR n.+1 * exp (- (2) * eps ^ 2 * mR) 
+        INR n.+1 * exp (- (2) * eps ^ 2 * mR)
       = (exp (- (2) * eps ^ 2 * mR)) + INR n * exp (- (2) * eps ^ 2 * mR).
       { by rewrite S_INR Rmult_assoc Rmult_plus_distr_r Rmult_1_l Rplus_comm. }
       apply: Rplus_le_compat_l => //.
@@ -113,7 +115,7 @@ Section learning.
       move => j /=; case/existsP => h H.
       by apply/existsP; exists (enum_rank h); rewrite enum_rankK.
     Qed.
-    
+
     Lemma empVal_le1 T h : empVal T h <= 1.
     Proof.
       rewrite /empVal; set (f := big_sum _ _).
@@ -134,12 +136,12 @@ Section learning.
       rewrite /Rdiv Rinv_r; first by apply: Rle_refl.
       apply: not_0_INR => Heq; move: m_gt0; rewrite Heq //.
     Qed.
-    
+
     Lemma chernoff_bound3
           (learn : training_set -> Hyp) (eps : R) (eps_gt0 : 0 < eps) :
       probOfR (prodR (fun _ : 'I_m => d))
-        [pred T:training_set | 
-         let: h := learn T in 
+        [pred T:training_set |
+         let: h := learn T in
          Rlt_le_dec (expVal h + eps) (empVal T h)]
       <= INR #|eps_Hyp eps| * exp (-2%R * eps^2 * mR).
     Proof.
@@ -159,30 +161,30 @@ Section learning.
       case: (Rle_lt_dec (expVal (learn T) + eps) (empVal T (learn T))) => //.
       move => b; lra.
     Qed.
-      
+
     Lemma eps_Hyp_card eps : (#|eps_Hyp eps| <= #|Hyp|)%nat.
     Proof.
       rewrite /eps_Hyp /= card_sig; apply: leq_trans; first by apply: subset_leq_card.
       by rewrite cardsT.
-    Qed.    
+    Qed.
 
     Lemma chernoff_bound
           (learn : training_set -> Hyp) (eps : R) (eps_gt0 : 0 < eps) :
       probOfR (prodR (fun _ : 'I_m => d))
-        [pred T:training_set | 
-         let: h := learn T in 
+        [pred T:training_set |
+         let: h := learn T in
          Rlt_le_dec (expVal h + eps) (empVal T h)]
       <= INR #|Hyp| * exp (-2%R * eps^2 * mR).
     Proof.
       apply: Rle_trans; first by apply: chernoff_bound3.
       apply Rmult_le_compat_r; first by apply: Rlt_le; apply: exp_pos.
       apply: le_INR; apply/leP; apply: eps_Hyp_card.
-    Qed.      
-    
+    Qed.
+
     Lemma chernoff_bound_holdout
           (h : Hyp) (eps : R) (eps_gt0 : 0 < eps) (eps_lt : eps < 1 - expVal h) :
       probOfR (prodR (fun _ : 'I_m => d))
-        [pred T:training_set | 
+        [pred T:training_set |
          Rlt_le_dec (expVal h + eps) (empVal T h)]
       <= exp (-2%R * eps^2 * mR).
     Proof.
@@ -190,15 +192,15 @@ Section learning.
       apply: probOfR_le.
       { move => x; apply: prodR_nonneg => _ y; apply: d_nonneg. }
       move => x /=; case: (Rlt_le_dec _ _) => // H1 _.
-      case: (Rle_lt_dec _ _) => // H2; lra. 
-    Qed.      
+      case: (Rle_lt_dec _ _) => // H2; lra.
+    Qed.
 
     Definition eps_Hyp_condition_twosided (eps : R) :=
       [pred h : Hyp | Rlt_le_dec eps (Rmin (expVal h) (1 - expVal h))].
-    
+
     Lemma chernoff_twosided_bound_h
         (h : Hyp)
-        (Hid : identically_distributed d (X h))        
+        (Hid : identically_distributed d (X h))
         (eps : R) (eps_gt0 : 0 < eps) (Hyp_eps : eps_Hyp_condition_twosided eps h) :
     probOfR
       (prodR (fun _ : 'I_m => d))
@@ -211,14 +213,14 @@ Section learning.
       have eps_range1 : eps < 1 - expVal h.
       { apply: Rlt_le_trans; [by apply: eps_range|by apply: Rmin_r]. }
       have eps_range2 : eps < expVal h.
-      { apply: Rlt_le_trans; [by apply: eps_range|by apply: Rmin_l]. }    
+      { apply: Rlt_le_trans; [by apply: eps_range|by apply: Rmin_l]. }
       have H1: expVal h = p_exp d m_gt0 (X h) by [].
       have H2:
-        probOfR 
+        probOfR
                 (prodR (T:=prod_finType A B) (fun _ : 'I_m => d))
                 (fun T : training_set =>
-                   Rle_lt_dec eps (Rabs (p_exp (T:=prod_finType A B) d m_gt0 (X h) - empVal T h))) = 
-        probOfR 
+                   Rle_lt_dec eps (Rabs (p_exp (T:=prod_finType A B) d m_gt0 (X h) - empVal T h))) =
+        probOfR
                 (prodR (T:=prod_finType A B) (fun _ : 'I_m => d))
                 (fun T => Rle_lt_dec eps (Rabs (p_exp (T:=prod_finType A B) d m_gt0 (X h) - p_hat (X h) T))).
       { rewrite /probOfR; apply: big_sum_ext => //=; apply eq_in_filter => T Hin.
@@ -231,7 +233,7 @@ Section learning.
       move: H1; rewrite /p_exp => <- //.
     Qed.
 
-    Definition eps_Hyp_twosided (eps : R) : finType := 
+    Definition eps_Hyp_twosided (eps : R) : finType :=
       [finType of {h : Hyp | eps_Hyp_condition_twosided eps h}].
 
     Lemma eps_Hyp_twosided_inhabited :
@@ -251,8 +253,8 @@ Section learning.
           case: (expVal_nontrivial h) => H1 H2; lra. }
         lra. }
       apply: (RIneq.Rle_not_lt _ _ H H1).
-    Qed.    
-    
+    Qed.
+
     Lemma chernoff_twosided_bound_eps_Hyp (eps : R) (eps_gt0 : 0 < eps) :
       probOfR (prodR (fun _ : 'I_m => d))
               [pred T:training_set
@@ -261,12 +263,12 @@ Section learning.
                  in Rle_lt_dec eps (Rabs (expVal h - empVal T h))]]
       <= 2 * INR #|eps_Hyp_twosided eps| * exp (-2%R * eps^2 * mR).
     Proof.
-      set (P := fun i:'I_#|eps_Hyp_twosided eps| => 
+      set (P := fun i:'I_#|eps_Hyp_twosided eps| =>
                   [pred T : training_set |
                    let: h := projT1 (enum_val i)
                    in Rle_lt_dec eps (Rabs (expVal h - empVal T h))]).
       change (probOfR (prodR (fun _ => d))
-                      [pred T:training_set | [exists i : 'I_#|eps_Hyp_twosided eps|, P i T]] 
+                      [pred T:training_set | [exists i : 'I_#|eps_Hyp_twosided eps|, P i T]]
               <= 2 * INR #|eps_Hyp_twosided eps| * exp (-2%R * eps^2 * mR)).
       apply: Rle_trans; [apply: union_bound|].
       { by apply: prodR_nonneg. }
@@ -284,7 +286,7 @@ Section learning.
       { rewrite !Rmult_0_l; apply: Rle_refl. }
       move => n H; rewrite iterS.
       have ->:
-        INR n.+1 * 2 * exp (- (2) * eps ^ 2 * mR) 
+        INR n.+1 * 2 * exp (- (2) * eps ^ 2 * mR)
       = (2 * exp (- (2) * eps ^ 2 * mR)) + INR n * 2 * exp (- (2) * eps ^ 2 * mR).
       { rewrite S_INR Rmult_assoc Rmult_plus_distr_r Rmult_1_l Rplus_comm; f_equal.
           by rewrite -Rmult_assoc. }
@@ -295,8 +297,8 @@ Section learning.
     Proof.
       rewrite /eps_Hyp_twosided /= card_sig; apply: leq_trans; first by apply: subset_leq_card.
       by rewrite cardsT.
-    Qed.    
-    
+    Qed.
+
     Lemma chernoff_twosided_bound1 (eps : R) (eps_gt0 : 0 < eps) :
       probOfR (prodR (fun _ : 'I_m => d))
               [pred T:training_set
@@ -330,7 +332,7 @@ Section learning.
     Variable predict : Params -> A -> B. (*the prediction function*)
 
     Definition accuracy01 (p : Params) (i : 'I_m) (xy : A*B) : R :=
-      let: (x,y) := xy in if predict p x == y then 1%R else 0%R.    
+      let: (x,y) := xy in if predict p x == y then 1%R else 0%R.
     Definition loss01 (p : Params) (i : 'I_m) (xy : A*B) : R :=
       1 - accuracy01 p i xy.
 
@@ -339,26 +341,26 @@ Section learning.
     Variable learn : training_set -> Params.
     Variable not_perfectly_learnable : forall p : Params, 0 < expVal accuracy01 p < 1.
 
-    (*we get the the following result for any eps: the probability that 
-      the expected accuracy of h is more than eps lower than the empirical 
-      accuracy of h on T is less than |Params| * exp(-2eps*m), 
+    (*we get the the following result for any eps: the probability that
+      the expected accuracy of h is more than eps lower than the empirical
+      accuracy of h on T is less than |Params| * exp(-2eps*m),
       where m is the number of training examples in T.*)
     Lemma chernoff_bound_accuracy01 (eps : R) (eps_gt0 : 0 < eps) :
-      probOfR (prodR (fun _ : 'I_m => d)) 
+      probOfR (prodR (fun _ : 'I_m => d))
               [pred T:training_set
-              | let: h := learn T in 
+              | let: h := learn T in
                 Rlt_le_dec (expVal accuracy01 h + eps) (empVal accuracy01 T h)]
       <= INR #|Params| * exp (-2%R * eps^2 * mR).
     Proof.
       apply chernoff_bound => // p i x; rewrite /accuracy01; case: x => a b.
-      case: (predict p a == b)%B; split; lra. 
+      case: (predict p a == b)%B; split; lra.
     Qed.
 
-    (*Here's the holdout version of the above lemma (the additional condition 
+    (*Here's the holdout version of the above lemma (the additional condition
       on epsilon appears to fall out -- cf. Mulzer's tutorial on Chernoff bound proofs).*)
     Lemma chernoff_bound_accuracy01_holdout
           (h : Params) (eps : R) (eps_gt0 : 0 < eps) (eps_lt : eps < 1 - expVal accuracy01 h) :
-      probOfR (prodR (fun _ : 'I_m => d)) 
+      probOfR (prodR (fun _ : 'I_m => d))
               [pred T:training_set
               | Rlt_le_dec (expVal accuracy01 h + eps) (empVal accuracy01 T h)]
       <= exp (-2%R * eps^2 * mR).
@@ -368,9 +370,6 @@ Section learning.
         move => hx i x; rewrite /accuracy01; case: x => a b.
         case: (predict _ _ == _)%B; split; lra. }
       apply: Rle_refl.
-    Qed.      
+    Qed.
   End zero_one_accuracy.
 End learning.
-
-
-  

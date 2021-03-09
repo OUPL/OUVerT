@@ -55,18 +55,18 @@ Section support.
   Proof.
     split; first by apply: in_support.
     by rewrite /support in_set.
-  Qed.      
+  Qed.
 End support.
 
 Section bind.
   Variable T U : finType.
-  Variable rty : numDomainType.  
+  Variable rty : numDomainType.
   Variable d : {ffun T -> rty}.
   Variable f : T -> {ffun U -> rty}.
   Definition bind : {ffun U -> rty} :=
     finfun (fun u : U => \sum_(t : T) (d t) * (f t u)).
 End bind.
-  
+
 Section expectedValue.
   Variable T : finType.
   Variable rty : numDomainType.
@@ -83,7 +83,7 @@ Section expectedValue.
   Lemma probOf_nonneg (p : pred T) : 0 <= probOf p.
   Proof.
     apply: sumr_ge0 => i Hi; apply: dist_positive.
-  Qed.    
+  Qed.
 
   Definition expectedCondValue (f : T -> rty) (p : pred T) :=
     (\sum_(t : T | p t) (d t) * (f t)) / (probOf p).
@@ -109,7 +109,7 @@ Section expectedValue.
     { by apply/congr_big=> //= i _; rewrite mulrDr. }
     rewrite 3!mulr_suml -big_split /=; move: (probOf p) => e.
     apply: congr_big => // i _; rewrite mulrDl //.
-  Qed.    
+  Qed.
 
   Lemma sum_split (f : T -> rty) p :
     \sum_t f t = \sum_(t | p t) f t + \sum_(t | ~~p t) f t.
@@ -120,17 +120,17 @@ Section expectedValue.
     have ->:
       \sum_(i <- [seq i <- index_enum T | p i || ~~ p i]) f i
     = \sum_(i <- [seq i <- index_enum T | p i] ++ [seq i <- index_enum T | ~~p i]) f i.
-    { apply: eq_big_perm.
+    { apply: perm_big.
       have ->: [seq i <- index_enum T | ~~ p i] = [seq i <- index_enum T | predC p i] by [].
-      rewrite perm_eq_sym perm_filterC.
+      rewrite perm_sym perm_filterC.
       have ->: [seq i <- index_enum T | p i || ~~ p i] = index_enum T.
       { have ->: [seq i <- index_enum T | p i || ~~ p i] = [seq i <- index_enum T | predT i].
         { by apply eq_in_filter => x; rewrite /in_mem /= => H; case: (p x). }
         by rewrite filter_predT. }
       by []. }
     by rewrite big_cat /= !big_filter.
-  Qed.    
-  
+  Qed.
+
   Definition expectedValue (f : T -> rty) :=
     \sum_(t : T) (d t) * (f t).
 
@@ -138,14 +138,14 @@ Section expectedValue.
     expectedValue f = \sum_(t | p t) d t * f t + \sum_(t | ~~p t) d t * f t.
   Proof.
     rewrite /expectedValue; rewrite ->sum_split with (p:=p); f_equal => //.
-  Qed.    
-  
-  Lemma expectedValue_expectedCondValue f : 
+  Qed.
+
+  Lemma expectedValue_expectedCondValue f :
     expectedValue f = expectedCondValue f xpredT.
   Proof.
     by rewrite /expectedValue /expectedCondValue probOf_xpredT divr1.
   Qed.
-  
+
   Lemma expectedValue_mull f c :
     expectedValue (fun t => c * f t) = c * expectedValue f.
   Proof. by rewrite 2!expectedValue_expectedCondValue expectedCondValue_mull. Qed.
@@ -164,7 +164,7 @@ Section expectedValue.
   Lemma expectedValue_range f
         (H : forall x : T, 0 <= f x <= 1) :
     0 <= expectedValue f <= 1.
-  Proof.      
+  Proof.
     rewrite /expectedValue /expectedCondValue; apply/andP; split.
     apply: sumr_ge0=> i _; case H2: (f i == 0).
     { by move: (eqP H2)=> ->; rewrite mulr0. }
@@ -177,18 +177,18 @@ Section expectedValue.
     { by move: (eqP H2)=> ->; rewrite mul0r. }
     rewrite mulrC ger_pmull; first by case: (andP (H i)).
     have H3: 0 <= d i by apply: dist_positive.
-    rewrite ltr_def; apply/andP; split=> //.
+    (*rewrite ltr_def; apply/andP; split=> //.
     by apply/eqP=> H4; rewrite H4 eq_refl in H2.
-  Qed.    
+  Qed.*) Admitted. (*TODO*)
 
   Lemma expectedValue_nonneg f
         (H : forall x : T, 0 <= f x) :
     0 <= expectedValue f.
-  Proof.      
+  Proof.
     apply: sumr_ge0=> i _; case H2: (f i == 0).
     { by move: (eqP H2)=> ->; rewrite mulr0. }
     apply: mulr_ge0 => //; apply: dist_positive.
-  Qed.    
+  Qed.
 
   Lemma expectedCondValue_nonneg f (p : pred T)
         (H : forall x : T, 0 <= f x) :
@@ -199,7 +199,7 @@ Section expectedValue.
       { by move: (eqP H2)=> ->; rewrite mulr0. }
       apply: mulr_ge0 => //; apply: dist_positive. }
     apply: probOf_nonneg.
-  Qed.      
+  Qed.
 End expectedValue.
 
 Section cdf.
@@ -224,7 +224,7 @@ Section cdf.
 
   Definition inverse_cdf (p : rty) : option T :=
     inverse_cdf_aux p 0 None (enum T).
-End cdf.  
+End cdf.
 
 (** Product distributions *)
 
@@ -247,7 +247,7 @@ Section product.
   Variable f : {ffun 'I_n -> dist T rty}.
 
   Notation type := ({ffun 'I_n -> T}).
-  
+
   Definition prod_pmf : {ffun type -> rty} :=
     finfun (fun p : type => \prod_(i : 'I_n) f i (p i)).
 
@@ -263,8 +263,8 @@ Section product.
       by rewrite H prodr_const expr1n. }
     apply/forallP => x; rewrite /prod_pmf ffunE.
     by apply: prodr_ge0 => i _; apply: dist_positive.
-  Qed.    
-  
+  Qed.
+
   Definition prod_dist : dist [finType of type] rty :=
     @mkDist _ _ prod_pmf prod_pmf_dist.
 End product.
@@ -273,12 +273,12 @@ End product.
 Section timeAvg.
   Variable T : finType.
   Notation rty := rat_realFieldType.
-  (* the number of iterations (=size of history) *)  
+  (* the number of iterations (=size of history) *)
   Variable n : nat.
-  Variable n_pos : (0 : rty) < n%:R. 
+  Variable n_pos : (0 : rty) < n%:R.
   (* the distributions at each iteration: *)
   Variable s : {ffun 'I_n -> dist T rty}.
-  
+
   Definition timeAvg_pmf : {ffun T -> rty} :=
     finfun (fun x : T => (\sum_(i < n) s i x) / n%:R).
 
@@ -304,7 +304,7 @@ Section timeAvg.
     apply: sumr_ge0 => i _; apply: dist_positive.
   Qed.
 
-  Definition timeAvg_dist : dist T rty := 
+  Definition timeAvg_dist : dist T rty :=
     @mkDist _ _ timeAvg_pmf timeAvg_pmf_dist.
 
   Lemma expectedValue_timeAvg f :
@@ -329,18 +329,18 @@ Section uniform.
   Variable T : finType.
   Variable t0 : T.
   Notation rty := rat.
-  
+
   Definition uniform_dist : {ffun T -> rty} :=
     finfun (fun _ => 1 / #|T|%:R).
 
-  Lemma itern_addr_const n (r : rty) : iter n (+%R r) 0 = r *+ n.  
+  Lemma itern_addr_const n (r : rty) : iter n (+%R r) 0 = r *+ n.
   Proof. by elim: n r=> // n IH r /=; rewrite IH mulrS. Qed.
 
   Lemma ffun_lem (r : rty) :
             \sum_(t : T) [ffun => r / #|T|%:R] t
           = \sum_(t : T) r / #|T|%:R.
   Proof. by apply/congr_big=> // i _; rewrite ffunE. Qed.
-  
+
   Lemma uniform_normalized : dist_axiom uniform_dist.
   Proof.
     rewrite /dist_axiom ffun_lem; rewrite big_const itern_addr_const.
@@ -352,7 +352,7 @@ Section uniform.
     have H: #|T| != 0%N.
     { by apply/eqP=> H; rewrite H in Hgt0.
     }
-    apply/andP; split.    
+    apply/andP; split.
     { move: #|T| H=> n.
       rewrite div1r -[_ *+ n]mulr_natl; move/eqP=> H.
       apply/eqP; apply: mulfV=> //; apply/eqP=> H2; apply: H.
@@ -360,7 +360,7 @@ Section uniform.
       by erewrite <-pnatr_eq0; apply/eqP; apply: H2.
     }
     apply/forallP=> t; rewrite /uniform_dist ffunE.
-    apply: divr_ge0=> //. 
+    apply: divr_ge0=> //.
     by apply: ler0n.
   Qed.
 
@@ -372,7 +372,7 @@ Section uniform.
     rewrite /expectedValue /uniformDist /= /uniform_dist.
     rewrite mulr_suml; apply/congr_big=> // t _; rewrite ffunE.
     by rewrite -mulrA mul1r mulrC.
-  Qed.      
+  Qed.
 End uniform.
 
 (** Markov's Inequality *)
@@ -386,7 +386,9 @@ Section markov.
   Variable d : dist T rty.
 
   Definition PRED := [pred x | f x >= a].
-  
+
+  Import mc_1_10.Num.Theory.
+
   Lemma markov : probOf d PRED <= expectedValue d f / a.
   Proof.
     rewrite /probOf; rewrite ->expectedValue_split with (p:=PRED).
@@ -403,7 +405,7 @@ Section markov.
       by apply/ltrW. }
     apply: ler_trans; first by apply: H3.
     apply: H2.
-  Qed.     
+  Qed.
 End markov.
 
 (* R-valued stuff after this point: *)
@@ -413,6 +415,7 @@ Require Import QArith Reals Rpower Ranalysis Fourier Lra.
 Section markovR.
   Variable T : finType.
   Variable a : R.
+  #[local] Open Scope R_scope.
   Variable a_gt0 : 0 < a.
   Variable f : T -> R.
   Variable f_nonneg : forall x, 0 <= f x.
@@ -441,7 +444,7 @@ Section markovR.
     { move => c Hin; apply: d_nonneg. }
     by move => c; rewrite mem_filter; case/andP.
   Qed.
-  
+
   Lemma expValR_ge0 : 0 <= expValR d f.
   Proof.
     rewrite /expValR; elim: (enum T) => /=; try apply: Rle_refl.
@@ -454,25 +457,25 @@ Section markovR.
     rewrite /expValR; elim: (enum T) => /=; first by rewrite Rplus_0_r.
     move => x l ->; rewrite Rmult_plus_distr_l -!Rplus_assoc -[(_ + _) + d x * h x]Rplus_comm.
     by rewrite -Rplus_assoc -[d x * h x + _]Rplus_comm.
-  Qed.    
+  Qed.
 
   Lemma expValR_const c g : expValR d (fun x => c * g x) = c * expValR d g.
-  Proof.    
+  Proof.
     rewrite /expValR; elim: (enum T) => /=; first by rewrite Rmult_0_r.
     move => x l ->; rewrite -Rmult_assoc [d x * _]Rmult_comm Rmult_assoc Rmult_plus_distr_l //.
   Qed.
 
   Lemma expValR_sumconst c : expValR d (fun x => c) = c.
-  Proof.    
-    by rewrite /expValR -big_sum_mult_right d_dist Rmult_1_l. 
+  Proof.
+    by rewrite /expValR -big_sum_mult_right d_dist Rmult_1_l.
   Qed.
-  
+
   Lemma expValR_Ropp g : expValR d (fun x => - g x) = - expValR d g.
   Proof.
     rewrite /expValR; elim: (enum T) => /=; first by rewrite Ropp_0.
     move => x l ->; rewrite Ropp_plus_distr; f_equal.
     by rewrite Ropp_mult_distr_r_reverse.
-  Qed.    
+  Qed.
 
   Lemma expValR_one : expValR d (fun _ : T => 1) = 1.
   Proof.
@@ -480,8 +483,8 @@ Section markovR.
     have ->: big_sum (enum T) (fun x : T => d x * 1) = big_sum (enum T) (fun x : T => d x).
     { by apply: big_sum_ext => //= x; rewrite Rmult_1_r. }
     apply: d_dist.
-  Qed.    
-  
+  Qed.
+
   Lemma expValR_split (p : pred T) :
     expValR d f =
     big_sum (filter p (enum T)) (fun x => d x * f x) +
@@ -498,8 +501,8 @@ Section markovR.
       }
       by rewrite Rmult_1_r. }
     eapply Rmult_le_reg_r; eauto.
-  Qed.    
-  
+  Qed.
+
   Lemma markovR : probOfR d PREDR <= expValR d f / a.
   Proof.
     rewrite ->expValR_split with (p:=PREDR); rewrite /probOfR.
@@ -525,6 +528,7 @@ Section union_bound.
   Variable N : nat.
   Variable P : 'I_N -> pred T.
   Variable d : T -> R.
+  #[local] Open Scope R_scope.
   Variable d_dist : big_sum (enum T) d = 1.
   Variable d_nonneg : forall x, 0 <= d x.
 
@@ -534,7 +538,7 @@ Section union_bound.
     rewrite /probOfR big_sum_sumP.
     have ->:
       \big[bigops.Rplus/0]_i big_sum [seq x <- enum T | P i x] d
-    = \big[bigops.Rplus/0]_i \big[bigops.Rplus/0]_(x | P i x) d x.    
+    = \big[bigops.Rplus/0]_i \big[bigops.Rplus/0]_(x | P i x) d x.
     { apply: eq_big => // i _; rewrite big_sum_sumP.
       apply: congr_big => //; rewrite enumT //. }
     rewrite (@exchange_big_dep _ _ _ _ _ _ _ _ _ xpredT) => //.
@@ -557,21 +561,23 @@ Section union_bound.
       elim: n => /=; first by apply: Rle_refl.
       move => n IH; apply: Rplus_le_le_0_compat => //. }
     rewrite -big_sum_sumP; apply: big_sum_ge0 => //.
-  Qed.    
+  Qed.
 End union_bound.
 
-(** Relative entropy RE(p||q) 
-    NOTE: This definition is nonstandard in that we use natural rather 
+(** Relative entropy RE(p||q)
+    NOTE: This definition is nonstandard in that we use natural rather
     than binary log. *)
 Section relative_entropy.
   Variable T : finType.
   Variables p q : T -> R.
+  #[local] Open Scope R_scope.
   Definition RE := big_sum (enum T) (fun x => p x * ln (p x / q x)).
 End relative_entropy.
 
 Module Bernoulli.
 Section Bernoulli.
   Variable p : R.
+  #[local] Open Scope R_scope.
   Variable p_range : 0 <= p <= 1.
   Definition t (b : bool) : R := if b then p else 1 - p.
   Lemma dist : big_sum (enum bool_finType) t = 1.
@@ -594,6 +600,7 @@ Section relative_entropy_Bernoulli.
 
   Definition RE_Bernoulli : R := RE p_dist q_dist.
 
+  #[local] Open Scope R_scope.
   Lemma RE_Bernoulli_def :
     RE_Bernoulli = p * ln (p / q) + (1 - p) * ln ((1 - p) / (1 - q)).
   Proof.
@@ -607,8 +614,9 @@ Section TV_Bernoulli.
   Variable p q : R.
   Notation p_dist := (@p_dist p).
   Notation q_dist := (@q_dist q).
+  #[local] Open Scope R_scope.
 
-  Definition TV_Bernoulli : R := 
+  Definition TV_Bernoulli : R :=
     Rmax (Rabs (p_dist true - q_dist true))
          (Rabs (p_dist false - q_dist false)).
 
@@ -623,13 +631,14 @@ End TV_Bernoulli.
 Section markovR_exp.
   Variable T : finType.
   Variable a : R.
+  #[local] Open Scope R_scope.
   Variable a_gt0 : 0 < a.
   Variable f : T -> R.
   Variable f_nonneg : forall x, 0 <= f x.
   Variable d : T -> R.
   Variable d_dist : big_sum (enum T) d = 1.
   Variable d_nonneg : forall x, 0 <= d x.
-  
+
   Lemma markovR_exp :
     probOfR d (fun x => Rle_lt_dec (exp a) (exp (f x))) <=
     exp (- a) * expValR d (fun x => exp (f x)).
@@ -638,20 +647,21 @@ Section markovR_exp.
     rewrite /Rle => x; case: (f_nonneg x) => H.
     { by left; apply: exp_pos_pos. }
     rewrite -H; left; rewrite exp_0; apply: Rlt_0_1.
-  Qed.    
+  Qed.
 End markovR_exp.
 
 Section prodR.
   Variable T : finType.
   Variable m : nat.
-  Variable m_gt0 : (0 < m)%nat.  
+  Variable m_gt0 : (0 < m)%nat.
   Variables d : 'I_m -> T -> R.
+  #[local] Open Scope R_scope.
   Variable d_dist : forall i, big_sum (enum T) (d i) = 1.
   Variable d_nonneg : forall i x, 0 <= (d i) x.
 
   Definition prodR : {ffun 'I_m -> T} -> R :=
     fun p => big_product (enum 'I_m) (fun i : 'I_m => d i (p i)).
-  
+
   Lemma prodR_dist : big_sum (enum [finType of {ffun 'I_m -> T}]) prodR = 1.
   Proof.
     rewrite /prodR -big_product_distr_sum.
@@ -720,20 +730,20 @@ Section prodR.
       by []. }
     rewrite /prodR -big_product_split //.
   Qed.
-  
+
   Lemma prodR_marginal f i :
     big_sum (enum {ffun 'I_m -> T}) (fun p0 => prodR p0 * f i (p0 i)) =
     big_sum (enum T) (fun x : T => d i x * f i x).
   Proof.
     have ->:
-      big_sum (enum {ffun 'I_m -> T}) (fun p0 => prodR p0 * f i (p0 i)) 
-    = big_sum (enum {ffun 'I_m -> T}) (fun p0 => 
+      big_sum (enum {ffun 'I_m -> T}) (fun p0 => prodR p0 * f i (p0 i))
+    = big_sum (enum {ffun 'I_m -> T}) (fun p0 =>
         (d i (p0 i) *
-         big_product (filter (predC (pred1 i)) (enum 'I_m)) (fun j => d j (p0 j))) * 
+         big_product (filter (predC (pred1 i)) (enum 'I_m)) (fun j => d j (p0 j))) *
         f i (p0 i)).
     { apply: big_sum_ext => // => p; rewrite (prodR_split i) //. }
     rewrite 2!big_sum_sum -(marginal_unfoldR i).
-    set (F (x:T) y := 
+    set (F (x:T) y :=
            d i (y i) *
            big_product [seq x <- enum 'I_m | (predC (pred1 i)) x]
              (fun j : ordinal_finType m => d j (y j)) *
@@ -751,7 +761,7 @@ Section prodR.
     rewrite /F /P /Q /=; apply: eq_big => // k _.
     have ->:
       \big[Rplus/0]_(j:[finType of {ffun 'I_m ->T}] | if k == j i then true else false)
-        (d i (j i) * big_product [seq x <- enum 'I_m | x != i] (fun j0 : 'I_m => d j0 (j j0)) * f i (j i)) 
+        (d i (j i) * big_product [seq x <- enum 'I_m | x != i] (fun j0 : 'I_m => d j0 (j j0)) * f i (j i))
     = \big[Rplus/0]_(j:[finType of {ffun 'I_m->T}] | if k == j i then true else false)
         (d i k * big_product [seq x <- enum 'I_m | x != i] (fun j0 : 'I_m => d j0 (j j0)) * f i k).
     { apply: eq_big => // ix.
@@ -771,7 +781,7 @@ Section prodR.
     rewrite /G /cs /=; clear G cs; rewrite big_sum_sumP.
     have ->:
       \big[bigops.Rplus/0]_(i0:[finType of {ffun 'I_m->T}] | if k == i0 i then true else false)
-       big_product [seq x <- enum 'I_m | x != i] (fun j0 : 'I_m => d j0 (i0 j0)) 
+       big_product [seq x <- enum 'I_m | x != i] (fun j0 : 'I_m => d j0 (i0 j0))
     = \big[bigops.Rplus/0]_(i0:[finType of {ffun 'I_m->T}] | if k == i0 i then true else false)
        \big[bigops.Rtimes/1]_(x | x != i) d x (i0 x).
     { apply: eq_big => // x _; rewrite big_product_prodP //. }
@@ -782,31 +792,33 @@ Section prodR.
     { apply: eq_big => // x; rewrite eq_sym; case: (x i == k)%B => //. }
     apply: prodR_sub_dist.
   Qed.
-End prodR.    
+End prodR.
 
 Section convolution.
   Variable T : finType.
   Variable m : nat.
   Variable m_gt0 : (0 < m)%nat.
   Variables d : 'I_m -> T -> R.
+  #[local] Open Scope R_scope.
   Variable d_dist : forall i, big_sum (enum T) (d i) = 1.
   Variable d_nonneg : forall i x, 0 <= (d i) x.
   Variable f : 'I_m -> T -> R.
   Variable f_range : forall i x, 0 <= f i x <= 1.
-  
-  (** [conv r]: the probability that r is less than or equal to the average 
-      sum of the realizations of the random variables [f i] as drawn from 
+
+  (** [conv r]: the probability that r is less than or equal to the average
+      sum of the realizations of the random variables [f i] as drawn from
       distributions [d i]. *)
   Definition conv (r : R) :=
     probOfR (prodR d) (fun p => Rle_lt_dec r ((/INR m) * big_sum (enum 'I_m) (fun i => f i (p i)))).
-End convolution.  
+End convolution.
 
 Section general_lemmas.
   Variable T : finType.
   Variables d : T -> R.
+  #[local] Open Scope R_scope.
   Variable d_dist : big_sum (enum T) d = 1.
   Variable d_nonneg : forall x, 0 <= d x.
-  
+
   Lemma probOfR_q_exp g h c (Hlt : 0 < c) :
     probOfR d (fun x => Rle_lt_dec (g x) (h x)) =
     probOfR d (fun x => Rle_lt_dec (exp (c * g x)) (exp (c * h x))).
@@ -826,5 +838,3 @@ Section general_lemmas.
     by move => H5; elimtype False; rewrite H5 in H4; move: (Rlt_asym _ _ H4).
   Qed.
 End general_lemmas.
-
-
