@@ -3072,6 +3072,13 @@ Proof.
   destruct (Dred' x y); simpl in H|-*; rewrite H; auto.
 Qed.
 
+Lemma Qred_inv : forall q, Qred (Qred q) = Qred q.
+Proof.
+  intros.
+  apply Qred_complete.
+  apply Qred_correct.
+Qed.
+
 Lemma Dred_idem d : Dred (Dred d) = Dred d.
 Proof.
   destruct d.
@@ -3133,16 +3140,17 @@ Proof.
     {
       destruct (Try_Q_to_D (Qred (Qred q))) eqn:Hm1.
       {
-        (* Qred of Qred is Qred *)
-        admit.
+        rewrite Qred_inv in Hm1.
+        exfalso.
+        rewrite Hm in Hm1.
+        inversion Hm1.
       }
       {
-        (* Qred of Qred is Qred *)
-        admit.
+        rewrite Qred_inv; auto.
       }
     }
   }
-Admitted.
+Qed.
 
 Close Scope positive_scope.
 Close Scope nat_scope.
