@@ -213,7 +213,7 @@ Proof.
 Qed.
 
 Lemma ln_Taylor_lower x : (x <= 1/2 -> -x - x^2 <= ln (1 - x))%R.
-Proof. 
+Proof.
     intros H.
     rewrite -[(-x - x^2)%R] ln_exp.
     apply ln_le; first by apply exp_pos.
@@ -273,6 +273,7 @@ Proof.
     move => ->; rewrite exp_ln; lra.
 Qed.
 
+#[local] Open Scope R_scope.
 Lemma exp_mult x y : exp (x * INR y) = exp x ^ y.
 Proof.
   apply: ln_inv; try apply: exp_pos.
@@ -283,19 +284,19 @@ Proof.
   { rewrite -IH; clear IH; case: n.
     { by rewrite Rmult_1_r ln_exp /= Rmult_0_r Rplus_0_r. }
     by move => n; rewrite ln_exp // Rmult_plus_distr_l Rmult_1_r Rplus_comm. }
-  apply: pow_lt; apply: exp_pos.    
+  apply: pow_lt; apply: exp_pos.
 Qed.
 
 Lemma exp_le_inv : forall x y : R, exp x <= exp y -> x <= y.
 Proof.
   intros. inversion H.
   left. apply exp_lt_inv; auto.
-  right. apply exp_inv. auto. 
+  right. apply exp_inv. auto.
 Qed.
 
-Lemma derive_decreasing_interv : 
+Lemma derive_decreasing_interv :
   forall (a b : R) (f : R -> R) (pr : derivable f),
-    a < b -> 
+    a < b ->
     (forall t : R, a < t < b -> derive_pt f t (pr t) < 0) ->
        forall x y : R, a <= x <= b -> a <= y <= b -> x < y -> f y < f x.
 Proof.
@@ -343,7 +344,7 @@ Proof.
   erewrite derive_pt_minus.
   2: (intros; reflexivity).
   erewrite null_derivative_0.
-  2: constructor. 
+  2: constructor.
   erewrite derive_pt_id. ring_simplify.
   erewrite pr_nu_var.
   erewrite derive_pt_mult.
@@ -377,19 +378,19 @@ Proof.
   apply derivable_const. apply derivable_id.
 Qed.
 
-Lemma ln_upper_01_aux_bot c : 
+Lemma ln_upper_01_aux_bot c :
   0 = 1 - 0 + 0 * exp c - exp (c * 0).
 Proof.
   rewrite Rmult_0_r exp_0. ring.
 Qed.
 
-Lemma ln_upper_01_aux_top c : 
+Lemma ln_upper_01_aux_top c :
   0 = 1 - 1 + 1 * exp c - exp (c * 1).
 Proof.
   rewrite Rmult_1_r Rmult_1_l. ring.
 Qed.
 
-Lemma ln_upper_01_aux_deriv_at_top c : 
+Lemma ln_upper_01_aux_deriv_at_top c :
   0 <= @derive_pt (fun x => 1 - x + x * exp c - exp (c * x))
              0 (ln_upper_01_aux_deriv c 0).
 Proof.
@@ -398,7 +399,7 @@ Proof.
   move: (ln_Taylor_upper' c) => H. lra.
 Qed.
 
-Lemma ln_upper_01_aux_deriv_at_bot c : 
+Lemma ln_upper_01_aux_deriv_at_bot c :
   0 >= @derive_pt (fun x => 1 - x + x * exp c - exp (c * x))
              1(ln_upper_01_aux_deriv c 1).
 Proof.
@@ -456,7 +457,7 @@ Proof.
     repeat (try apply derivable_plus;
             try apply derivable_id;
             try apply derivable_mult;
-            try apply derivable_opp;  
+            try apply derivable_opp;
             try apply derivable_exp;
             try apply derivable_const).
   Qed.
@@ -489,7 +490,7 @@ Proof.
 Qed.
 
 Lemma ln_upper_01_aux_deriv_2_decreasing c :
-  c <> 0 -> 
+  c <> 0 ->
   strict_decreasing (fun x => - 1 + exp c - c * exp (c * x)).
 Proof.
   intros cNeq.
@@ -548,7 +549,7 @@ Lemma ln_upper_01 x c :
   0 < x < 1 ->
   c * x <= ln (1 - x + x * exp c).
 Proof.
-  intros.  
+  intros.
   apply exp_le_inv.
   rewrite exp_ln.
   case: (Req_EM_T c 0); intros.
@@ -562,7 +563,7 @@ Proof.
     set f' := fun x => -1 + exp c - c * exp (c * x).
     replace (1 - x + x * exp c - exp (c * x)) with (f x); last by auto.
     move: (Rolle f 0 1) => H_rolle.
-    assert (0 < 1) as duh by lra. 
+    assert (0 < 1) as duh by lra.
     assert (f 0 = f 1) as H_bounds by
       (rewrite /f -(ln_upper_01_aux_bot c) -(ln_upper_01_aux_top c); auto).
     specialize (H_rolle
@@ -611,7 +612,7 @@ Proof.
     replace (1 - x + x * exp c) with (1 - (x * (1 - exp c))); last by ring.
     assert (1 - exp c < 1).
     {
-      move: (exp_pos c) => H0. lra. 
+      move: (exp_pos c) => H0. lra.
     }
     move: (Rtotal_order (1 - exp c) 0) => H1.
     apply Rlt_Rminus.
@@ -619,11 +620,11 @@ Proof.
     * inversion H. apply (@Rlt_trans _ 0 _).
       apply Ropp_lt_cancel.
       assert (- ( 1 - exp c ) > 0) by lra.
-      replace (- (x * (1 - exp c))) with (x * - (1 - exp c)); last by ring. 
+      replace (- (x * (1 - exp c))) with (x * - (1 - exp c)); last by ring.
       replace (- 0) with 0; last by ring.
-      apply Rmult_lt_0_compat; lra. lra. 
+      apply Rmult_lt_0_compat; lra. lra.
     * rewrite H1. lra.
-    * replace 1 with (1 * 1) at 2. inversion H. 
+    * replace 1 with (1 * 1) at 2. inversion H.
       apply Rmult_le_0_lt_compat; lra. ring.
   }
 Qed.
@@ -644,7 +645,7 @@ Proof.
   { move/exp_increasing => H; left; apply: Rlt_le_trans; first by apply: H.
     rewrite exp_ln //; apply: Rle_refl. }
   move => ->; rewrite exp_ln //; apply: Rle_refl.
-Qed.  
+Qed.
 
 
 (* Lemmas in support of Gibbs' inequality. *)
@@ -656,7 +657,7 @@ Proof.
   rewrite <- exp_0 at 1. f_equal. field.
 Qed.
 
-Lemma derivable_exp_minus_1_minus_x  : derivable (fun x => exp(x-1) -x). 
+Lemma derivable_exp_minus_1_minus_x  : derivable (fun x => exp(x-1) -x).
 Proof.
   rewrite /derivable => x.
   apply derivable_pt_minus.
@@ -670,7 +671,7 @@ Proof.
   apply derivable_pt_id.
 Defined.
 
-Lemma deriv_at_point_exp_minus_1_minus_x : 
+Lemma deriv_at_point_exp_minus_1_minus_x :
   forall x pf,
     derive_pt (fun x => exp(x-1) -x) x pf = exp(x-1) -1.
 Proof.
@@ -680,7 +681,7 @@ Proof.
           derive_pt_comp
           derive_pt_minus
           derive_pt_id
-          derive_pt_const 
+          derive_pt_const
           derive_pt_exp.
   field.
 Qed.

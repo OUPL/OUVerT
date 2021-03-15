@@ -20,9 +20,9 @@ Section Extrema.
 (** The primary parameters are:
       - [rty : realFieldType]    A real field
       - [I : finType]            A finite type
-      - [P : pred I]             A subset of [I] 
-      - [F : I -> rty]           A "valuation" function over [I] 
-    The module implements the following functions: 
+      - [P : pred I]             A subset of [I]
+      - [F : I -> rty]           A "valuation" function over [I]
+    The module implements the following functions:
       - [arg_min]                An [i : I \in P] that minimizes [F]
       - [arg_max]                An [i : I \in P] that maximizes [F]
       - [min]                    := [F arg_min]
@@ -47,7 +47,7 @@ Section Extrema.
       ord (F (getOrd i1 l)) (F (getOrd i2 l)).
     Proof.
       move: i1 i2; elim: l=> // a l IH i1 i2 H /=.
-      case H2: (ord (F i1) (F a)). 
+      case H2: (ord (F i1) (F a)).
       { by case H3: (ord (F i2) (F a)); apply: IH.
       }
       case H3: (ord (F i2) _)=> //.
@@ -56,7 +56,7 @@ Section Extrema.
       { by apply: ord_trans; first by apply: H.
       }
       by rewrite H4 in H2.
-    Qed.    
+    Qed.
 
     Lemma getOrd_minimalIn i0 l :
       [&& ord (F (getOrd i0 l)) (F i0)
@@ -69,8 +69,8 @@ Section Extrema.
       move=> a l IH i0.
       apply/andP; split.
       { simpl; case H2: (ord (F i0) _)=> //.
-        by case: (andP (IH i0)).                                        
-        apply: ord_trans.        
+        by case: (andP (IH i0)).
+        apply: ord_trans.
         case: (andP (IH a))=> H3 _; apply: H3.
         by case: (orP (ord_total (F i0) (F a))); first by rewrite H2.
       }
@@ -92,7 +92,7 @@ Section Extrema.
     Qed.
 
     Definition getOrd_tot i0 := getOrd i0 (enum I).
-    
+
     Lemma getOrd_totP i0 : [forall i, ord (F (getOrd_tot i0)) (F i)].
     Proof.
       case: (andP (getOrd_minimalIn i0 (enum I)))=> H H2.
@@ -108,8 +108,8 @@ Section Extrema.
     Proof.
       rewrite /getOrd_sub; move: (enum I)=> l.
       elim: l=> // a l /=.
-      case H: (P a)=> //=.                   
-      case: (ord _ _)=> //.                      
+      case H: (P a)=> //=.
+      case: (ord _ _)=> //.
       elim: l a H i0 Hi0 => //= a0 l IH a H i0 Hi0.
       case H2: (P a0)=> //=.
       case: (ord _ _).
@@ -119,8 +119,8 @@ Section Extrema.
       case: (ord _ _)=> //.
       by apply: IH.
       by apply: IH.
-    Qed.        
-      
+    Qed.
+
     Lemma getOrd_subP i0 (Hi0 : P i0) :
       [&& P (getOrd_sub i0)
         & [forall (i | P i), ord (F (getOrd_sub i0)) (F i)]].
@@ -133,12 +133,14 @@ Section Extrema.
     Qed.
   End getOrd.
 
+  Import mc_1_10.Num.Theory.
+
   Section default.
     Variable i0 : I.
     Hypothesis H : P i0.
-  
+
     Definition arg_max := getOrd_sub ger i0.
-  
+
     Lemma arg_maxP : [&& P arg_max & [forall (i | P i), F arg_max >= F i]].
     Proof.
       apply: getOrd_subP=> //; rewrite /ger.
@@ -153,14 +155,14 @@ Section Extrema.
     Proof.
       rewrite /max.
       by case: (andP arg_maxP).
-    Qed.      
-    
+    Qed.
+
     Definition arg_min := getOrd_sub ler i0.
 
     Lemma arg_minP : [&& P arg_min & [forall (i | P i), F arg_min <= F i]].
     Proof.
       apply: getOrd_subP=> //.
-      by apply: ler_trans.                           
+      by apply: ler_trans.
       by apply: ler_total.
     Qed.
 
@@ -170,8 +172,8 @@ Section Extrema.
     Proof.
       rewrite /min.
       by case: (andP arg_minP).
-    Qed.      
-  
+    Qed.
+
     Lemma min_le_max : min <= max.
     Proof.
       rewrite /min /max.
@@ -220,9 +222,9 @@ Section min_lems.
   Variables (rty : realFieldType) (I : finType).
 
   Lemma arg_min_ext (p1 p2 : pred I) (f g : I -> rty) d1 d2 :
-    p1 =1 p2 -> 
+    p1 =1 p2 ->
     f =1 g ->
-    d1 = d2 -> 
+    d1 = d2 ->
     arg_min p1 f d1 = arg_min p2 g d2 .
   Proof.
     move => H1 H2 ->.
@@ -232,13 +234,13 @@ Section min_lems.
      [seq x <- enum I | p2 x].
      { rewrite (eq_in_filter (a2:=p2)) => //. }
      move: ([seq x <- _ | _]) d2; elim => // a l /= IH.
-     move => d2; rewrite !H2; case: (_ <= _) => //. 
+     move => d2; rewrite !H2; case: (_ <= _) => //.
   Qed.
-  
+
   Lemma min_ext (p1 p2 : pred I) (f g : I -> rty) d1 d2 :
-    p1 =1 p2 -> 
+    p1 =1 p2 ->
     f =1 g ->
-    d1 = d2 -> 
+    d1 = d2 ->
     min p1 f d1 = min p2 g d2 .
   Proof.
     move => H1 H2 ->; rewrite /min.
@@ -247,31 +249,31 @@ Section min_lems.
   Qed.
 
   Lemma ler_const_inv (c x y : rat) :
-    0 < c ->    
+    0 < c ->
     ((c * x <= c * y) = (x <= y)).
   Proof.
     move => Hpos; rewrite -(ler_pdivl_mull _ _ Hpos) mulrA mulVf.
     { by rewrite mul1r. }
     by apply/eqP => H; rewrite H in Hpos.
-  Qed.    
+  Qed.
 
   Lemma arg_min_const (p : pred I) (f : I -> rat) (c : rat) d :
-    0 < c -> 
+    0 < c ->
     arg_min p (fun x => c * f x) d = arg_min p f d.
   Proof.
     move => Hpos; rewrite /arg_min/getOrd_sub.
     move: ([seq x <- enum I | p x]) d; elim => // a l IH /= d.
     rewrite (ler_const_inv _ _ Hpos). case: (f d <= f a) => //.
-  Qed.    
-  
+  Qed.
+
   Lemma min_const (p : pred I) (f : I -> rat) (c : rat) d :
-    0 < c -> 
+    0 < c ->
     min p (fun x => c * f x) d = c * min p f d.
   Proof.
     move => Hpos; rewrite /min; f_equal.
     rewrite arg_min_const //.
-  Qed.    
-End min_lems.    
+  Qed.
+End min_lems.
 
 Local Open Scope Numeric_scope.
 Delimit Scope Numerics_scope with Num.
@@ -286,7 +288,7 @@ Module num_Extrema.
     Fixpoint max (l : list Nt) : option Nt :=
       match l with
       | List.nil => None
-      | x :: l' => 
+      | x :: l' =>
         match max l' with
         | None => Some x
         | Some x' =>
@@ -299,7 +301,7 @@ Module num_Extrema.
     | None => def
     | Some x => x
     end.
-    
+
 
     Fixpoint argmax {T : Type} (l : list T) (f : T -> Nt) : option T :=
     match l with
@@ -337,7 +339,7 @@ Module num_Extrema.
         | Some x' => Some (if leb (f x) x' then x' else (f x))
         end
     end.
-    
+
 
     Lemma argmax_ne_ok: forall {T : Type} (l : list T) (f : T-> Nt) (h : O <> (length l)),
           (argmax l f) = Some (argmax_ne f h).
@@ -374,7 +376,7 @@ Module num_Extrema.
     Fixpoint nth_max (l : list Nt) (n : nat) : option Nt :=
     match n with
     | O => max l
-    | S n' => 
+    | S n' =>
       match (max l) with
       | None => None
       | Some m => nth_max (filter (fun x => ltb x m) l) n'
@@ -405,7 +407,7 @@ Module num_Extrema.
       simpl.
       destruct (max l); auto.
     Qed.
-    
+
     Lemma max_ne_some: forall (l : list Nt), O <> length l <-> exists x, max l = Some x.
     Proof.
       intros.
@@ -457,7 +459,7 @@ Module num_Extrema.
       intros.
       assert (forall (T : Type) (l : list T), length l = size l). auto.
       rewrite H0.
-      rewrite mapmax_map_max.            
+      rewrite mapmax_map_max.
       rewrite <- size_map with T Nt f _.
       rewrite <- H0.
       apply max_ne_some.
@@ -471,12 +473,12 @@ Module num_Extrema.
       { exfalso. apply H0. auto. }
       simpl in *.
       destruct l.
-      { simpl. exists a. split; auto. } 
+      { simpl. exists a. split; auto. }
       destruct IHl; simpl; auto.
       destruct H1.
       inversion H1.
       destruct (length l) eqn:e.
-      { 
+      {
         rewrite -> List.length_zero_iff_nil in e. rewrite e; simpl.
         eexists. split; auto.
         destruct (leb (f a) (f t)); auto.
@@ -508,7 +510,7 @@ Module num_Extrema.
       inversion H1.
       destruct (leb (f t) (f x0)) eqn:e3.
       {
-        inversion H1.      
+        inversion H1.
         inversion H2.
         destruct (leb (f a) (f x)); auto.
       }
@@ -527,9 +529,9 @@ Module num_Extrema.
       rewrite H3.
       rewrite mapmax_ne_ok in H1.
       inversion H1.
-      auto. 
+      auto.
     Qed.
-      
+
     Lemma mapmax_ext: forall (T : Type) (f g : T->Nt) (l : list T), (forall x : T, f x = g x) -> mapmax l f = mapmax l g.
     Proof.
       intros.
@@ -539,7 +541,7 @@ Module num_Extrema.
       rewrite H0.
       auto.
     Qed.
-    
+
     Lemma argmax_ext: forall (T : Type) (f g : T->Nt) (l : list T), (forall x : T, f x = g x) -> argmax l f = argmax l g.
     Proof.
       intros.
@@ -560,7 +562,7 @@ Module num_Extrema.
       rewrite IHl.
       destruct (argmax l g); auto.
       destruct total_order_T with (f a) (f t).
-      { 
+      {
         destruct s.
         {
           apply le_lt_weak in l0.
@@ -651,7 +653,7 @@ Module num_Extrema.
       repeat rewrite plus_id_l in H0.
       auto.
     Qed.
-      
+
 
     Lemma argmax_plus_const_l: forall (T : Type) (l : list T) (f : T -> Nt) (x : Nt), argmax l f = argmax l (fun n => x + f n).
     Proof.
@@ -663,7 +665,7 @@ Module num_Extrema.
       apply plus_le_compat_l_reverse in H0.
       auto.
     Qed.
-    
+
     Lemma argmax_mult_pos_r: forall (T : Type) (l : list T) (f : T -> Nt) (x : Nt), 0 < x -> argmax l f = argmax l (fun n => f n * x).
     Proof.
       intros.
@@ -683,7 +685,7 @@ Module num_Extrema.
       { apply mult_le_compat_l; auto. apply le_lt_weak. auto. }
       apply mult_le_compat_l_reverse in H1; auto.
     Qed.
-    
+
 
     Lemma argmax_ne_mult_pos_r: forall (T : Type) (l : list T) (f : T -> Nt) (x : Nt) (H : O <> length l), 0 < x -> argmax_ne f H = argmax_ne (fun n => f n * x) H.
     Proof.
@@ -697,7 +699,7 @@ Module num_Extrema.
      inversion H3.
      auto.
     Qed.
-    
+
     Lemma argmax_ne_mult_pos_l: forall (T : Type) (l : list T) (f : T -> Nt) (x : Nt) (H : O <> length l), 0 < x -> argmax_ne f H = argmax_ne (fun n => x * f n) H.
     Proof.
       intros.
@@ -710,7 +712,7 @@ Module num_Extrema.
      inversion H3.
      auto.
     Qed.
-    
+
     Lemma mapmax_const: forall (T : Type) (l : list T) (x : Nt), (O <> length l) -> mapmax l (fun _ => x) = Some x.
     Proof.
       intros.
@@ -722,7 +724,7 @@ Module num_Extrema.
       rewrite IHl; auto.
       destruct  (leb x x); auto.
     Qed.
-    
+
     Lemma mapmax_ne_const: forall (T : Type) (l : list T) (x : Nt) (H : O <> length l), mapmax_ne (fun _ => x) H = x.
     Proof.
       intros.
@@ -767,7 +769,7 @@ Module num_Extrema.
       repeat rewrite argmax_ne_mapmax_ne.
       rewrite <- argmax_ne_mult_pos_l; auto.
     Qed.
-    
+
 
     Lemma argmax_ne_plus_const_r: forall (T : Type) (l : list T) (f : T -> Nt) (x : Nt) (H : O <> length l), argmax_ne f H = argmax_ne (fun n => f n + x) H.
     Proof.
@@ -786,7 +788,7 @@ Module num_Extrema.
       repeat rewrite argmax_ne_mapmax_ne.
       rewrite <- argmax_ne_plus_const_r; auto.
     Qed.
-    
+
     Lemma argmax_ne_plus_const_l: forall (T : Type) (l : list T) (f : T -> Nt) (x : Nt) (H : O <> length l), argmax_ne f H = argmax_ne (fun n => x + f n) H.
     Proof.
       intros.
@@ -820,7 +822,7 @@ Module num_Extrema.
       inversion H3.
       auto.
     Qed.
-    
+
     Lemma max_correct: forall (l : list Nt) (n : Nt), List.In n l -> (exists m, Some m = max l /\ n <= m).
     Proof.
       intros.
@@ -864,12 +866,12 @@ Module num_Extrema.
 
     Lemma max_in: forall (l : list Nt) (x : Nt), max l = Some x -> List.In x l.
     Proof.
-      intros. 
+      intros.
       induction l.
       { inversion H0. }
       simpl in *.
       destruct (max l) eqn:e.
-      2: { inversion H0. auto. }       
+      2: { inversion H0. auto. }
       destruct (leb a n); auto.
       inversion H0. auto.
     Qed.
@@ -909,7 +911,7 @@ Module num_Extrema.
 
     Lemma filter_none: forall {T : Type} (l : list T) (f : T->bool),
       filter f l = [::] <-> (forall x : T, List.In x l ->  f x = false).
-    Proof. 
+    Proof.
       intros.
       split; intros.
       {
@@ -973,12 +975,12 @@ Module num_Extrema.
       destruct i. destruct H4.
       rewrite H0 in H4. inversion H4.
       clear H4. rewrite H7 in H5.
-      clear H7. clear x0.      
+      clear H7. clear x0.
       destruct H5; auto.
       exfalso. apply lt_not_le with y z; auto.
       assert(List.In z ([seq x0 <- n :: l | ltb x0 x])).
         rewrite -> List.filter_In. split; auto. apply ltb_true_iff. auto.
-      apply max_correct in H5. destruct H5. destruct H5. 
+      apply max_correct in H5. destruct H5. destruct H5.
       rewrite H1 in H5. inversion H5. rewrite <- H8. auto.
     Qed.
 
@@ -997,27 +999,27 @@ Module num_Extrema.
       destruct H1. apply ltb_true_iff.
       auto.
     Qed.
-  
+
     Lemma exists_min_dist_to_max: forall (l : list Nt) (x : Nt), max l = Some x ->
        (exists e, 0 < e /\ (forall y : Nt, List.In y l -> abs (x + - y) < e -> x = y)).
     Proof.
       intros.
       destruct (nth_max l 1) eqn:eq.
-      2:{ 
+      2:{
         exists 1. split. apply plus_id_lt_mult_id. intros.
         apply second_max_none with l y in eq; auto.
         rewrite H0 in eq. inversion eq. auto.
       }
       exists (x + - n).
       split.
-      { 
+      {
         rewrite <- plus_neg_r with n.
         apply plus_lt_compat_r.
         apply second_max_lt_max with l; auto.
       }
       intros.
       rewrite abs_posb in H2.
-      2:{ 
+      2:{
         apply leb_true_iff.
         rewrite <- plus_neg_r with y.
         apply plus_le_compat_r.
@@ -1040,7 +1042,7 @@ Module num_Extrema.
       assert (max l = Some ( max_ne H0)).
       { apply max_ne_ok. }
       assert (exists m, Some m = max l /\ n <= m).
-      { apply max_correct.  auto. } 
+      { apply max_correct.  auto. }
       destruct H3.
       destruct H3.
       rewrite H2 in H3.
@@ -1065,9 +1067,9 @@ Module num_Extrema.
       apply List.in_map.
       auto.
     Qed.
-      
 
-    Lemma mapmax_ne_cons_le: forall (T : Type) (l : list T) (f : T -> Nt) (t : T) (H0 : O <> length l) (H1 : O <> length (t :: l)), 
+
+    Lemma mapmax_ne_cons_le: forall (T : Type) (l : list T) (f : T -> Nt) (t : T) (H0 : O <> length l) (H1 : O <> length (t :: l)),
           mapmax_ne f H0 <= mapmax_ne f H1.
     Proof.
       intros.
@@ -1166,7 +1168,7 @@ Module num_Extrema.
 
     Lemma mapmax_ne_le_all: forall (T : Type) (l : list T) (f : T -> Nt) (H : O <> length l) (n : Nt),
         (forall t : T, List.In t l -> n <= f t) -> n <= mapmax_ne f H.
-    Proof. 
+    Proof.
       intros.
       assert (mapmax l f = Some (mapmax_ne f H0)).
         apply mapmax_ne_ok.
@@ -1187,7 +1189,7 @@ Module num_Extrema.
       apply H1; auto.
     Qed.
 
-    Lemma mapmax_ne_le_ext: forall (T : Type) (l : list T) (f g: T -> Nt) (H : O <> length l), 
+    Lemma mapmax_ne_le_ext: forall (T : Type) (l : list T) (f g: T -> Nt) (H : O <> length l),
           (forall t : T, List.In t l -> f t <= g t) -> mapmax_ne f H <= mapmax_ne g H.
     Proof.
       intros.
@@ -1195,7 +1197,7 @@ Module num_Extrema.
       { exfalso. apply H0. auto. }
       destruct l.
         simpl. apply H1. simpl. auto.
-      assert (O <> length (t :: l)). unfold not. intros. inversion H2.      
+      assert (O <> length (t :: l)). unfold not. intros. inversion H2.
       destruct mapmax_ne_cons with T (t :: l) f a H2 H0.
       {
         destruct H3.
@@ -1213,7 +1215,7 @@ Module num_Extrema.
       auto.
     Qed.
 
-    Lemma abs_mapmax_ne_le: forall (T : Type) (l : list T) (f: T -> Nt) (H : O <> length l), 
+    Lemma abs_mapmax_ne_le: forall (T : Type) (l : list T) (f: T -> Nt) (H : O <> length l),
           Numerics.abs ( mapmax_ne f H) <= mapmax_ne (fun x => abs (f x)) H.
     Proof.
       intros.
@@ -1225,7 +1227,7 @@ Module num_Extrema.
         apply mapmax_ne_le_ext.
         intros.
         apply Numerics.le_abs.
-      }      
+      }
       assert (Numerics.abs (mapmax_ne (l:=l) f H0) = -mapmax_ne (l:=l) f H0).
         unfold Numerics.abs. rewrite e. auto.
       rewrite H1.
@@ -1247,7 +1249,7 @@ Module num_Extrema.
         destruct H3.
         rewrite <- H3.
         apply Numerics.le_trans with (mapmax_ne (l:=t :: l) (fun x : T => Numerics.abs (f x)) H2).
-        { 
+        {
           apply IHl; auto.
           apply Numerics.le_lt_trans with (mapmax_ne (l:=[:: a, t & l]) f H0).
             apply mapmax_ne_cons_le. auto.
@@ -1266,7 +1268,7 @@ Module num_Extrema.
       rewrite <- H3.
       apply Numerics.le_trans with (Numerics.abs (f a)).
       { rewrite <- Numerics.abs_neg. apply Numerics.le_abs. }
-      remember ((fun x : T => Numerics.abs (f x))) as f'.      
+      remember ((fun x : T => Numerics.abs (f x))) as f'.
       assert (Numerics.abs (f a) = f' a). rewrite Heqf'. auto.
       rewrite H5.
       apply mapmax_ne_correct.
@@ -1284,7 +1286,7 @@ Module num_Extrema.
       assert(O <> length (t :: l)).
         unfold not. intros. inversion H1.
       destruct  mapmax_ne_cons with T (t :: l) (fun x : T => f x + g x) a H1 H0.
-      { 
+      {
         destruct H2.
         rewrite <- H2.
         apply Numerics.le_trans with (mapmax_ne (l:=t :: l) f H1 + mapmax_ne(l:=t :: l) g H1); auto.
@@ -1295,7 +1297,7 @@ Module num_Extrema.
       apply Numerics.plus_le_compat;
         apply mapmax_ne_correct; simpl; auto.
     Qed.
-  
+
     Lemma mapmax_ne_sub_le: forall (T : Type) (l : list T) (f g : T->Nt) (H0 : O <> length l),
          mapmax_ne f H0 + - mapmax_ne g H0 <= mapmax_ne(fun x => f x + - g x) H0.
     Proof.
@@ -1318,7 +1320,7 @@ Module num_Extrema.
       apply mapmax_ne_plus_le.
     Qed.
 
-        
+
     Lemma argmax_ne_in: forall (T : Type) (l : list T) (f : T->Nt) (H0 : O <> length l),
         List.In (argmax_ne f H0) l.
     Proof.
@@ -1359,7 +1361,7 @@ Module num_Extrema.
     Qed.
 
 
-    Lemma mapmax_ne_increasing_max_ne: forall (l : list Nt) (f : Nt->Nt) (H0 : O <> length l), 
+    Lemma mapmax_ne_increasing_max_ne: forall (l : list Nt) (f : Nt->Nt) (H0 : O <> length l),
       (forall x : Nt, List.In x l -> x <= f x) ->
       f (max_ne H0) <= mapmax_ne f H0.
     Proof.
@@ -1367,14 +1369,14 @@ Module num_Extrema.
       induction l.
       { exfalso. apply H0. auto. }
       destruct (Nat.eqb O (length l)) eqn:e.
-      { 
+      {
         apply EqNat.beq_nat_true in e. symmetry in e. rewrite -> List.length_zero_iff_nil in e.
         simpl. rewrite e. simpl. intros. apply le_refl.
       }
       intros.
-      apply EqNat.beq_nat_false in e.      
+      apply EqNat.beq_nat_false in e.
       destruct max_ne_cons with  l a e H0.
-      { 
+      {
         destruct H2.
         rewrite <- H2.
         destruct mapmax_ne_cons with  Nt l f a e H0.
@@ -1433,7 +1435,7 @@ Module num_Extrema.
           rewrite <- H4.
           destruct  mapmax_ne_cons with T  l' (fun x : T => Numerics.abs (f x + - g x)) a H1 H0.
           { destruct H6. rewrite <- H6. apply IHl. }
-          destruct H6.          
+          destruct H6.
           rewrite <- H6.
           apply Numerics.le_trans with ( mapmax_ne (fun x : T => Numerics.abs (f x + - g x)) H1); auto.
         }
@@ -1441,7 +1443,7 @@ Module num_Extrema.
         rewrite <- H4.
         destruct  mapmax_ne_cons with T l' (fun x : T => Numerics.abs (f x + - g x)) a H1 H0.
         {
-          destruct H6. 
+          destruct H6.
           rewrite <- H6.
           destruct (Numerics.leb 0 (mapmax_ne (l:=l') f H1 + - g a)) eqn:e.
           {
@@ -1605,7 +1607,7 @@ Module num_Extrema.
       simpl. auto.
     Qed.
 
-    Lemma mapmax_ne_le_const: forall (T : Type) (l : list T) (f : T -> Nt) (H0 : O <> length l) (c : Nt), 
+    Lemma mapmax_ne_le_const: forall (T : Type) (l : list T) (f : T -> Nt) (H0 : O <> length l) (c : Nt),
       (forall n : T, List.In n l -> f n <= c) <-> (mapmax_ne f H0 <= c).
     Proof.
       intros.
@@ -1622,7 +1624,7 @@ Module num_Extrema.
       auto.
     Qed.
 
-    Lemma mapmax_ne_gt_const: forall (T : Type) (l : list T) (f : T -> Nt) (H0 : O <> length l) (c : Nt), 
+    Lemma mapmax_ne_gt_const: forall (T : Type) (l : list T) (f : T -> Nt) (H0 : O <> length l) (c : Nt),
       (exists n : T, List.In n l /\ c < f n) <-> (c < mapmax_ne f H0).
     Proof.
       intros.
@@ -1635,12 +1637,12 @@ Module num_Extrema.
         auto.
       }
       exists (argmax_ne f H0).
-      rewrite <- argmax_ne_mapmax_ne. 
+      rewrite <- argmax_ne_mapmax_ne.
       split; auto.
         apply argmax_ne_in.
     Qed.
 
-    Lemma mapmax_ne_ge_const: forall (T : Type) (l : list T) (f : T -> Nt) (H0 : O <> length l) (c : Nt), 
+    Lemma mapmax_ne_ge_const: forall (T : Type) (l : list T) (f : T -> Nt) (H0 : O <> length l) (c : Nt),
       (exists n : T, List.In n l /\ c <= f n) <-> (c <= mapmax_ne f H0).
     Proof.
       intros.
@@ -1653,12 +1655,12 @@ Module num_Extrema.
         auto.
       }
       exists (argmax_ne f H0).
-      rewrite <- argmax_ne_mapmax_ne. 
+      rewrite <- argmax_ne_mapmax_ne.
       split; auto.
         apply argmax_ne_in.
     Qed.
 
-    Lemma mapmax_ne_lt_ext: forall (T : Type) (l : list T) (f g : T->Nt) (H0 : O <> length l), 
+    Lemma mapmax_ne_lt_ext: forall (T : Type) (l : list T) (f g : T->Nt) (H0 : O <> length l),
       (forall t : T, List.In t l -> f t < g t) -> mapmax_ne f H0 < mapmax_ne g H0.
     Proof.
       intros.
@@ -1689,7 +1691,7 @@ Module num_Extrema.
       apply List.in_eq.
     Qed.
 
-   Lemma mapmax_ne_lt_const: forall (T : Type) (l : list T) (f : T->Nt)  (c : Nt) (H0 : O <> length l), 
+   Lemma mapmax_ne_lt_const: forall (T : Type) (l : list T) (f : T->Nt)  (c : Nt) (H0 : O <> length l),
       (forall t : T, List.In t l -> f t < c) <-> mapmax_ne f H0 < c .
    Proof.
     intros.
@@ -1717,7 +1719,7 @@ Module num_Extrema.
       apply le_both_eq.
         apply mapmax_ne_le_const. auto.
       apply mapmax_ne_ge_const. exists x. split; auto.
-      rewrite H3. apply le_refl. 
+      rewrite H3. apply le_refl.
     }
     split.
     {
@@ -1734,7 +1736,7 @@ Module num_Extrema.
   Qed.
 
   Lemma mapmax_ne_dist_triangle: forall (T : Type) (f1 f2 f3 : T -> Nt) (l : list T) (H0 : O <> length l),
-    mapmax_ne (fun x => abs (f1 x + - f2 x)) H0 <= 
+    mapmax_ne (fun x => abs (f1 x + - f2 x)) H0 <=
     mapmax_ne (fun x => abs (f1 x + - f3 x)) H0 + mapmax_ne (fun x => abs (f3 x + - f2 x)) H0.
   Proof.
     intros.
@@ -1771,7 +1773,7 @@ Module num_Extrema.
     intros.
     induction l.
     { exfalso. apply H0. auto. }
-    
+
     simpl.**)
 
   Lemma max_ne_In: forall (l : list Nt) (H0 : O <> length l),
@@ -1801,7 +1803,7 @@ Module num_Extrema.
     induction l.
     { exfalso. apply H0. auto. }
     destruct l.
-    { 
+    {
       exists 1.
       split. apply plus_id_lt_mult_id. intros.
       inversion H1; auto. inversion H2.
@@ -1817,14 +1819,14 @@ Module num_Extrema.
       destruct H3.
       {
         exists (Numerics.min x (max_ne H1 + - a)).
-        split. 
+        split.
         {
           unfold Numerics.min. destruct (leb x (max_ne H1 + - a)); auto.
           apply lt_diff_pos. auto.
         }
         intros.
         inversion H5.
-        { 
+        {
           rewrite <- H6. right.
           apply le_trans with (a + (max_ne (l:=n :: l) H1 + - a)).
             apply plus_le_compat_l. apply ge_min_r.
@@ -1846,7 +1848,7 @@ Module num_Extrema.
     clear IHl.
     destruct H4.
     destruct H3.
-    {      
+    {
       exists (a + - max_ne H1).
       split.
         apply lt_diff_pos.  auto.
@@ -1867,10 +1869,10 @@ Module num_Extrema.
     intros.
     destruct H6; auto.
     destruct H5 with n0; auto.
-    { rewrite H3 in H7. auto. } 
+    { rewrite H3 in H7. auto. }
     right. rewrite H3 in H7. auto.
   Qed.
-    
+
   Lemma mapmax_ne_min_dist_max: forall (T : Type) (f : T->Nt) (l : list T) (H0 : O <> length l),
       exists c : Nt, 0 < c /\ forall t : T, List.In t l ->  (f t = mapmax_ne f H0) \/ (f t + c <= mapmax_ne f H0).
   Proof.
@@ -1893,8 +1895,8 @@ Module num_Extrema.
 
   Context (Nt:Type) `{Numeric_Props Nt}.
 
-  
-   
+
+
   Lemma to_R_argmax: forall (T : Type) (l : list T) (f : T->Nt),
      argmax l f = argmax l (fun x => to_R (f x)).
   Proof.
@@ -1908,7 +1910,7 @@ Module num_Extrema.
   Qed.
 
   Lemma to_R_mapmax: forall (T : Type) (l : list T) (f : T->Nt),
-     O <> length l -> exists x : Nt, 
+     O <> length l -> exists x : Nt,
         Some x = mapmax l f /\ Some (to_R x) = mapmax l (fun x => to_R (f x)).
   Proof.
     intros.
@@ -1919,7 +1921,7 @@ Module num_Extrema.
     destruct IHl.
     { simpl. auto. }
     destruct H1.
-    simpl in *.    
+    simpl in *.
     rewrite <- H1.
     rewrite <- H2.
     exists (if leb (f a) x then x else f a).
@@ -1928,7 +1930,7 @@ Module num_Extrema.
     destruct (leb (f a) x); auto.
   Qed.
 
- 
+
   Lemma to_R_argmax_ne: forall (T : Type) (l : list T) (f : T-> Nt) (H0 : O <> length l),
     argmax_ne f H0 = argmax_ne (fun x => to_R (f x)) H0.
   Proof.
@@ -1942,7 +1944,7 @@ Module num_Extrema.
     inversion H2.
     auto.
   Qed.
-    
+
   Lemma to_R_mapmax_ne: forall (T : Type) (l : list T) (f : T-> Nt) (H0 : O <> length l),
     to_R (mapmax_ne f H0) = mapmax_ne (fun x => to_R (f x)) H0.
   Proof.
@@ -1953,13 +1955,9 @@ Module num_Extrema.
     auto.
   Qed.
 
-  
+
 
 
 
    End use_Numerics2.
 End num_Extrema.
-
-
-
-

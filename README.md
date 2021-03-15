@@ -3,10 +3,10 @@ Ohio University Verification Toolsuite
 
 # REQUIREMENTS
 
-coq 8.9.0
-mathcomp algebra 1.7.0
-mathcomp fingroup 1.7.0
-mathcomp ssreflect 1.7.0
+coq 8.13.0
+mathcomp algebra 1.12.0
+mathcomp fingroup 1.12.0
+mathcomp ssreflect 1.12.0
 
 # BUILD
 
@@ -18,7 +18,7 @@ To build OUVerT, clone it and do:
 
 The latter command installs the OUVerT files in your local `.opam` directory.
 
-To use OUVerT files in another development, simply import them with OUVerT.filename, as in: 
+To use OUVerT files in another development, simply import them with OUVerT.filename, as in:
 
 > Require Import OUVerT.dyadic.
 

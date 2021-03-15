@@ -11,12 +11,14 @@ Require Import QArith Reals Rpower Ranalysis Fourier Lra.
 
 Require Import bigops numerics expfacts dist axioms.
 
+#[local] Open Scope R_scope.
+
 Section relative_entropy_lemmas.
   Variables p eps : R.
   Variable p_range : 0 < p < 1.
   Variable eps_range : 0 < eps < 1 - p.
 
-  Lemma RE_Bernoulli_bounded_below : 
+  Lemma RE_Bernoulli_bounded_below :
     RE_Bernoulli (p + eps) p >= 2 * eps^2.
   Proof.
     have p_eps_ax: 0<p+eps<1 by lra.
@@ -50,17 +52,17 @@ Section mutual_independence.
 
   (* The distribution function corresponding to m samples of d *)
   Definition d_prod (_ : 'I_m) := d.
-  
+
   Variable f : 'I_m -> T -> R.
   Variable f_range : forall i x, 0 <= f i x <= 1.
-  Definition identically_distributed := forall i j : 'I_m, expValR d (f i) = expValR d (f j).  
+  Definition identically_distributed := forall i j : 'I_m, expValR d (f i) = expValR d (f j).
   Variable f_identically_distributed : identically_distributed.
-  (* Mutual independence of the f's: 
-     -The expected value of the product of a function of the f_i's is equal to 
+  (* Mutual independence of the f's:
+     -The expected value of the product of a function of the f_i's is equal to
       the product of the expected value of the same function of the f_i's.
      -NOTE: this is a stronger assumption than pairwise independence. *)
   Definition mutual_independence :=
-    forall g : R -> R, 
+    forall g : R -> R,
     expValR (prodR d_prod) (fun p => big_product (enum 'I_m) (fun i => g (f i (p i)))) =
     big_product (enum 'I_m) (fun i => expValR d (fun x => g (f i x))).
   Definition mutual_independence' :=
@@ -81,7 +83,7 @@ Section chernoff_geq.
   Variable m_gt0 : (0 < m)%nat.
 
   Notation d_prod := (@d_prod T d m).
-  
+
   Variable f : 'I_m -> T -> R.
   Variable f_range : forall i x, 0 <= f i x <= 1.
   Variable f_identically_distributed : @identically_distributed T d m f.
@@ -90,18 +92,18 @@ Section chernoff_geq.
     rewrite /mutual_independence => g; rewrite /expValR /= big_product_distr_sum /=.
     rewrite /prodR /d_prod; apply: big_sum_ext => // p.
     by rewrite -big_product_assoc.
-  Qed.    
-  
+  Qed.
+
   Definition mR := INR m.
   Lemma mR_gt0 : (0 < mR)%R.
   Proof. by apply: lt_0_INR; apply/ltP. Qed.
   Lemma mR_neq0 : (mR <> 0)%R.
   Proof. by move: mR_gt0 => H H2; rewrite H2 in H; move: (Rlt_asym _ _ H). Qed.
-  
+
   Definition i0 : 'I_m := Ordinal m_gt0.
   Definition p := expValR d (f i0).
-  Variable p_nontrivial : 0 < p < 1. (*required to construct lambda_min*)  
-  
+  Variable p_nontrivial : 0 < p < 1. (*required to construct lambda_min*)
+
   Lemma expVal_independence c :
     expValR (prodR d_prod) (fun p => big_product (enum 'I_m) (fun i => exp (c * f i (p i)))) =
     big_product (enum 'I_m) (fun i => expValR d (fun x => exp (c * f i x))).
@@ -118,10 +120,10 @@ Section chernoff_geq.
   Variable eps : R.
   Variable eps_gt0 : 0 < eps.
   Variable eps_lt_1p : eps < 1 - p.
-  (*This above assumption, which is required to show that lambda_min > 0, 
-    is strange in the sense that it limits the values epsilon we can choose 
+  (*This above assumption, which is required to show that lambda_min > 0,
+    is strange in the sense that it limits the values epsilon we can choose
     to (0, 1-p).*)
-  
+
   Definition q := p + eps.
 
   Lemma lt_p_q : p < q.
@@ -135,14 +137,14 @@ Section chernoff_geq.
   Lemma lt_p_p2_eps : 0 < p - (p*(p + eps)).
   Proof.
     apply: Rlt_Rminus; rewrite Rmult_plus_distr_l.
-    apply: (@Rlt_le_trans _ (p*p + p*(1-p)) _).
+    apply: (@Rlt_le_trans _ (p * p + p*(1-p)) _).
     { apply: Rplus_lt_compat_l.
       apply Rmult_lt_compat_l => //.
       by case: p_nontrivial. }
     rewrite Rmult_plus_distr_l Rmult_1_r [p + _]Rplus_comm -Rplus_assoc.
-    rewrite -Ropp_mult_distr_r Rplus_opp_r Rplus_0_l; apply: Rle_refl. 
+    rewrite -Ropp_mult_distr_r Rplus_opp_r Rplus_0_l; apply: Rle_refl.
   Qed.
-  
+
   Lemma p_leq1 : p <= 1.
   Proof.
     rewrite /p/expValR -d_dist; apply: big_sum_le; last first.
@@ -153,12 +155,12 @@ Section chernoff_geq.
     { by apply: Rle_refl. }
     by case: (f_range i0 c).
   Qed.
-  
+
   Section LAMBDA.
   Variable lambda : R.
   Variable lambda_gt0 : 0 < lambda.
-  
-  Lemma expValR_linear_approx : 
+
+  Lemma expValR_linear_approx :
     exp (-lambda * mR * q) *
     big_product (enum 'I_m)
       (fun i => expValR d (fun x => exp (lambda * f i x))) <=
@@ -207,21 +209,21 @@ Section chernoff_geq.
     rewrite /p/expValR/Rminus.
     move: f_identically_distributed; rewrite /identically_distributed.
     by move/(_ i i0); rewrite /expValR.
-  Qed.    
-  
-  Lemma big_product_expValR_simpl_aux : 
+  Qed.
+
+  Lemma big_product_expValR_simpl_aux :
     big_product
       (enum 'I_m)
       (fun i => expValR d (fun x => 1 - f i x + f i x * exp lambda)) =
     big_product (enum 'I_m) (fun i => 1 - p + p * exp lambda).
   Proof. by apply: big_product_ext => // p; rewrite expValR_simpl. Qed.
-    
+
   Lemma big_product_expValR_simpl :
     big_product
       (enum 'I_m)
       (fun i => expValR d (fun x => 1 - f i x + f i x * exp lambda)) =
     (1 - p + p * exp lambda) ^ m.
-  Proof. by rewrite big_product_expValR_simpl_aux big_product_constant size_enum_ord. Qed.  
+  Proof. by rewrite big_product_expValR_simpl_aux big_product_constant size_enum_ord. Qed.
 
   Definition phi := ln (exp (-lambda*q) * (1 - p + p * exp lambda)).
 
@@ -229,7 +231,7 @@ Section chernoff_geq.
   Proof.
     by move => p_neq1; move: p_leq1; case => H; try lra.
   Qed.
-  
+
   Lemma one_minus_p_etc_gt0 : 0 < 1 - p + p * exp lambda.
   Proof.
     case: (Req_dec p 1).
@@ -239,8 +241,8 @@ Section chernoff_geq.
     apply: Rmult_le_pos.
     { by apply: expValR_ge0 => x; case: (f_range i0 x). }
     left; apply: exp_pos.
-  Qed.    
-  
+  Qed.
+
   Lemma phi_simpl :
     exp (phi * mR) = exp (-lambda * mR * q) * (1 - p + p * exp lambda) ^ m.
   Proof.
@@ -250,12 +252,12 @@ Section chernoff_geq.
     rewrite ln_exp Rmult_plus_distr_r exp_plus; f_equal.
     { by rewrite Rmult_assoc [q * mR]Rmult_comm Rmult_assoc. }
     rewrite exp_mult exp_ln => //.
-    apply: one_minus_p_etc_gt0. 
+    apply: one_minus_p_etc_gt0.
   Qed.
 
   (** The probability that phat is greater than or equal to q: *)
   Definition phat_ge_q : R := conv (fun _ => d) f q.
-  
+
   Lemma probOfR_phat_q :
     phat_ge_q <=
     exp (-lambda * mR * q) *
@@ -292,8 +294,8 @@ Section chernoff_geq.
     rewrite big_sum_mult_left -big_product_exp_sum; apply: Rle_refl.
   Qed.
 
-  Lemma probOfR_phat_q_bound : 
-    phat_ge_q <= 
+  Lemma probOfR_phat_q_bound :
+    phat_ge_q <=
     exp (-lambda * mR * q) *
     big_product (enum 'I_m)
       (fun i => expValR d (fun x => 1 - f i x + f i x * exp lambda)).
@@ -301,13 +303,13 @@ Section chernoff_geq.
     apply: Rle_trans; first by apply: probOfR_phat_q.
     apply: expValR_linear_approx.
   Qed.
-  
+
   Lemma chernoff0 : phat_ge_q <= exp (phi * mR).
   Proof.
     apply: Rle_trans; first by apply: probOfR_phat_q_bound.
     rewrite big_product_expValR_simpl phi_simpl; f_equal; apply: Rle_refl.
   Qed.
-  End LAMBDA.  
+  End LAMBDA.
 
   Lemma chernoff0_lambda_ge0 (lambda:R) (lambda_ge0 : 0 <= lambda) :
     phat_ge_q <= exp (phi lambda * mR).
@@ -319,8 +321,8 @@ Section chernoff_geq.
     rewrite exp_0 /phat_ge_q /conv; apply: Rle_trans.
     { apply: probOfR_le_1; [by apply: prodR_dist|by apply: prodR_nonneg]. }
     by rewrite pow1 Rmult_1_r; apply: Rle_refl.
-  Qed.    
-  
+  Qed.
+
   Definition lambda_min := ln ((q * (1 - p)) / ((1 - q) * p)).
 
   Lemma lambda_min_gt0 : 0 < lambda_min.
@@ -328,7 +330,7 @@ Section chernoff_geq.
     apply: exp_lt_inv; rewrite exp_0 /lambda_min.
     have Hlt: 1 < q * (1 - p) / ((1 - q) * p).
     { rewrite Rmult_minus_distr_l Rmult_1_r.
-      rewrite [(1-q)*p]Rmult_comm Rmult_minus_distr_l Rmult_1_r.
+      rewrite [(1-q) * p]Rmult_comm Rmult_minus_distr_l Rmult_1_r.
       rewrite Rmult_comm /q; move: lt_p_p2_eps; move: (p*(p+eps)) => r H.
       apply: (Rmult_lt_reg_r (p-r)) => //.
       rewrite Rmult_1_l Rmult_assoc Rinv_l; last first.
@@ -337,8 +339,8 @@ Section chernoff_geq.
     rewrite exp_ln => //.
     apply: Rlt_trans; last by apply: Hlt.
     lra.
-  Qed. 
-  
+  Qed.
+
   Lemma phi_lambda_min :
     phi lambda_min = -(RE_Bernoulli (p + eps) p).
   Proof.
@@ -347,7 +349,7 @@ Section chernoff_geq.
     { have H: 0 < 1 - p by lra.
       apply: Rlt_le_trans; first by apply: H.
       rewrite -{1}[1-p]Rplus_0_r; apply: Rplus_le_compat_l.
-      case: p_nontrivial => H1 H2; apply: Rmult_le_pos; [lra|]. 
+      case: p_nontrivial => H1 H2; apply: Rmult_le_pos; [lra|].
       by apply: Rlt_le; apply: exp_pos. }
     simpl; rewrite ln_mult; [|by apply: exp_pos|] => //.
     case: p_nontrivial => X1 X2.
@@ -394,7 +396,7 @@ Section chernoff_geq.
     { rewrite -Rdiv_plus_distr.
       have ->: (1 - q) * (1 - p) + q * (1 - p) = 1 - p.
       { have ->: (1 - q) * (1 - p) = 1 - p - q + p * q by lra.
-        rewrite Rmult_minus_distr_l Rmult_1_r [q*p]Rmult_comm /Rminus.
+        rewrite Rmult_minus_distr_l Rmult_1_r [q * p]Rmult_comm /Rminus.
         rewrite [_ + p*q]Rplus_comm -Rplus_assoc Rplus_comm.
         rewrite [p * q + _ + q]Rplus_assoc -[-_ + _]Rplus_assoc Rplus_opp_l Rplus_0_l.
         rewrite Rplus_assoc Rplus_opp_l Rplus_0_r //. }
@@ -418,7 +420,7 @@ Section chernoff_geq.
       apply: Rinv_0_lt_compat; lra. }
     have X3: p * (1 - q) / (q * (1 - p)) = (p / q) * ((1 - q) / (1 - p)).
     { rewrite /Rdiv [p * (1 - q) * _]Rmult_assoc [(1 - q) * _]Rmult_comm -Rmult_assoc.
-      rewrite Rinv_mult_distr // -Rmult_assoc; lra. }    
+      rewrite Rinv_mult_distr // -Rmult_assoc; lra. }
     have ->: ln (p * (1 - q) / (q * (1 - p))) = ln (p / q) + ln ((1 - q) / (1 - p)).
     { rewrite X3 ln_mult //. }
     have ->: p * (1 - q) / (q * (1 - p)) * ((1 - p) / (1 - q)) = p / q.
@@ -445,7 +447,7 @@ Section chernoff_geq.
   Proof.
     rewrite -phi_lambda_min; apply: chernoff0.
     by apply: lambda_min_gt0.
-  Qed. 
+  Qed.
 
   Lemma chernoff_geq : phat_ge_q <= exp (-2%R * eps^2 * mR).
   Proof.
@@ -476,7 +478,7 @@ Section chernoff_leq.
   Variable m_gt0 : (0 < m)%nat.
 
   Notation d_prod := (@d_prod T d m).
-  
+
   Variable f : 'I_m -> T -> R.
   Variable f_range : forall i x, 0 <= f i x <= 1.
   Variable f_identically_distributed : identically_distributed d f.
@@ -495,19 +497,19 @@ Section chernoff_leq.
   Variable eps : R.
   Variable eps_gt0 : 0 < eps.
   Variable eps_lt_1p : eps < 1 - p d m_gt0 f_neg.
-  Variable p_nontrivial : 0 < p d m_gt0 f < 1. 
-  
+  Variable p_nontrivial : 0 < p d m_gt0 f < 1.
+
   Definition p_neg := p d m_gt0 f_neg.
 
   Lemma p_neg_one_minus_p : p_neg = 1 - p d m_gt0 f.
   Proof.
     rewrite /p_neg /p /f_neg; rewrite expValR_linear expValR_Ropp /Rminus; f_equal.
     apply: expValR_one => //.
-  Qed.    
-  
+  Qed.
+
   Lemma p_neg_nontrivial : 0 < p_neg < 1.
   Proof. rewrite p_neg_one_minus_p; case: p_nontrivial => H1 H2; split; lra. Qed.
-  
+
   Lemma chernoff_leq : phat_ge_q d m_gt0 f_neg eps <= exp (-2%R * eps^2 * mR m).
   Proof.
     apply: chernoff_geq => //.
@@ -526,18 +528,18 @@ Section chernoff_onesided.
   Variable m_gt0 : (0 < m)%nat.
 
   Notation d_prod := (@d_prod T d m).
-  
+
   Variable f : 'I_m -> T -> R.
   Variable f_range : forall i x, 0 <= f i x <= 1.
   Variable f_identically_distributed : identically_distributed d f.
 
   Variable eps : R.
   Variable eps_gt0 : 0 < eps.
-  (*NOTE: the following assumptions are required to prove \lambda_min > 0*)  
+  (*NOTE: the following assumptions are required to prove \lambda_min > 0*)
   Variable eps_lt_1p : eps < 1 - p d m_gt0 f.
   Variable p_nontrivial : 0 < p d m_gt0 f < 1.
-  (*END: the following assumptions*)    
-  
+  (*END: the following assumptions*)
+
   Lemma chernoff_aux1 :
     phat_ge_q d m_gt0 f eps <= exp (-2%R * eps^2 * mR m).
   Proof.
@@ -547,14 +549,14 @@ Section chernoff_onesided.
 
   Definition p_hat x := / (mR m) * big_sum (enum 'I_m) (fun i => f i (x i)).
   Definition p_exp := p d m_gt0 f.
-  
+
   Lemma chernoff :
     probOfR (prodR (fun _ => d)) (fun x => Rle_lt_dec (p_exp + eps) (p_hat x)) <=
     exp (-2%R * eps^2 * mR m).
   Proof.
     apply: Rle_trans; last by apply: chernoff_aux1.
     apply: Rle_refl.
-  Qed.    
+  Qed.
 End chernoff_onesided.
 
 Section chernoff_twosided.
@@ -566,7 +568,7 @@ Section chernoff_twosided.
   Variable m_gt0 : (0 < m)%nat.
 
   Notation d_prod := (@d_prod T d m).
-  
+
   Variable f : 'I_m -> T -> R.
   Variable f_range : forall i x, 0 <= f i x <= 1.
   Variable f_identically_distributed : identically_distributed d f.
@@ -575,10 +577,10 @@ Section chernoff_twosided.
   Variable eps_gt0 : 0 < eps.
   Variable delt_gt0 : 0 < delt.
   (*NOTE: the following assumptions are required to prove \lambda_min > 0*)
-  Variable eps_lt_p : eps < p d m_gt0 f.  
+  Variable eps_lt_p : eps < p d m_gt0 f.
   Variable delt_lt_1p : delt < 1 - p d m_gt0 f.
   Variable p_nontrivial : 0 < p d m_gt0 f < 1.
-  (*END: the following assumptions*)  
+  (*END: the following assumptions*)
 
   Definition min_eps_delt := Rmin eps delt.
 
@@ -592,10 +594,10 @@ Section chernoff_twosided.
   Proof.
     rewrite /min_eps_delt /Rmin; case: (Rle_dec _ _) => //.
     move/Rnot_le_gt => H1 H2; lra.
-  Qed.    
-  
+  Qed.
+
   Lemma Rle_exp_delt_min : exp (- (2) * delt ^ 2 * mR m) <= exp (- (2) * min_eps_delt ^ 2 * mR m).
-  Proof.    
+  Proof.
     rewrite !Ropp_mult_distr_l_reverse 2!exp_Ropp; apply: Rinv_le_contravar.
     { apply: exp_pos. }
     case: (Req_dec (exp (2 * min_eps_delt ^ 2 * mR m)) (exp (2 * delt ^ 2 * mR m))).
@@ -604,13 +606,13 @@ Section chernoff_twosided.
     apply: Rmult_lt_compat_l; first by lra.
     rewrite -!tech_pow_Rmult /= 2!Rmult_1_r; apply: Rmult_le_0_lt_compat.
     { apply: Rle_0_min_eps_delt. }
-    { apply: Rle_0_min_eps_delt. }      
+    { apply: Rle_0_min_eps_delt. }
     { by apply: Rlt_min_eps_delt_delt => Heq; rewrite Heq in Hneq; apply: Hneq. }
     by apply: Rlt_min_eps_delt_delt => Heq; rewrite Heq in Hneq; apply: Hneq.
-  Qed.    
+  Qed.
 
   Lemma Rle_exp_eps_min : exp (- (2) * eps ^ 2 * mR m) <= exp (- (2) * min_eps_delt ^ 2 * mR m).
-  Proof.    
+  Proof.
     rewrite !Ropp_mult_distr_l_reverse 2!exp_Ropp; apply: Rinv_le_contravar.
     { apply: exp_pos. }
     case: (Req_dec (exp (2 * min_eps_delt ^ 2 * mR m)) (exp (2 * eps ^ 2 * mR m))).
@@ -619,11 +621,11 @@ Section chernoff_twosided.
     apply: Rmult_lt_compat_l; first by lra.
     rewrite -!tech_pow_Rmult /= 2!Rmult_1_r; apply: Rmult_le_0_lt_compat.
     { apply: Rle_0_min_eps_delt. }
-    { apply: Rle_0_min_eps_delt. }      
+    { apply: Rle_0_min_eps_delt. }
     { by apply: Rlt_min_eps_delt_eps => Heq; rewrite Heq in Hneq; apply: Hneq. }
     by apply: Rlt_min_eps_delt_eps => Heq; rewrite Heq in Hneq; apply: Hneq.
-  Qed.    
-  
+  Qed.
+
   Lemma chernoff_twosided_aux1 :
     phat_ge_q d m_gt0 f delt + phat_ge_q d m_gt0 (f_neg f) eps <=
     2 * exp (-2%R * min_eps_delt^2 * mR m).
@@ -652,7 +654,7 @@ Section chernoff_twosided.
 
   Notation p_exp := (p_exp d m_gt0 f).
   Notation p_hat := (p_hat f).
-  
+
   Lemma chernoff_twosided (Heq : eps = delt) :
     probOfR (prodR (fun _ => d)) (fun x => Rle_lt_dec eps (Rabs (p_exp - p_hat x))) <=
     2 * exp (-2%R * eps^2 * mR m).
@@ -686,11 +688,11 @@ Section chernoff_twosided.
     case: (Rle_lt_dec p_exp (p_hat x)); last first => Hle2.
     { (*Case 1: p_hat < p*)
       have Hle3: eps <= p_exp - p_hat x.
-      { move: Hle; rewrite Rabs_minus_sym /Rabs; case: (Rcase_abs _) => //= Hx Hy. lra. 
+      { move: Hle; rewrite Rabs_minus_sym /Rabs; case: (Rcase_abs _) => //= Hx Hy. lra.
         apply Rplus_ge_compat_r with p_exp _ _ in Hx.
         rewrite Rplus_0_l in Hx. rewrite Rplus_assoc in Hx.
         rewrite Rplus_opp_l in Hx. rewrite Rplus_0_r in Hx.
-        exfalso. 
+        exfalso.
         eapply Rlt_not_ge . apply Hle2. apply Hx.
       }
       have Hle4: p_hat x + eps <= p_exp by lra.
@@ -712,7 +714,7 @@ Section chernoff_twosided.
         rewrite Rmult_1_r Rmult_plus_distr_l Rinv_l; last first.
         { move => Heq; move: (mR_gt0 m_gt0); rewrite /mR Heq => Hlt; lra. }
         rewrite -Ropp_mult_distr_r; apply: Rle_refl. }
-      have H10: eps > p_exp - p_hat x. 
+      have H10: eps > p_exp - p_hat x.
       { clear - H8 H9; move: H8 H9; rewrite /p_exp; move: (p _ _) => p_exp => H1 H2.
         lra. }
       lra. }
@@ -722,7 +724,7 @@ Section chernoff_twosided.
       apply Rplus_gt_compat_r with p_exp _ _ in Hx.
         rewrite Rplus_0_l in Hx. rewrite Rplus_assoc in Hx.
         rewrite Rplus_opp_l in Hx. rewrite Rplus_0_r in Hx.
-        exfalso. 
+        exfalso.
         apply Rgt_not_le with p_exp (p_hat x); auto.
       }
       have Hle4: p_exp + eps <= p_hat x by lra.
@@ -734,4 +736,3 @@ Section chernoff_twosided.
       move: (p _ _ _) => X; move: (/_ * _) => Y => H1 H2; lra. }
   Qed.
 End chernoff_twosided.
-

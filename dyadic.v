@@ -41,13 +41,13 @@ Definition DOadd (d1 d2 : DO) : DO :=
   | Dmake x1 y1, Dmake x2 y2 =>
     if Pos.ltb y1 y2 then
       Dmake (Z.pow_pos 2 (y2 - y1) * x1 + x2) y2
-    else if Pos.ltb y2 y1 then 
+    else if Pos.ltb y2 y1 then
            Dmake (Z.pow_pos 2 (y1 - y2) * x2 + x1) y1
          else Dmake (x1 + x2) y1
   end.
 
 Lemma Qdiv_mult (s q r : Q) :
-  ~ s == 0 -> 
+  ~ s == 0 ->
   (q / r) == (q * s) / (r * s).
 Proof.
   intros H; unfold Qdiv.
@@ -69,10 +69,10 @@ Proof.
   rewrite Pos2Z.inj_xO, (Pos2Z.inj_xO y).
   rewrite Zdiv_mult_cancel_l; auto.
   inversion 1.
-Qed.  
+Qed.
 
 Lemma Zpow_pos_2exp (x y : nat) :
-  (y < x)%nat -> 
+  (y < x)%nat ->
   Z.pow 2 (Z.of_nat (x - y)) = (Z.pow 2 (Z.of_nat x) / Z.pow 2 (Z.of_nat y))%Z.
 Proof.
   intros H; rewrite <-!two_power_nat_equiv; unfold two_power_nat.
@@ -87,7 +87,7 @@ Proof.
 Qed.
 
 Lemma Pos_iter_swap' T f g (r : T) (x : positive) :
-  (forall t, f (g t) = t) -> 
+  (forall t, f (g t) = t) ->
   Pos.iter f (Pos.iter g r x) x = r.
 Proof.
   rewrite 2!Pos2Nat.inj_iter.
@@ -111,16 +111,16 @@ Proof.
   rewrite Pos2Nat.inj_iter.
   apply IHn; auto.
   exists y; auto.
-Qed.  
+Qed.
 
-Lemma Pos_lt_Zpos_Zlt x y :  
-  (x < y)%positive -> 
+Lemma Pos_lt_Zpos_Zlt x y :
+  (x < y)%positive ->
   (Zpos' x < Zpos' y)%Z.
 Proof.
   unfold Z.lt; simpl; rewrite <-Pos.ltb_lt.
   rewrite Pos.ltb_compare.
   destruct (Pos.compare x y); auto; try solve[inversion 1].
-Qed.  
+Qed.
 
 Lemma Zlt_le x y : (x < y -> x <= y)%Z.
 Proof.
@@ -131,7 +131,7 @@ Proof.
 Qed.
 
 Lemma Zpow_pos_div x y :
-  (y < x)%positive -> 
+  (y < x)%positive ->
   (Z.pow_pos 2 x # 1) * / (Z.pow_pos 2 y # 1) == Z.pow_pos 2 (x - y) # 1.
 Proof.
   intros H; rewrite !Z.pow_pos_fold.
@@ -175,10 +175,10 @@ Proof.
   { inversion 1. }
   split.
   { apply Pos2Z.is_nonneg. }
-  unfold Z.le, Z.compare; rewrite H; inversion 1. 
+  unfold Z.le, Z.compare; rewrite H; inversion 1.
   split.
   { apply Pos2Z.is_nonneg. }
-  unfold Z.le, Z.compare; rewrite H; inversion 1. 
+  unfold Z.le, Z.compare; rewrite H; inversion 1.
 Qed.
 
 Lemma Qinv_neq (n : Q) : ~0 == n -> ~0 == / n.
@@ -191,7 +191,7 @@ Proof.
   intros _ H.
   generalize (Zlt_neg_0 (Qden n * 1)).
   rewrite <-H; inversion 1.
-Qed.  
+Qed.
 
 Lemma Qdiv_neq_0 n m : ~n==0 -> ~m==0 -> ~(n / m == 0).
 Proof.
@@ -201,7 +201,7 @@ Proof.
   assert (H2: ~0 == m).
   { intros H2; rewrite H2 in H1; apply H1; apply Qeq_refl. }
   apply (Qinv_neq _ H2); rewrite H0; apply Qeq_refl.
-Qed.  
+Qed.
 
 Lemma Qmake_neq_0 n m : (~n=0)%Z -> ~(n # m) == 0.
 Proof.
@@ -222,7 +222,7 @@ Proof.
 Qed.
 
 Lemma Zmult_pow_plus x y r :
-  (r <> 0)%Z -> 
+  (r <> 0)%Z ->
   x * inject_Z (Z.pow r (Z.pos y)) / inject_Z (Z.pow r (Z.pos y+Z.pos y)) ==
   x / inject_Z (Z.pow r (Z.pos y)).
 Proof.
@@ -242,7 +242,7 @@ Proof.
   { apply Qeq_refl. }
   apply Qmake_neq_0; intros H2.
   apply (Zpow_pos_neq_0 _ _ H H2).
-Qed.  
+Qed.
 
 Lemma DOadd_ok d1 d2 :
   DO_to_Q (DOadd d1 d2) == DO_to_Q d1 + DO_to_Q d2.
@@ -369,7 +369,7 @@ Proof.
   assert (inject_Z W * inject_Z (Z.pow_pos 2 X) *
           / inject_Z (Z.pow_pos 2 (X + X)) ==
           inject_Z W / inject_Z (Z.pow_pos 2 X)) as ->.
-  { apply Zmult_pow_plus; inversion 1. }  
+  { apply Zmult_pow_plus; inversion 1. }
   unfold Qdiv; rewrite <-Qmult_plus_distr_l, Qmake_Qdiv, inject_Z_plus.
   unfold Qdiv; rewrite shift_pos_correct, Zmult_1_r; apply Qeq_refl.
 Qed.
@@ -386,7 +386,7 @@ Proof.
   induction n; simpl; auto.
   rewrite IHn; auto.
 Qed.
- 
+
 Lemma DOmult_ok d1 d2 :
   DO_to_Q (DOmult d1 d2) = DO_to_Q d1 * DO_to_Q d2.
 Proof.
@@ -427,7 +427,7 @@ Qed.
 
 
 Definition DOle (d1 d2 : DO) : Prop :=
-  Qle (DO_to_Q d1) (DO_to_Q d2).  
+  Qle (DO_to_Q d1) (DO_to_Q d2).
 
 (*TODO: There's probably a more efficient way to implement the following:*)
 Definition DOle_bool (d1 d2 : DO) : bool :=
@@ -440,7 +440,7 @@ Proof.
 Qed.
 
 Definition DOlt (d1 d2 : DO) : Prop :=
-  Qlt (DO_to_Q d1) (DO_to_Q d2).  
+  Qlt (DO_to_Q d1) (DO_to_Q d2).
 
 Definition DOlt_bool (d1 d2 : DO) : bool :=
   match DO_to_Q d1 ?= DO_to_Q d2 with
@@ -454,7 +454,7 @@ Proof.
   destruct (Qcompare_spec (DO_to_Q d1) (DO_to_Q d2));
     try solve[inversion 1|auto].
   unfold DOlt; rewrite Qlt_alt; intros ->; auto.
-Qed.  
+Qed.
 
 Lemma DOeq_dec (d1 d2 : DO) : {d1=d2} + {d1<>d2}.
 Proof.
@@ -464,7 +464,7 @@ Proof.
     left; subst; f_equal.
     right; inversion 1; subst; apply n; auto. }
   right; inversion 1; subst; auto.
-Qed.  
+Qed.
 
 (*(* MICROBENCHMARK *)
 Fixpoint f (n : nat) (d : D) : D :=
@@ -557,8 +557,8 @@ Proof.
   rewrite Pos2Z.inj_xO.
   rewrite
     (Pos2Z.inj_xO
-       (nat_rect (fun _ : nat => positive) 1%positive 
-                 (fun _ : nat => xO) y')).  
+       (nat_rect (fun _ : nat => positive) 1%positive
+                 (fun _ : nat => xO) y')).
   apply Zmult_le_compat; try omega.
   { apply IHx'; omega. }
   clear - x'.
@@ -566,7 +566,7 @@ Proof.
   simpl; rewrite Pos2Z.inj_xO.
   assert ((0=0*0)%Z) as -> by (rewrite Zmult_0_r; auto).
   apply Zmult_le_compat; try omega.
-Qed.  
+Qed.
 
 Lemma Zpow_pos_size_le x : (x <= Z.pow_pos 2 (Zsize x))%Z.
 Proof.
@@ -577,7 +577,7 @@ Proof.
     rewrite <-Pos2Z.inj_pow_pos; auto. }
   rewrite <-Pos2Z.inj_pow_pos.
   apply Zle_neg_pos.
-Qed.  
+Qed.
 
 Lemma Pos_succ_sub_1 p : (Pos.succ p - 1 = p)%positive.
 Proof.
@@ -591,7 +591,7 @@ Proof.
   rewrite !Pos2Nat.inj_succ.
   rewrite Pos2Nat.inj_1.
   omega.
-Qed.  
+Qed.
 
 Lemma Pos_le_1_add_sub x : (x <= 1 + (x - 1))%positive.
 Proof.
@@ -616,12 +616,12 @@ Proof.
     assert (H3: (1 <= Pos.iter_op Init.Nat.add p 1)%nat) by apply le_Pmult_nat.
     apply Peano.le_n_S; auto. }
   omega.
-Qed.  
+Qed.
 
 Lemma Pos2Nat_inj_2 : Pos.to_nat 2 = 2%nat.
 Proof. unfold Pos.to_nat; simpl; auto. Qed.
 
-Lemma Pos_le_2_add_sub x : 
+Lemma Pos_le_2_add_sub x :
   (1 + (x - 1) <= 2 + (x - 2))%positive.
 Proof.
   rewrite Pos2Nat.inj_le.
@@ -725,7 +725,7 @@ Proof.
   rewrite Pplus_one_succ_l.
   rewrite <-Pos.add_assoc.
   rewrite Pos.add_xO.
-  rewrite <-Pos.add_assoc.  
+  rewrite <-Pos.add_assoc.
   apply Pos.add_le_mono; auto.
   apply Pos.le_1_l.
 Qed.
@@ -745,7 +745,7 @@ Proof.
     apply H; auto. }
   intros _; apply Pos.le_1_l.
 Qed.
-  
+
 Local Open Scope DO_scope.
 
 Lemma DOlub_mult_le1 d : d * DOlub d <= 1.
@@ -783,7 +783,7 @@ Proof.
 Qed.
 
 Lemma DOlub_ok (d : DO) :
-  0 <= d -> 
+  0 <= d ->
   DOle 0 (d * DOlub d) /\ DOle (d * DOlub d) 1.
 Proof.
   intros H.
@@ -811,12 +811,12 @@ Proof.
   destruct (Zodd_dec n); auto.
   destruct (Zeven_odd_dec n); auto.
   elimtype False; apply n0; auto.
-Qed.  
+Qed.
 
 Definition DO_of_DOred' (p : Z*nat) : DO :=
   let (x,y) := p in Dmake x (Pos.of_nat (S y)).
 
-Definition DOred (d : DO) : DO := 
+Definition DOred (d : DO) : DO :=
   DO_of_DOred' (DOred' (num d) (pred (Pos.to_nat (den d)))).
 
 Lemma DOredP d : Zodd (num (DOred d)) \/ (den (DOred d) = 1%positive).
@@ -827,7 +827,7 @@ Proof.
     destruct (DOred' _ _); auto. }
   destruct (DOred' _ _); right; simpl in *.
   rewrite H; auto.
-Qed.  
+Qed.
 
 Lemma DO_of_DOred'_correct x y :
   DO_to_Q (DO_of_DOred' (DOred' x y)) == DO_to_Q (DO_of_DOred' (x,y)).
@@ -849,7 +849,7 @@ Proof.
     rewrite Zmult_assoc.
     pattern (Z.div2 x * 2)%Z; rewrite Zmult_comm; auto. }
   apply Qeq_refl.
-Qed.  
+Qed.
 
 Lemma DOred_correct d : DO_to_Q (DOred d) == DO_to_Q d.
 Proof.
@@ -864,7 +864,7 @@ Proof.
   intros _; simpl.
   rewrite (SuccNat2Pos.inv n y); auto.
   apply Qeq_refl.
-Qed.  
+Qed.
 
 Lemma gcd_2_odd_1 x : Zodd x -> Z.gcd x 2 = 1%Z.
 Proof.
@@ -889,7 +889,7 @@ Proof.
   intros H2; apply Znumtheory.Zdivide_mod in H2.
   rewrite Zmod_odd in H2.
   rewrite <-Zodd_bool_iff in H4; rewrite H4 in H2; inversion H2.
-Qed.  
+Qed.
 
 Lemma gcd_2_even_2 x : Zeven x -> Z.gcd x 2 = 2%Z.
 Proof.
@@ -912,7 +912,7 @@ Proof.
   destruct H; auto.
   elimtype False.
   rewrite Znumtheory.Zgcd_1_rel_prime in H.
-  destruct H. 
+  destruct H.
   assert (H2: (2 | x)%Z).
   { apply Znumtheory.Zmod_divide.
     { inversion 1. }
@@ -928,7 +928,7 @@ Proof.
   { apply Z.divide_pos_le; auto.
     omega. }
   omega.
-Qed.    
+Qed.
 
 Lemma gcd_x_times2_1 x y : Zodd x -> Z.gcd x y = 1%Z -> Z.gcd x (2*y) = 1%Z.
 Proof.
@@ -936,7 +936,7 @@ Proof.
   generalize (Znumtheory.Zgcd_is_gcd x y) as H2; intro.
   apply Znumtheory.Zis_gcd_gcd; try omega.
   inversion H2.
-  constructor; try apply Z.divide_1_l. 
+  constructor; try apply Z.divide_1_l.
   intros w H4 H5.
   rewrite H in H3.
   apply Znumtheory.Gauss in H5; auto.
@@ -956,7 +956,7 @@ Proof.
       apply Zeven_2p. }
     apply Zodd_not_Zeven in Hodd; auto. }
   apply gcd_2_odd_1; auto.
-Qed.  
+Qed.
 
 Lemma gcd_pow2_odd_1 x n : Zodd x -> Z.gcd x (Zpower_nat 2 n) = 1%Z.
 Proof.
@@ -968,7 +968,7 @@ Proof.
   generalize (IHn Hodd).
   intros H.
   apply gcd_x_times2_1; auto.
-Qed.  
+Qed.
 
 Lemma Qred_odd_pow2 x n : Zodd x -> Qred (x # pow_pos 2 n) = x # (pow_pos 2 n).
 Proof.
@@ -986,7 +986,7 @@ Proof.
   rewrite H2, Zmult_1_l in H0.
   subst b.
   auto.
-Qed.  
+Qed.
 
 Lemma Qred_odd_2 x : Zodd x -> Qred (x # 2) = x # 2.
 Proof.
@@ -1003,7 +1003,7 @@ Proof.
   rewrite H2, Zmult_1_l in H0.
   subst b.
   auto.
-Qed.  
+Qed.
 
 Lemma shift_pos_pow_pos n : shift_pos n 1 = pow_pos 2 n.
 Proof.
@@ -1016,7 +1016,7 @@ Proof.
   rewrite Pos2Nat.inj_succ; simpl; rewrite IH.
   unfold pow_pos; simpl; auto.
   rewrite Pos.iter_succ; auto.
-Qed.  
+Qed.
 
 Lemma pow_pos_2inj p q : pow_pos 2 p = pow_pos 2 q -> p = q.
 Proof.
@@ -1033,10 +1033,10 @@ Proof.
   destruct n; simpl.
   { inversion 1. }
   inversion 1; subst; f_equal; apply IHm; auto.
-Qed.  
+Qed.
 
 Lemma Qred_even_2 x :
-  Zeven x -> 
+  Zeven x ->
   Qred (x # 2) = Z.div2 x # 1.
 Proof.
   unfold Qred.
@@ -1055,7 +1055,7 @@ Proof.
   rewrite H0.
   f_equal.
   destruct b; auto.
-Qed.  
+Qed.
 
 Lemma Zdiv2_even_inj x y : Zeven x -> Zeven y -> Z.div2 x = Z.div2 y -> x=y.
 Proof.
@@ -1063,7 +1063,7 @@ Proof.
   destruct x; destruct y; simpl in H2; auto;
   try destruct p; try destruct p0; inversion H2;
   try inversion H; try inversion H1; auto.
-Qed.  
+Qed.
 
 Lemma DOred_complete d1 d2 :
   DO_to_Q d1 == DO_to_Q d2 ->
@@ -1087,7 +1087,7 @@ Proof.
       f_equal.
       apply pow_pos_2inj; auto. }
 
-    (* den (DOred d2) = 1 *)    
+    (* den (DOred d2) = 1 *)
     rewrite H0.
     rewrite Qred_odd_pow2; auto.
     intros H2.
@@ -1120,7 +1120,7 @@ Proof.
     f_equal.
     apply pow_pos_2inj; auto. }
 
-  (* den (DOred d1) = 1 *)    
+  (* den (DOred d1) = 1 *)
   destruct (DOredP d2).
     (* Zodd (num (DOred d2)) *)
     { rewrite H.
@@ -1148,7 +1148,7 @@ Proof.
       inversion H2; subst.
       revert H3 H4 H0.
       destruct (DOred d2); simpl.
-      destruct (DOred d1); simpl.            
+      destruct (DOred d1); simpl.
       intros <- Hx Hodd.
       simpl in H.
       subst den1.
@@ -1181,7 +1181,7 @@ Proof.
       inversion 1. }
     rewrite !Qred_odd_2; auto.
     inversion 1; subst.
-    simpl in H0, H; subst; auto. 
+    simpl in H0, H; subst; auto.
 Qed.
 
 Lemma DOred'_idem x y :
@@ -1197,8 +1197,8 @@ Proof.
     destruct (Zeven_dec z); auto.
     apply Zodd_not_Zeven in H; contradiction. }
   destruct (DOred' x y); simpl in H|-*; rewrite H; auto.
-Qed.  
-    
+Qed.
+
 Lemma DOred_idem d : DOred (DOred d) = DOred d.
 Proof.
   unfold DOred.
@@ -1229,7 +1229,7 @@ Proof.
   rewrite H3 in H.
   rewrite DOred'_idem in H.
   rewrite H; auto.
-Qed.  
+Qed.
 
 
 Module DORed.
@@ -1238,11 +1238,11 @@ Module DORed.
          pf : DOred d = d }.
 
   Definition build (d : DO) : t := @mk (DOred d) (DOred_idem d).
-  
+
   Program Definition t0 := mk 0 _.
 
   Program Definition t1 := mk 1 _.
-  
+
   Program Definition add (d1 d2 : t) : t :=
     mk (DOred (DOadd d1.(d) d2.(d))) _.
   Next Obligation.
@@ -1252,25 +1252,25 @@ Module DORed.
   Program Definition sub (d1 d2 : t) : t :=
     mk (DOred (DOsub d1.(d) d2.(d))) _.
   Next Obligation.
-    apply DOred_complete; rewrite DOred_correct; apply Qeq_refl.    
+    apply DOred_complete; rewrite DOred_correct; apply Qeq_refl.
   Qed.
 
-  Program Definition mult (d1 d2 : t) : t := 
+  Program Definition mult (d1 d2 : t) : t :=
     mk (DOred (DOmult d1.(d) d2.(d))) _.
   Next Obligation.
-    apply DOred_complete; rewrite DOred_correct; apply Qeq_refl.        
+    apply DOred_complete; rewrite DOred_correct; apply Qeq_refl.
   Qed.
 
-  Program Definition opp (dx : t) : t := 
+  Program Definition opp (dx : t) : t :=
     mk (DOred (DOopp dx.(d))) _.
   Next Obligation.
-    apply DOred_complete; rewrite DOred_correct; apply Qeq_refl.            
+    apply DOred_complete; rewrite DOred_correct; apply Qeq_refl.
   Qed.
 
-  Program Definition lub (dx : t) : t := 
+  Program Definition lub (dx : t) : t :=
     mk (DOred (DOlub dx.(d))) _.
   Next Obligation.
-    apply DOred_complete; rewrite DOred_correct; apply Qeq_refl.            
+    apply DOred_complete; rewrite DOred_correct; apply Qeq_refl.
   Qed.
 
   Program Definition of_nat (n : nat) : t :=
@@ -1289,16 +1289,16 @@ Module DORed.
     intros H; assert (H2: x1 = x2).
     { rewrite <-pf1, <-pf2; apply DOred_complete; auto. }
     generalize pf1 pf2; rewrite H2; intros; f_equal; apply proof_irrelevance.
-  Qed.    
-  
+  Qed.
+
   Lemma addP d1 d2 :
     DO_to_Q (d (add d1 d2)) == (DO_to_Q (d d1) + DO_to_Q (d d2))%Q.
   Proof.
     unfold add; simpl.
     rewrite DOred_correct.
     rewrite DOadd_ok; apply Qeq_refl.
-  Qed.    
-  
+  Qed.
+
   Lemma addC d1 d2 : add d1 d2 = add d2 d1.
   Proof.
     apply DOred_eq; simpl; rewrite 2!DOred_correct, 2!DOadd_ok.
@@ -1310,7 +1310,7 @@ Module DORed.
     apply DOred_eq; simpl.
     rewrite !DOred_correct, !DOadd_ok, !DOred_correct, !DOadd_ok.
     apply Qplus_assoc.
-  Qed.    
+  Qed.
 
   Lemma add0l d : add t0 d = d.
   Proof.
@@ -1318,8 +1318,8 @@ Module DORed.
     generalize (add_obligation_1 {|d:=0;pf:=t0_obligation_1|} d).
     unfold DORed.d; rewrite DOred_correct; intros e.
     rewrite DOadd_ok, DO_to_Q0, Qplus_0_l; apply Qeq_refl.
-  Qed.    
-        
+  Qed.
+
   Lemma subP d1 d2 :
     DO_to_Q (d (sub d1 d2)) == (DO_to_Q (d d1) - DO_to_Q (d d2))%Q.
   Proof.
@@ -1334,8 +1334,8 @@ Module DORed.
     unfold mult; simpl.
     rewrite DOred_correct.
     rewrite DOmult_ok; apply Qeq_refl.
-  Qed.    
-  
+  Qed.
+
   Lemma multC d1 d2 : mult d1 d2 = mult d2 d1.
   Proof.
     apply DOred_eq; simpl; rewrite 2!DOred_correct, 2!DOmult_ok.
@@ -1347,7 +1347,7 @@ Module DORed.
     apply DOred_eq; simpl.
     rewrite !DOred_correct, !DOmult_ok, !DOred_correct, !DOmult_ok.
     apply Qmult_assoc.
-  Qed.    
+  Qed.
 
   Lemma oppP dx :
     DO_to_Q (d (opp dx)) == (- DO_to_Q (d dx))%Q.
@@ -1371,7 +1371,7 @@ Module DORed.
   Proof.
     intros.
     apply DOred_eq.
-    rewrite addP.    
+    rewrite addP.
     simpl.
     rewrite DO_to_Q0.
     rewrite DOred_correct.
@@ -1379,7 +1379,7 @@ Module DORed.
     rewrite Qplus_comm.
     apply Qplus_opp_r.
   Qed.
-    
+
   Lemma addNegDistr: forall d1 d2, opp (add d1 d2) = add (opp d1) (opp d2).
   Proof.
     intros.
@@ -1430,7 +1430,7 @@ Module DORed.
       apply Qle_lteq.
       destruct H; auto.
       rewrite H.
-      right.  
+      right.
       apply Qeq_refl.
     }
     intros.
@@ -1458,7 +1458,7 @@ Module DORed.
     repeat (rewrite addP).
     apply Qplus_lt_le_compat; auto.
   Qed.
-    
+
   Lemma plus_lt_compat_l : forall t t1 t2 : t, DOlt t1 t2 -> DOlt (add t t1) (add t t2).
   Proof.
     intros.
@@ -1470,18 +1470,18 @@ Module DORed.
   Qed.
 
 
-  
-  
+
+
   Lemma lt_t0_t1: t0 < t1.
   Proof.
     unfold DOlt.
     rewrite DO_to_Q0.
     rewrite DO_to_Q1.
     unfold Qlt, Z.lt.
-    auto. 
+    auto.
   Qed.
 
-  Lemma mult_le_compat: 
+  Lemma mult_le_compat:
         forall (r1 r2 r3 r4 : t) , DOle t0 r1 -> DOle t0 r3 -> DOle r1  r2 -> DOle r3 r4 ->
            DOle (mult r1 r3) (mult r2   r4).
   Proof.
@@ -1556,7 +1556,7 @@ Module DORed.
     rewrite Z.mul_comm with (QDen q3) (Qnum q4).
     auto.
   Qed.
-    
+
   Lemma mult_lt_compat_l : forall r r1 r2 : t, DOlt t0 r -> (DOlt r1 r2 <-> DOlt (mult r r1) (mult r r2)).
   Proof.
     unfold DOlt.
@@ -1606,7 +1606,7 @@ Module DORed.
   Lemma of_natP: forall n : nat,  DO_to_Q (of_nat n) = (Qmake (2 * (Z.of_nat n)) 2).
   Proof. auto. Qed.
 
-  Lemma of_nat_succ_l: forall n : nat, of_nat (S n) = add t1 (of_nat (n)). 
+  Lemma of_nat_succ_l: forall n : nat, of_nat (S n) = add t1 (of_nat (n)).
   Proof.
     intros.
     apply DOred_eq.
@@ -1656,8 +1656,8 @@ Module DORed.
   Proof.
     intros.
     destruct DOeq_dec with (d d1) (d d2).
-    { 
-      left. 
+    {
+      left.
       destruct d1,d2.
       simpl in e.
       generalize pf0 pf1.
@@ -1700,7 +1700,7 @@ Module DORed.
     intros.
     apply Qlt_trans with (DO_to_Q d2); auto.
   Qed.
-    
+
 
   Lemma total_order_T : forall d1 d2 : t, {DOlt d1 d2} + {d1 = d2} + {DOlt d2 d1}.
   Proof.
@@ -1715,7 +1715,7 @@ Module DORed.
   Qed.
 
   (* TODO: More lemmas here! *)
-End DORed.      
+End DORed.
 
 Coercion DORed.d : DORed.t >-> DO.
 
@@ -1747,7 +1747,7 @@ Inductive D : Set :=
 
 Definition D_to_Q (d : D) :=
   match d with
-  | DD d => 
+  | DD d =>
     DO_to_Q d
   | DQ q => q
   end.
@@ -1769,7 +1769,7 @@ Proof. rewrite D_to_Q1'; unfold Qeq; simpl; auto. Qed.
 
 Definition Dadd (d1 d2 : D) : D :=
   match d1,d2 with
-  | DD d1, DD d2 => 
+  | DD d1, DD d2 =>
     DD (DOadd d1 d2)
   | _, _ => DQ (D_to_Q d1 + D_to_Q d2)
   end.
@@ -1789,7 +1789,7 @@ Qed.
 
 Definition Dmult (d1 d2 : D) : D :=
   match d1,d2 with
-  | DD d1, DD d2 => 
+  | DD d1, DD d2 =>
     DD (DOmult d1 d2)
   | _, _ => DQ (D_to_Q d1 * D_to_Q d2)
   end.
@@ -1807,7 +1807,7 @@ Qed.
 
 Definition Dopp (d : D) : D :=
   match d with
-  | DD d => 
+  | DD d =>
     DD (DOopp d)
   | _ => DQ (Qopp (D_to_Q d))
   end.
@@ -1831,7 +1831,7 @@ Proof.
 Qed.
 
 Definition Dle (d1 d2 : D) : Prop :=
-  Qle (D_to_Q d1) (D_to_Q d2).  
+  Qle (D_to_Q d1) (D_to_Q d2).
 
 (*TODO: There's probably a more efficient way to implement the following:*)
 Definition Dle_bool (d1 d2 : D) : bool :=
@@ -1844,7 +1844,7 @@ Proof.
 Qed.
 
 Definition Dlt (d1 d2 : D) : Prop :=
-  Qlt (D_to_Q d1) (D_to_Q d2).  
+  Qlt (D_to_Q d1) (D_to_Q d2).
 
 Definition Dlt_bool (d1 d2 : D) : bool :=
   match D_to_Q d1 ?= D_to_Q d2 with
@@ -1858,7 +1858,7 @@ Proof.
   destruct (Qcompare_spec (D_to_Q d1) (D_to_Q d2));
     try solve[inversion 1|auto].
   unfold Dlt; rewrite Qlt_alt; intros ->; auto.
-Qed.  
+Qed.
 
 Lemma Deq_dec (d1 d2 : D) : {d1=d2} + {d1<>d2}.
 Proof.
@@ -1929,7 +1929,7 @@ Definition Dmax (d1 d2 : D) : D :=
 
 Definition Dlub (max : D) : D :=
   match max with
-  | DD max => 
+  | DD max =>
     DD (DOlub max)
   | DQ q => DQ (Qinv q)
   end.
@@ -1998,7 +1998,7 @@ Proof.
 Qed.
 
 Lemma Dlub_ok (d : D) :
-  0 <= d -> 
+  0 <= d ->
   Dle 0 (d * Dlub d) /\ Dle (d * Dlub d) 1.
 Proof.
   intros H.
@@ -2026,17 +2026,14 @@ Proof.
   destruct (Zodd_dec n); auto.
   destruct (Zeven_odd_dec n); auto.
   elimtype False; apply n0; auto.
-Qed.  
+Qed.
 
 Definition D_of_Dred' (p : Z*nat) : D :=
   let (x,y) := p in DD (Dmake x (Pos.of_nat (S y))).
 
-Eval compute in (log_inf 10).
-
-
 Fixpoint Is_Pos_Power2 (p : positive) : option positive :=
   match p with
-  | xH => None 
+  | xH => None
   | xO xH => Some xH
   | xO p' => match Is_Pos_Power2 p' with
              | None => None
@@ -2049,7 +2046,7 @@ Definition Try_Q_to_D (q : Q) : option DO :=
   match Is_Pos_Power2 (Qden q) with
   | None =>
     if
-      ((Qden q) =? xH)%positive 
+      ((Qden q) =? xH)%positive
     then
       Some (Dmake (2 * (Qnum q))%Z 1)
     else
@@ -2060,7 +2057,7 @@ Definition Try_Q_to_D (q : Q) : option DO :=
 
 Definition Dred (d : D) : D :=
   match d with
-  | DD d => 
+  | DD d =>
     DD (DOred d)
   | DQ q =>
     let qr := Qred q in
@@ -2115,11 +2112,11 @@ Proof.
     rewrite Zmult_assoc.
     pattern (Z.div2 x * 2)%Z; rewrite Zmult_comm; auto. }
   apply Qeq_refl.
-Qed.  
+Qed.
 
 Lemma Shift_Pos_Not_xI : forall p acc, ~exists res, shift_pos p acc = xI res.
 Proof.
-  induction p; intros. 
+  induction p; intros.
   +
     intros Hnot; eauto.
     destruct Hnot.
@@ -2153,7 +2150,7 @@ Proof.
     auto.
   }
 Qed.
-  
+
 Lemma Is_Pow_Pow_Shift_inv : forall p, Is_Pos_Power2 (shift_pos p 1) = Some p.
 Proof.
   intros.
@@ -2166,7 +2163,7 @@ Proof.
   apply Pos2Nat.id.
 Qed.
 
-Lemma Is_Pow_eq_spec : forall p1 p2, 
+Lemma Is_Pow_eq_spec : forall p1 p2,
     Is_Pos_Power2 p1~0 = Is_Pos_Power2 p2~0 ->
 
     Is_Pos_Power2 p1 = Is_Pos_Power2 p2.
@@ -2255,7 +2252,7 @@ Proof.
 Qed.
 
 Lemma Try_Q_to_D_num : forall q d, Try_Q_to_D (Qred q) = Some d ->
-       num d = Qnum (Qred q) \/ (num d = (2 * (Qnum (Qred q)))%Z) /\ den d = 1%positive.                    
+       num d = Qnum (Qred q) \/ (num d = (2 * (Qnum (Qred q)))%Z) /\ den d = 1%positive.
 Proof.
   intros q d H1.
   unfold Try_Q_to_D in H1.
@@ -2314,7 +2311,7 @@ Proof.
             inversion H1.
             subst.
             simpl in *.
-            pose proof H3. 
+            pose proof H3.
             rewrite <- H2 in H3.
             apply Is_Pow_eq in H3.
             destruct H3; auto.
@@ -2419,7 +2416,7 @@ Proof.
   induction n using (well_founded_ind (well_founded_ltof nat id)); auto.
 Qed.
 
-Lemma Is_Pow2_eq1' : 
+Lemma Is_Pow2_eq1' :
   forall p : positive, Is_Pos_Power2 (Pos.succ p) = Some (Pos.of_nat 1) -> 1%positive = p.
 Proof.
     destruct p; intros; auto.
@@ -2463,7 +2460,7 @@ Proof.
     }
 Qed.
 
-Lemma Is_Pow2_eq1 : 
+Lemma Is_Pow2_eq1 :
   forall p : positive, Is_Pos_Power2 p = Some (Pos.of_nat 1) -> 2%positive = p.
 Proof.
  destruct p; intros; inversion H; auto.
@@ -2503,7 +2500,7 @@ Lemma Pow2_xO : forall p q : positive,
     Is_Pos_Power2 q = Some p ->
     exists q', xO q' = q.
 Proof.
-  induction q; intros; 
+  induction q; intros;
   simpl in *;
   eauto.
   inversion H.
@@ -2511,7 +2508,7 @@ Proof.
 Qed.
 
 Lemma Pos_Div2_succ2 : forall p,
-    (p <> 1)%positive -> 
+    (p <> 1)%positive ->
     Pos.div2 (Pos.succ (Pos.succ p)) =
     Pos.succ (Pos.div2 p).
 Proof.
@@ -2520,7 +2517,7 @@ Proof.
   simpl.
   lia.
 Qed.
-  
+
 Lemma Pos_of_nat_Div2_spec : forall n, Pos.of_nat (Nat.div2 n) =
                       Pos.div2 (Pos.of_nat n).
 Proof.
@@ -2552,16 +2549,11 @@ Proof.
       rewrite Nat2Pos.inj_succ; try lia.
       rewrite Nat2Pos.inj_succ; lia.
     }
-    {
-      intros Hnot.
-      destruct n; auto.
-      rewrite Nat2Pos.inj_succ in Hnot; try lia.
-    }
   }
 Qed.
 
 Lemma Pos_Pow2_xO_spec : forall x p,
-    (x <> 1)%positive -> 
+    (x <> 1)%positive ->
     Is_Pos_Power2 x~0 = Some (Pos.of_nat (S p)) ->
     Is_Pos_Power2 x = Some (Pos.of_nat (p)).
 Proof.
@@ -2590,11 +2582,11 @@ Proof.
     simpl in *.
     destruct p; auto; try lia.
   }
-Qed.      
+Qed.
 
 Lemma Pow2_Div : forall p q : nat,
-    (q > 2) -> 
-    Is_Pos_Power2 (Pos.of_nat q) = Some (Pos.of_nat (S p)) -> 
+    (q > 2) ->
+    Is_Pos_Power2 (Pos.of_nat q) = Some (Pos.of_nat (S p)) ->
     Is_Pos_Power2 (Pos.of_nat (q/2)) = Some (Pos.of_nat p).
 Proof.
   intros.
@@ -2628,8 +2620,8 @@ Proof.
 Qed.
 
 Lemma shift_nat_spec : forall p q,
-    q <> 0 -> 
-    shift_nat p 1 = Pos.of_nat q  -> 
+    q <> 0 ->
+    shift_nat p 1 = Pos.of_nat q  ->
     shift_nat (S p) 1 = Pos.of_nat (2 * q).
 Proof.
   intros.
@@ -2687,7 +2679,7 @@ Proof.
       destruct H0; lia.
     }
   {
-    destruct H0; subst; auto; 
+    destruct H0; subst; auto;
     simpl in Hnot; try lia.
   }
   }
@@ -2709,7 +2701,7 @@ Proof.
   {
     inversion H.
   }
-  {  
+  {
     intros.
     simpl in H.
     inversion H.
@@ -2727,7 +2719,7 @@ Proof.
   rewrite <- Nat.div2_div.
   destruct q; auto.
   {
-    destruct q; auto. 
+    destruct q; auto.
     {
       simpl in *.
       inversion H0.
@@ -2737,7 +2729,7 @@ Proof.
       {
         rewrite Nat2Pos.id; try lia.
       }
-      rewrite H1 at 2.      
+      rewrite H1 at 2.
       rewrite <- H.
       rewrite Pos2Nat.inj_mul.
       rewrite Nat2Pos.id; try lia.
@@ -2749,8 +2741,8 @@ Proof.
 Qed.
 
 Lemma Shift_Is_Pos_Pow2_inv_nat' : forall p q,
-    p <> 0 -> 
-    q <> 0 -> 
+    p <> 0 ->
+    q <> 0 ->
     Is_Pos_Power2 (Pos.of_nat q) = Some (Pos.of_nat p) ->
     shift_nat p 1 = (Pos.of_nat q).
 Proof.
@@ -2826,7 +2818,7 @@ Proof.
   auto.
 Qed.
 
-Lemma Shift_Is_Pos_Pow2_inv : forall p q, 
+Lemma Shift_Is_Pos_Pow2_inv : forall p q,
     Is_Pos_Power2 ((Qden (Qred q))) = Some p ->
     shift_pos p 1 = (Qden (Qred q)).
 Proof.
@@ -2925,7 +2917,7 @@ Proof.
 
 
 Lemma QeqD_is_pow2 : forall q d,
-    q == DO_to_Q d -> 
+    q == DO_to_Q d ->
     Try_Q_to_D (Qred q) = None -> False.
 Proof.
   intros q d H H1.
@@ -2955,7 +2947,7 @@ Proof.
         destruct (num0) eqn:H2.
         {
           simpl in H1.
-          inversion H1; 
+          inversion H1;
             subst.
           simpl in *.
           lia.
@@ -3078,8 +3070,15 @@ Proof.
     destruct (Zeven_dec z); auto.
     apply Zodd_not_Zeven in H; contradiction. }
   destruct (Dred' x y); simpl in H|-*; rewrite H; auto.
-Qed.  
-    
+Qed.
+
+Lemma Qred_inv : forall q, Qred (Qred q) = Qred q.
+Proof.
+  intros.
+  apply Qred_complete.
+  apply Qred_correct.
+Qed.
+
 Lemma Dred_idem d : Dred (Dred d) = Dred d.
 Proof.
   destruct d.
@@ -3098,7 +3097,7 @@ Proof.
       unfold DO_of_DOred'.
       destruct (DOred' _ _) eqn:H.
       rewrite Hm in H.
-      rewrite <- Hm in H.    
+      rewrite <- Hm in H.
       destruct ((Init.Nat.pred (Pos.to_nat (den (DOred d))))) eqn:H1;
         subst.
       {
@@ -3113,7 +3112,7 @@ Proof.
         rewrite H0.
         auto.
       }
-      {      
+      {
         simpl in H.
         destruct Zeven_dec eqn:He.
         {
@@ -3127,7 +3126,7 @@ Proof.
             simpl in H1.
             inversion H1.
           }
-        }        
+        }
         {
           inversion H; subst; auto.
           rewrite Hm in *.
@@ -3141,16 +3140,17 @@ Proof.
     {
       destruct (Try_Q_to_D (Qred (Qred q))) eqn:Hm1.
       {
-        (* Qred of Qred is Qred *)
-        admit.
+        rewrite Qred_inv in Hm1.
+        exfalso.
+        rewrite Hm in Hm1.
+        inversion Hm1.
       }
-      {      
-        (* Qred of Qred is Qred *)
-        admit.
+      {
+        rewrite Qred_inv; auto.
       }
     }
   }
-Admitted.
+Qed.
 
 Close Scope positive_scope.
 Close Scope nat_scope.
@@ -3161,11 +3161,11 @@ Module DRed.
          pf : Dred d = d }.
 
   Definition build (d : D) : t := @mk (Dred d) (Dred_idem d).
-  
+
   Program Definition t0 := mk 0 _.
 
   Program Definition t1 := mk 1 _.
-  
+
   Program Definition add (d1 d2 : t) : t :=
     mk (Dred (Dadd d1.(d) d2.(d))) _.
   Next Obligation.
@@ -3179,19 +3179,19 @@ Module DRed.
     apply Dred_idem.
   Qed.
 
-  Program Definition mult (d1 d2 : t) : t := 
+  Program Definition mult (d1 d2 : t) : t :=
     mk (Dred (Dmult d1.(d) d2.(d))) _.
   Next Obligation.
     apply Dred_idem.
   Qed.
 
-  Program Definition opp (dx : t) : t := 
+  Program Definition opp (dx : t) : t :=
     mk (Dred (Dopp dx.(d))) _.
   Next Obligation.
     apply Dred_idem.
   Qed.
 
-  Program Definition lub (dx : t) : t := 
+  Program Definition lub (dx : t) : t :=
     mk (Dred (Dlub dx.(d))) _.
   Next Obligation.
     apply Dred_idem.
@@ -3211,19 +3211,19 @@ Module DRed.
     destruct d1 as [x1 pf1]; destruct d2 as [x2 pf2]; simpl.
     intros H; assert (H2: x1 = x2).
     {
-      
+
       rewrite <-pf1, <-pf2; apply Dred_complete; auto. }
     generalize pf1 pf2; rewrite H2; intros; f_equal; apply proof_irrelevance.
   Qed.
-  
+
   Lemma addP d1 d2 :
     D_to_Q (d (add d1 d2)) == (D_to_Q (d d1) + D_to_Q (d d2))%Q.
   Proof.
     unfold add; simpl.
     rewrite Dred_correct.
     rewrite Dadd_ok; apply Qeq_refl.
-  Qed.    
-  
+  Qed.
+
   Lemma addC d1 d2 : add d1 d2 = add d2 d1.
   Proof.
     apply Dred_eq; simpl; rewrite 2!Dred_correct, 2!Dadd_ok.
@@ -3235,7 +3235,7 @@ Module DRed.
     apply Dred_eq; simpl.
     rewrite !Dred_correct, !Dadd_ok, !Dred_correct, !Dadd_ok.
     apply Qplus_assoc.
-  Qed.    
+  Qed.
 
   Lemma add0l d : add t0 d = d.
   Proof.
@@ -3243,8 +3243,8 @@ Module DRed.
     generalize (add_obligation_1 {|d:=0;pf:=t0_obligation_1|} d).
     unfold DRed.d; rewrite Dred_correct; intros e.
     rewrite Dadd_ok, D_to_Q0, Qplus_0_l; apply Qeq_refl.
-  Qed.    
-        
+  Qed.
+
   Lemma subP d1 d2 :
     D_to_Q (d (sub d1 d2)) == (D_to_Q (d d1) - D_to_Q (d d2))%Q.
   Proof.
@@ -3259,8 +3259,8 @@ Module DRed.
     unfold mult; simpl.
     rewrite Dred_correct.
     rewrite Dmult_ok; apply Qeq_refl.
-  Qed.    
-  
+  Qed.
+
   Lemma multC d1 d2 : mult d1 d2 = mult d2 d1.
   Proof.
     apply Dred_eq; simpl; rewrite 2!Dred_correct, 2!Dmult_ok.
@@ -3272,7 +3272,7 @@ Module DRed.
     apply Dred_eq; simpl.
     rewrite !Dred_correct, !Dmult_ok, !Dred_correct, !Dmult_ok.
     apply Qmult_assoc.
-  Qed.    
+  Qed.
 
   Lemma oppP dx :
     D_to_Q (d (opp dx)) == (- D_to_Q (d dx))%Q.
@@ -3296,7 +3296,7 @@ Module DRed.
   Proof.
     intros.
     apply Dred_eq.
-    rewrite addP.    
+    rewrite addP.
     simpl.
     rewrite D_to_Q0.
     rewrite Dred_correct.
@@ -3304,7 +3304,7 @@ Module DRed.
     rewrite Qplus_comm.
     apply Qplus_opp_r.
   Qed.
-    
+
   Lemma addNegDistr: forall d1 d2, opp (add d1 d2) = add (opp d1) (opp d2).
   Proof.
     intros.
@@ -3355,7 +3355,7 @@ Module DRed.
       apply Qle_lteq.
       destruct H; auto.
       rewrite H.
-      right.  
+      right.
       apply Qeq_refl.
     }
     intros.
@@ -3383,7 +3383,7 @@ Module DRed.
     repeat (rewrite addP).
     apply Qplus_lt_le_compat; auto.
   Qed.
-    
+
   Lemma plus_lt_compat_l : forall t t1 t2 : t, Dlt t1 t2 -> Dlt (add t t1) (add t t2).
   Proof.
     intros.
@@ -3395,18 +3395,18 @@ Module DRed.
   Qed.
 
 
-  
-  
+
+
   Lemma lt_t0_t1: t0 < t1.
   Proof.
     unfold Dlt.
     rewrite D_to_Q0.
     rewrite D_to_Q1.
     unfold Qlt, Z.lt.
-    auto. 
+    auto.
   Qed.
 
-  Lemma mult_le_compat: 
+  Lemma mult_le_compat:
         forall (r1 r2 r3 r4 : t) , Dle t0 r1 -> Dle t0 r3 -> Dle r1  r2 -> Dle r3 r4 ->
            Dle (mult r1 r3) (mult r2   r4).
   Proof.
@@ -3462,7 +3462,7 @@ Module DRed.
       apply Zmult_le_0_compat.
       {
         unfold Qle in H.
-        simpl in *. 
+        simpl in *.
         rewrite Z.mul_1_r in H.
         auto.
       }
@@ -3481,7 +3481,7 @@ Module DRed.
     rewrite Z.mul_comm with (QDen q3) (Qnum q4).
     auto.
   Qed.
-    
+
   Lemma mult_lt_compat_l : forall r r1 r2 : t, Dlt t0 r -> (Dlt r1 r2 <-> Dlt (mult r r1) (mult r r2)).
   Proof.
     unfold Dlt.
@@ -3508,7 +3508,7 @@ Module DRed.
     2 :{  unfold Z.lt. auto. }
     repeat rewrite <- Z.mul_assoc in H0.
     rewrite Z.mul_comm in H0.
-    rewrite Z.mul_comm with (Qnum (D_to_Q r)) 
+    rewrite Z.mul_comm with (Qnum (D_to_Q r))
                             ((Qnum (D_to_Q r2) * Z.pos (Qden (D_to_Q r) * Qden (D_to_Q r1)))%Z) in
         H0.
     apply Zmult_gt_0_lt_reg_r in H0.
@@ -3520,7 +3520,7 @@ Module DRed.
     repeat rewrite Pos2Z.inj_mul in H0.
     repeat rewrite <- Z.mul_assoc in H0.
     rewrite Z.mul_comm in H0.
-    rewrite Z.mul_comm with 
+    rewrite Z.mul_comm with
         (QDen (D_to_Q r))
         (QDen (D_to_Q r1) * Qnum (D_to_Q r2))%Z in
         H0.
@@ -3533,7 +3533,7 @@ Module DRed.
   Lemma of_natP: forall n : nat,  D_to_Q (of_nat n) = (Qmake (2 * (Z.of_nat n)) 2).
   Proof. auto. Qed.
 
-  Lemma of_nat_succ_l: forall n : nat, of_nat (S n) = add t1 (of_nat (n)). 
+  Lemma of_nat_succ_l: forall n : nat, of_nat (S n) = add t1 (of_nat (n)).
   Proof.
     intros.
     apply Dred_eq.
@@ -3583,8 +3583,8 @@ Module DRed.
   Proof.
     intros.
     destruct Deq_dec with (d d1) (d d2).
-    { 
-      left. 
+    {
+      left.
       destruct d1,d2.
       simpl in e.
       generalize pf0 pf1.
@@ -3627,7 +3627,7 @@ Module DRed.
     intros.
     apply Qlt_trans with (D_to_Q d2); auto.
   Qed.
-    
+
 
   Lemma total_order_T : forall d1 d2 : t, {Dlt d1 d2} + {d1 = d2} + {Dlt d2 d1}.
   Proof.
@@ -3641,7 +3641,7 @@ Module DRed.
     auto.
   Qed.
   (* TODO: More lemmas here! *)
-End DRed.      
+End DRed.
 
 Coercion DRed.d : DRed.t >-> D.
 
@@ -3663,9 +3663,3 @@ Infix "*" := DRed.mult : DRed_scope.
 
 Notation "'0'" := DRed.t0 : DRed_scope.
 Notation "'1'" := DRed.t1 : DRed_scope.
-
-
-
-  
-    
-                         
